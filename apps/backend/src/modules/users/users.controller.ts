@@ -1,46 +1,39 @@
-import { Controller, Get, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Patch,
+  Delete,
+  Body,
+  UseGuards,
+  Request,
+  HttpCode,
+  HttpStatus,
+  UseInterceptors,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
-import { UpdateUserDto } from './users.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { UpdateProfileDto } from './dtos/update-profile.dto';
+import { JwtAccessGuard } from '../../common/guards/jwt-access.guard';
+import { LoggingInterceptor } from '../../common/interceptors/logging.interceptor';
 
-@ApiTags('Users')
 @Controller('users')
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
+@UseGuards(JwtAccessGuard)
+@UseInterceptors(LoggingInterceptor)
 export class UsersController {
   constructor(private usersService: UsersService) {}
 
   @Get('me')
-  @ApiOperation({ summary: 'Obtenir le profil de l\'utilisateur connecté' })
-  @ApiResponse({ status: 200, description: 'Profil utilisateur' })
-  async getProfile(@Request() req) {
-    return this.usersService.findById(req.user.id);
+  async getMe(@Request() req) {
+    return this.usersService.getMe(req.user.id);
   }
 
-  @Put('me')
-  @ApiOperation({ summary: 'Mettre à jour le profil de l\'utilisateur connecté' })
-  @ApiResponse({ status: 200, description: 'Profil mis à jour' })
-  async updateProfile(@Request() req, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.updateProfile(req.user.id, updateUserDto);
+  @Patch('me')
+  async updateMe(@Request() req, @Body() updateProfileDto: UpdateProfileDto) {
+    return this.usersService.updateMe(req.user.id, updateProfileDto);
   }
 
-  @Get('me/stats')
-  @ApiOperation({ summary: 'Obtenir les statistiques de l\'utilisateur connecté' })
-  @ApiResponse({ status: 200, description: 'Statistiques utilisateur' })
-  async getUserStats(@Request() req) {
-    return this.usersService.getUserStats(req.user.id);
-  }
-
-  @Get(':username')
-  @ApiOperation({ summary: 'Obtenir le profil d\'un utilisateur par nom d\'utilisateur' })
-  @ApiResponse({ status: 200, description: 'Profil utilisateur' })
-  @ApiResponse({ status: 404, description: 'Utilisateur non trouvé' })
-  async getUserByUsername(@Param('username') username: string) {
-    const user = await this.usersService.findByUsername(username);
-    if (!user) {
-      throw new Error('Utilisateur non trouvé');
-    }
-    return user;
+  @Delete('me')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteMe(@Request() req) {
+    await this.usersService.deleteMe(req.user.id);
   }
 }

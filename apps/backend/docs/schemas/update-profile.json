@@ -1,0 +1,31 @@
+{
+  "type": "object",
+  "properties": {
+    "displayName": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 50
+    },
+    "avatarUrl": {
+      "type": "string",
+      "format": "uri",
+      "nullable": true
+    },
+    "bio": {
+      "type": "string",
+      "maxLength": 500,
+      "nullable": true
+    },
+    "location": {
+      "type": "string",
+      "maxLength": 100,
+      "nullable": true
+    },
+    "preferencesJson": {
+      "type": "object",
+      "additionalProperties": {},
+      "nullable": true
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,25 @@
+{
+  "type": "object",
+  "properties": {
+    "responderId": {
+      "type": "string",
+      "pattern": "^[cC][^\\s-]{8,}$"
+    },
+    "requestedItemTitle": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 100
+    },
+    "offeredItemTitle": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 100
+    }
+  },
+  "required": [
+    "responderId",
+    "requestedItemTitle",
+    "offeredItemTitle"
+  ],
+  "additionalProperties": false
+}

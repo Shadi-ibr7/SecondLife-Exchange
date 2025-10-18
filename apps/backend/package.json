@@ -19,7 +19,10 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "prisma:deploy": "prisma migrate deploy",
-    "prisma:reset": "prisma migrate reset"
+    "prisma:reset": "prisma migrate reset",
+    "prisma:seed": "ts-node prisma/seed.ts",
+    "schemas:build": "ts-node ./scripts/zod-to-jsonschema.ts",
+    "postman:build": "ts-node ./scripts/build-postman-collection.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",
@@ -76,7 +79,8 @@
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.3.0"
+    "typescript": "^5.3.0",
+    "zod-to-json-schema": "^3.22.5"
   },
   "jest": {
     "moduleFileExtensions": [
@@ -84,15 +88,15 @@
       "json",
       "ts"
     ],
-    "rootDir": "src",
+    "rootDir": ".",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "src/**/*.(t|j)s"
     ],
-    "coverageDirectory": "../coverage",
+    "coverageDirectory": "coverage",
     "testEnvironment": "node"
   }
 }

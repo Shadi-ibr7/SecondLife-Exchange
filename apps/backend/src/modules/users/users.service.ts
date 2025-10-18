@@ -1,95 +1,101 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { UpdateUserDto } from './users.dto';
-import { User } from '@prisma/client';
+import { UpdateProfileInput } from './dtos/update-profile.dto';
 
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  async findById(id: string): Promise<User | null> {
-    return this.prisma.user.findUnique({
-      where: { id, isActive: true },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        avatar: true,
-        bio: true,
-        location: true,
-        phone: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-  }
-
-  async findByUsername(username: string): Promise<User | null> {
-    return this.prisma.user.findUnique({
-      where: { username, isActive: true },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        avatar: true,
-        bio: true,
-        location: true,
-        phone: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-  }
-
-  async updateProfile(userId: string, updateUserDto: UpdateUserDto): Promise<User> {
+  async getMe(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
+      include: {
+        profile: true,
+      },
     });
 
     if (!user) {
       throw new NotFoundException('Utilisateur non trouvé');
     }
 
-    return this.prisma.user.update({
-      where: { id: userId },
-      data: updateUserDto,
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        avatar: true,
-        bio: true,
-        location: true,
-        phone: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+    return {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      avatarUrl: user.avatarUrl,
+      roles: [user.roles],
+      createdAt: user.createdAt,
+      profile: user.profile,
+    };
+  }
+
+  async updateMe(userId: string, input: UpdateProfileInput) {
+    const { displayName, avatarUrl, bio, location, preferencesJson } = input;
+
+    return this.prisma.$transaction(async (tx) => {
+      // Mettre à jour l'utilisateur
+      const user = await tx.user.update({
+        where: { id: userId },
+        data: {
+          ...(displayName && { displayName }),
+          ...(avatarUrl !== undefined && { avatarUrl }),
+        },
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          avatarUrl: true,
+          roles: true,
+          createdAt: true,
+        },
+      });
+
+      // Mettre à jour le profil
+      await tx.userProfile.upsert({
+        where: { userId },
+        update: {
+          ...(bio !== undefined && { bio }),
+          ...(location !== undefined && { location }),
+          ...(preferencesJson !== undefined && { preferencesJson }),
+        },
+        create: {
+          userId,
+          bio,
+          location,
+          preferencesJson,
+        },
+      });
+
+      // Récupérer le profil mis à jour
+      const profile = await tx.userProfile.findUnique({
+        where: { userId },
+      });
+
+      return {
+        ...user,
+        roles: [user.roles],
+        profile,
+      };
     });
   }
 
-  async getUserStats(userId: string) {
-    const [itemsCount, exchangesInitiated, exchangesReceived] = await Promise.all([
-      this.prisma.item.count({
-        where: { ownerId: userId, isAvailable: true },
-      }),
-      this.prisma.exchange.count({
-        where: { initiatorId: userId },
-      }),
-      this.prisma.exchange.count({
-        where: { receiverId: userId },
-      }),
-    ]);
+  async deleteMe(userId: string) {
+    // Suppression en cascade : RefreshToken + UserProfile + User
+    await this.prisma.$transaction(async (tx) => {
+      // Supprimer les refresh tokens
+      await tx.refreshToken.deleteMany({
+        where: { userId },
+      });
 
-    return {
-      itemsCount,
-      exchangesInitiated,
-      exchangesReceived,
-    };
+      // Supprimer le profil
+      await tx.userProfile.deleteMany({
+        where: { userId },
+      });
+
+      // Supprimer l'utilisateur
+      await tx.user.delete({
+        where: { id: userId },
+      });
+    });
   }
 }

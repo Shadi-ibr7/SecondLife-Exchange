@@ -1,55 +1,48 @@
-import { Controller, Post, Body, UseGuards, Get, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+  UseInterceptors,
+} from '@nestjs/common';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, RefreshTokenDto } from './auth.dto';
-import { JwtAuthGuard } from './jwt-auth.guard';
+import { AuthRegisterDto } from './dtos/auth-register.dto';
+import { AuthLoginDto } from './dtos/auth-login.dto';
+import { JwtRefreshGuard } from '../../common/guards/jwt-refresh.guard';
+import { LoggingInterceptor } from '../../common/interceptors/logging.interceptor';
 
-@ApiTags('Authentication')
 @Controller('auth')
+@UseInterceptors(LoggingInterceptor)
 export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('register')
-  @ApiOperation({ summary: 'Créer un nouveau compte' })
-  @ApiResponse({ status: 201, description: 'Compte créé avec succès' })
-  @ApiResponse({ status: 409, description: 'Email ou nom d\'utilisateur déjà utilisé' })
-  async register(@Body() registerDto: RegisterDto) {
+  @HttpCode(HttpStatus.CREATED)
+  async register(@Body() registerDto: AuthRegisterDto) {
     return this.authService.register(registerDto);
   }
 
   @Post('login')
-  @ApiOperation({ summary: 'Se connecter' })
-  @ApiResponse({ status: 200, description: 'Connexion réussie' })
-  @ApiResponse({ status: 401, description: 'Identifiants incorrects' })
-  async login(@Body() loginDto: LoginDto) {
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  async login(@Body() loginDto: AuthLoginDto) {
     return this.authService.login(loginDto);
   }
 
   @Post('refresh')
-  @ApiOperation({ summary: 'Rafraîchir le token d\'accès' })
-  @ApiResponse({ status: 200, description: 'Token rafraîchi avec succès' })
-  @ApiResponse({ status: 401, description: 'Refresh token invalide' })
-  async refresh(@Body() refreshTokenDto: RefreshTokenDto) {
-    return this.authService.refreshToken(refreshTokenDto.refreshToken);
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtRefreshGuard)
+  async refresh(@Body('refreshToken') refreshToken: string) {
+    return this.authService.refresh(refreshToken);
   }
 
   @Post('logout')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Se déconnecter' })
-  @ApiResponse({ status: 200, description: 'Déconnexion réussie' })
-  async logout(@Body() refreshTokenDto: RefreshTokenDto) {
-    await this.authService.logout(refreshTokenDto.refreshToken);
-    return { message: 'Déconnexion réussie' };
-  }
-
-  @Get('me')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Obtenir les informations du profil connecté' })
-  @ApiResponse({ status: 200, description: 'Informations du profil' })
-  async getProfile(@Request() req) {
-    const { password, ...userWithoutPassword } = req.user;
-    return userWithoutPassword;
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(JwtRefreshGuard)
+  async logout(@Body('refreshToken') refreshToken: string) {
+    await this.authService.logout(refreshToken);
   }
 }

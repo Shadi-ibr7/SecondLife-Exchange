@@ -14,7 +14,11 @@
     "format": "prettier -w .",
     "format:check": "prettier --check .",
     "prepare": "husky install",
-    "postinstall": "echo Postinstall root ok"
+    "postinstall": "echo Postinstall root ok",
+    "test:services": "node scripts/test-services.js",
+    "test:gemini": "node scripts/test-services.js gemini",
+    "test:cloudinary": "node scripts/test-services.js cloudinary",
+    "test:firebase": "node scripts/test-services.js firebase"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
