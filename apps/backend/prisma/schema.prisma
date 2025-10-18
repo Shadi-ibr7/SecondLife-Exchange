@@ -1,0 +1,141 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  firstName String?
+  lastName  String?
+  avatar    String?
+  bio       String?
+  location  String?
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  itemsOwned     Item[]
+  exchangesInitiated Exchange[] @relation("ExchangeInitiator")
+  exchangesReceived Exchange[] @relation("ExchangeReceiver")
+  messages       Message[]
+  refreshTokens  RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model Item {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  category    String
+  condition   String   // "excellent", "good", "fair", "poor"
+  images      String[] // URLs des images
+  tags        String[]
+  isAvailable Boolean  @default(true)
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  owner    User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  exchanges Exchange[]
+
+  @@map("items")
+}
+
+model Exchange {
+  id          String      @id @default(cuid())
+  status      ExchangeStatus @default(PENDING)
+  initiatorId String
+  receiverId  String
+  itemId      String
+  message     String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  completedAt DateTime?
+
+  // Relations
+  initiator User      @relation("ExchangeInitiator", fields: [initiatorId], references: [id])
+  receiver  User      @relation("ExchangeReceiver", fields: [receiverId], references: [id])
+  item      Item      @relation(fields: [itemId], references: [id])
+  messages  Message[]
+
+  @@map("exchanges")
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  content    String
+  senderId   String
+  exchangeId String
+  createdAt  DateTime @default(now())
+
+  // Relations
+  sender   User     @relation(fields: [senderId], references: [id])
+  exchange Exchange @relation(fields: [exchangeId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model WeeklyTheme {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  weekNumber  Int
+  year        Int
+  isActive    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  suggestedItems SuggestedItem[]
+
+  @@unique([weekNumber, year])
+  @@map("weekly_themes")
+}
+
+model SuggestedItem {
+  id           String   @id @default(cuid())
+  title        String
+  description  String
+  category     String
+  reason       String   // Pourquoi cette suggestion
+  themeId      String
+  createdAt    DateTime @default(now())
+
+  // Relations
+  theme WeeklyTheme @relation(fields: [themeId], references: [id], onDelete: Cascade)
+
+  @@map("suggested_items")
+}
+
+enum ExchangeStatus {
+  PENDING
+  ACCEPTED
+  COMPLETED
+  CANCELLED
+}
