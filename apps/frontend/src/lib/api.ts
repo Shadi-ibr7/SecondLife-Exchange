@@ -1,13 +1,24 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { toast } from 'react-hot-toast';
-import { AuthResponse, User, Item, Exchange, WeeklyTheme, PaginatedResponse } from '@/types';
+import {
+  AuthResponse,
+  User,
+  Item,
+  Exchange,
+  WeeklyTheme,
+  PaginatedResponse,
+  LoginDto,
+  RegisterDto,
+  UpdateProfileDto,
+} from '@/types';
 
 class ApiClient {
-  private client: AxiosInstance;
+  public client: AxiosInstance;
 
   constructor() {
     this.client = axios.create({
-      baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1',
+      baseURL:
+        process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1',
       timeout: 10000,
       headers: {
         'Content-Type': 'application/json',
@@ -94,23 +105,17 @@ class ApiClient {
   }
 
   // Auth endpoints
-  async login(email: string, password: string): Promise<AuthResponse> {
-    const response = await this.client.post<AuthResponse>('/auth/login', {
-      email,
-      password,
-    });
+  async login(data: LoginDto): Promise<AuthResponse> {
+    const response = await this.client.post<AuthResponse>('/auth/login', data);
     this.setTokens(response.data.accessToken, response.data.refreshToken);
     return response.data;
   }
 
-  async register(userData: {
-    email: string;
-    username: string;
-    password: string;
-    firstName?: string;
-    lastName?: string;
-  }): Promise<AuthResponse> {
-    const response = await this.client.post<AuthResponse>('/auth/register', userData);
+  async register(data: RegisterDto): Promise<AuthResponse> {
+    const response = await this.client.post<AuthResponse>(
+      '/auth/register',
+      data
+    );
     this.setTokens(response.data.accessToken, response.data.refreshToken);
     return response.data;
   }
@@ -127,16 +132,18 @@ class ApiClient {
     this.clearTokens();
   }
 
-  async refreshToken(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
-    const response = await this.client.post<{ accessToken: string; refreshToken: string }>(
-      '/auth/refresh',
-      { refreshToken }
-    );
+  async refreshToken(
+    refreshToken: string
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    const response = await this.client.post<{
+      accessToken: string;
+      refreshToken: string;
+    }>('/auth/refresh', { refreshToken });
     return response.data;
   }
 
   async getProfile(): Promise<User> {
-    const response = await this.client.get<User>('/auth/me');
+    const response = await this.client.get<User>('/users/me');
     return response.data;
   }
 
@@ -147,7 +154,9 @@ class ApiClient {
     category?: string;
     search?: string;
   }): Promise<PaginatedResponse<Item>> {
-    const response = await this.client.get<PaginatedResponse<Item>>('/items', { params });
+    const response = await this.client.get<PaginatedResponse<Item>>('/items', {
+      params,
+    });
     return response.data;
   }
 
@@ -183,8 +192,14 @@ class ApiClient {
   }
 
   // Exchanges endpoints
-  async getExchanges(params?: { page?: number; limit?: number }): Promise<PaginatedResponse<Exchange>> {
-    const response = await this.client.get<PaginatedResponse<Exchange>>('/exchanges', { params });
+  async getExchanges(params?: {
+    page?: number;
+    limit?: number;
+  }): Promise<PaginatedResponse<Exchange>> {
+    const response = await this.client.get<PaginatedResponse<Exchange>>(
+      '/exchanges',
+      { params }
+    );
     return response.data;
   }
 
@@ -193,13 +208,26 @@ class ApiClient {
     return response.data;
   }
 
-  async createExchange(exchangeData: { itemId: string; message?: string }): Promise<Exchange> {
-    const response = await this.client.post<Exchange>('/exchanges', exchangeData);
+  async createExchange(exchangeData: {
+    itemId: string;
+    message?: string;
+  }): Promise<Exchange> {
+    const response = await this.client.post<Exchange>(
+      '/exchanges',
+      exchangeData
+    );
     return response.data;
   }
 
-  async updateExchange(id: string, status: string, message?: string): Promise<Exchange> {
-    const response = await this.client.patch<Exchange>(`/exchanges/${id}`, { status, message });
+  async updateExchange(
+    id: string,
+    status: string,
+    message?: string
+  ): Promise<Exchange> {
+    const response = await this.client.patch<Exchange>(`/exchanges/${id}`, {
+      status,
+      message,
+    });
     return response.data;
   }
 
@@ -208,8 +236,14 @@ class ApiClient {
   }
 
   // Chat endpoints
-  async getMessages(exchangeId: string, params?: { page?: number; limit?: number }) {
-    const response = await this.client.get(`/chat/exchanges/${exchangeId}/messages`, { params });
+  async getMessages(
+    exchangeId: string,
+    params?: { page?: number; limit?: number }
+  ) {
+    const response = await this.client.get(
+      `/chat/exchanges/${exchangeId}/messages`,
+      { params }
+    );
     return response.data;
   }
 
@@ -225,9 +259,13 @@ class ApiClient {
     return response.data;
   }
 
-  async updateProfile(userData: Partial<User>): Promise<User> {
-    const response = await this.client.put<User>('/users/me', userData);
+  async updateProfile(userData: UpdateProfileDto): Promise<User> {
+    const response = await this.client.patch<User>('/users/me', userData);
     return response.data;
+  }
+
+  async deleteAccount(): Promise<void> {
+    await this.client.delete('/users/me');
   }
 
   async getUserStats() {

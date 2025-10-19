@@ -2,68 +2,187 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { WeeklyTheme, SuggestedItem } from '@/types';
-import apiClient from '@/lib/api';
+import { themesApi } from '@/lib/themes.api';
+import { ActiveTheme } from '@/components/themes/ActiveTheme';
+import { SuggestionsGrid } from '@/components/themes/SuggestionsGrid';
+import { NotificationBanner } from '@/components/notifications/NotificationBanner';
 import { Sparkles, ArrowRight, Calendar } from 'lucide-react';
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
 
 export default function HomePage() {
-  const [theme, setTheme] = useState<WeeklyTheme | null>(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    data: theme,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['activeTheme'],
+    queryFn: () => themesApi.getActiveTheme(),
+  });
 
-  useEffect(() => {
-    const fetchTheme = async () => {
-      try {
-        const currentTheme = await apiClient.getCurrentTheme();
-        setTheme(currentTheme);
-      } catch (error) {
-        console.error('Erreur lors du chargement du thème:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTheme();
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-32 w-32 animate-spin rounded-full border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted">
+        <NotificationBanner />
+
+        {/* Hero Section */}
+        <section className="container mx-auto px-4 py-16">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="mb-16 text-center"
+          >
+            <h1 className="mb-6 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-4xl font-bold text-transparent md:text-6xl">
+              SecondLife Exchange
+            </h1>
+            <p className="mx-auto mb-8 max-w-2xl text-xl text-muted-foreground">
+              Donnez une seconde vie à vos objets et découvrez de nouveaux
+              trésors grâce à notre plateforme d'échange intelligente.
+            </p>
+            <div className="flex flex-col justify-center gap-4 sm:flex-row">
+              <Button asChild size="lg" className="px-8 text-lg">
+                <Link href="/explore">
+                  Explorer les objets
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="px-8 text-lg"
+              >
+                <Link href="/register">Créer un compte</Link>
+              </Button>
+            </div>
+          </motion.div>
+
+          {/* Message d'erreur discret */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="mb-16"
+          >
+            <Card className="border-yellow-200 bg-yellow-50">
+              <CardContent className="p-6 text-center">
+                <p className="text-yellow-800">
+                  ⚠️ Le backend n'est pas encore démarré. Les fonctionnalités
+                  avancées seront disponibles une fois le serveur lancé.
+                </p>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Fonctionnalités clés */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="grid grid-cols-1 gap-8 md:grid-cols-3"
+          >
+            <Card className="text-center">
+              <CardHeader>
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                  <Sparkles className="h-6 w-6 text-primary" />
+                </div>
+                <CardTitle>Suggestions IA</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>
+                  Découvrez des idées d'objets à échanger grâce à notre IA qui
+                  génère des suggestions hebdomadaires personnalisées.
+                </CardDescription>
+              </CardContent>
+            </Card>
+
+            <Card className="text-center">
+              <CardHeader>
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                  <ArrowRight className="h-6 w-6 text-primary" />
+                </div>
+                <CardTitle>Échanges Faciles</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>
+                  Chat en temps réel, suivi des échanges et système de notation
+                  pour des échanges en toute confiance.
+                </CardDescription>
+              </CardContent>
+            </Card>
+
+            <Card className="text-center">
+              <CardHeader>
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                  <Calendar className="h-6 w-6 text-primary" />
+                </div>
+                <CardTitle>Thèmes Hebdomadaires</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>
+                  Chaque semaine, un nouveau thème inspirant pour vous
+                  encourager à échanger des objets spécifiques.
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </section>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted">
+      <NotificationBanner />
+
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-16">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-16"
+          className="mb-16 text-center"
         >
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+          <h1 className="mb-6 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-4xl font-bold text-transparent md:text-6xl">
             SecondLife Exchange
           </h1>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Donnez une seconde vie à vos objets et découvrez de nouveaux trésors grâce à notre plateforme d'échange intelligente.
+          <p className="mx-auto mb-8 max-w-2xl text-xl text-muted-foreground">
+            Donnez une seconde vie à vos objets et découvrez de nouveaux trésors
+            grâce à notre plateforme d'échange intelligente.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild size="lg" className="text-lg px-8">
+          <div className="flex flex-col justify-center gap-4 sm:flex-row">
+            <Button asChild size="lg" className="px-8 text-lg">
               <Link href="/explore">
                 Explorer les objets
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="text-lg px-8">
-              <Link href="/register">
-                Créer un compte
-              </Link>
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className="px-8 text-lg"
+            >
+              <Link href="/register">Créer un compte</Link>
             </Button>
           </div>
         </motion.div>
@@ -76,59 +195,24 @@ export default function HomePage() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="mb-16"
           >
-            <Card className="border-2 border-primary/20 shadow-xl">
-              <CardHeader className="text-center pb-4">
-                <div className="flex items-center justify-center gap-2 mb-4">
-                  <Sparkles className="h-6 w-6 text-primary" />
-                  <Badge variant="secondary" className="text-sm">
-                    <Calendar className="h-4 w-4 mr-1" />
-                    Semaine {theme.weekNumber} - {theme.year}
-                  </Badge>
+            <ActiveTheme theme={theme} />
+
+            <div className="mt-8">
+              <SuggestionsGrid
+                suggestions={theme.suggestions.slice(0, 6)}
+                title="Suggestions du thème"
+              />
+
+              {theme.suggestions.length > 6 && (
+                <div className="mt-6 text-center">
+                  <Button variant="outline" asChild>
+                    <Link href="/themes">
+                      Voir toutes les suggestions ({theme.suggestions.length})
+                    </Link>
+                  </Button>
                 </div>
-                <CardTitle className="text-3xl mb-2">{theme.title}</CardTitle>
-                <CardDescription className="text-lg">
-                  {theme.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {theme.suggestedItems.slice(0, 6).map((item, index) => (
-                    <motion.div
-                      key={item.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.4, delay: 0.3 + index * 0.1 }}
-                    >
-                      <Card className="h-full hover:shadow-md transition-shadow">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-lg">{item.title}</CardTitle>
-                          <Badge variant="outline" className="w-fit">
-                            {item.category}
-                          </Badge>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-sm text-muted-foreground mb-2">
-                            {item.description}
-                          </p>
-                          <p className="text-xs text-primary font-medium">
-                            💡 {item.reason}
-                          </p>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
-                </div>
-                {theme.suggestedItems.length > 6 && (
-                  <div className="text-center mt-6">
-                    <Button variant="outline" asChild>
-                      <Link href="/explore">
-                        Voir toutes les suggestions ({theme.suggestedItems.length})
-                      </Link>
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+              )}
+            </div>
           </motion.div>
         )}
 
@@ -137,46 +221,49 @@ export default function HomePage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-8"
+          className="grid grid-cols-1 gap-8 md:grid-cols-3"
         >
           <Card className="text-center">
             <CardHeader>
-              <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
                 <Sparkles className="h-6 w-6 text-primary" />
               </div>
               <CardTitle>Suggestions IA</CardTitle>
             </CardHeader>
             <CardContent>
               <CardDescription>
-                Découvrez des idées d'objets à échanger grâce à notre IA qui génère des suggestions hebdomadaires personnalisées.
+                Découvrez des idées d'objets à échanger grâce à notre IA qui
+                génère des suggestions hebdomadaires personnalisées.
               </CardDescription>
             </CardContent>
           </Card>
 
           <Card className="text-center">
             <CardHeader>
-              <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
                 <ArrowRight className="h-6 w-6 text-primary" />
               </div>
               <CardTitle>Échanges Sécurisés</CardTitle>
             </CardHeader>
             <CardContent>
               <CardDescription>
-                Chat en temps réel, suivi des échanges et système de notation pour des échanges en toute confiance.
+                Chat en temps réel, suivi des échanges et système de notation
+                pour des échanges en toute confiance.
               </CardDescription>
             </CardContent>
           </Card>
 
           <Card className="text-center">
             <CardHeader>
-              <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
                 <Calendar className="h-6 w-6 text-primary" />
               </div>
               <CardTitle>Thèmes Hebdomadaires</CardTitle>
             </CardHeader>
             <CardContent>
               <CardDescription>
-                Chaque semaine, un nouveau thème inspirant pour vous encourager à échanger des objets spécifiques.
+                Chaque semaine, un nouveau thème inspirant pour vous encourager
+                à échanger des objets spécifiques.
               </CardDescription>
             </CardContent>
           </Card>

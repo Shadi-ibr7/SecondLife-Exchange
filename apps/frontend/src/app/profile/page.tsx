@@ -3,37 +3,89 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { User } from '@/types';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { User, UpdateProfileDto } from '@/types';
 import { useAuthStore } from '@/store/auth';
 import { toast } from 'react-hot-toast';
-import { User as UserIcon, Mail, MapPin, Phone, Edit3, LogOut } from 'lucide-react';
-import { getInitials, getDisplayName } from '@/lib/utils';
+import {
+  User as UserIcon,
+  Mail,
+  MapPin,
+  Edit3,
+  LogOut,
+  Trash2,
+} from 'lucide-react';
+import ProtectedRoute from '../(auth)/protected';
 
-export default function ProfilePage() {
-  const { user, updateProfile, logout, isAuthenticated } = useAuthStore();
+const profileSchema = z.object({
+  displayName: z
+    .string()
+    .min(3, "Le nom d'affichage doit contenir au moins 3 caractères"),
+  bio: z.string().optional(),
+  location: z.string().optional(),
+  avatarUrl: z.string().url('URL invalide').optional().or(z.literal('')),
+});
+
+type ProfileForm = z.infer<typeof profileSchema>;
+
+function ProfilePageContent() {
+  const { user, updateProfile, logout, deleteAccount, isLoading } =
+    useAuthStore();
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    firstName: user?.firstName || '',
-    lastName: user?.lastName || '',
-    bio: user?.bio || '',
-    location: user?.location || '',
-    phone: user?.phone || '',
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<ProfileForm>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      displayName: user?.displayName || '',
+      bio: user?.bio || '',
+      location: user?.location || '',
+      avatarUrl: user?.avatarUrl || '',
+    },
   });
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
+    if (user) {
+      reset({
+        displayName: user.displayName || '',
+        bio: user.bio || '',
+        location: user.location || '',
+        avatarUrl: user.avatarUrl || '',
+      });
     }
-  }, [isAuthenticated, router]);
+  }, [user, reset]);
 
-  const handleSave = async () => {
+  const onSubmit = async (data: ProfileForm) => {
     try {
-      await updateProfile(formData);
+      await updateProfile(data);
       toast.success('Profil mis à jour avec succès !');
       setIsEditing(false);
     } catch (error) {
@@ -51,12 +103,18 @@ export default function ProfilePage() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    try {
+      await deleteAccount();
+      toast.success('Compte supprimé avec succès');
+      router.push('/');
+    } catch (error) {
+      toast.error('Erreur lors de la suppression du compte');
+    }
+  };
+
   if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -71,19 +129,23 @@ export default function ProfilePage() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold mb-2">Mon Profil</h1>
+              <h1 className="mb-2 text-3xl font-bold">Mon Profil</h1>
               <p className="text-muted-foreground">
                 Gérez vos informations personnelles et vos préférences
               </p>
             </div>
-            <Button onClick={handleLogout} variant="outline" className="flex items-center gap-2">
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
               <LogOut className="h-4 w-4" />
               Déconnexion
             </Button>
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           {/* Profil principal */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -109,131 +171,150 @@ export default function ProfilePage() {
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Avatar et nom */}
-                <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold">
-                    {user.avatar ? (
-                      <img
-                        src={user.avatar}
-                        alt="Avatar"
-                        className="w-full h-full rounded-full object-cover"
-                      />
-                    ) : (
-                      getInitials(user.firstName, user.lastName, user.username)
-                    )}
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-semibold">
-                      {getDisplayName(user)}
-                    </h2>
-                    <p className="text-muted-foreground">@{user.username}</p>
-                    <Badge variant="secondary" className="mt-1">
-                      Membre depuis {new Date(user.createdAt).getFullYear()}
-                    </Badge>
-                  </div>
-                </div>
-
-                {/* Informations */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Email</label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span>{user.email}</span>
+              <CardContent>
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                  {/* Avatar et nom */}
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-2xl font-bold">
+                      {user.avatarUrl ? (
+                        <img
+                          src={user.avatarUrl}
+                          alt="Avatar"
+                          className="h-full w-full rounded-full object-cover"
+                        />
+                      ) : (
+                        <UserIcon className="h-8 w-8" />
+                      )}
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-semibold">
+                        {user.displayName}
+                      </h2>
+                      <p className="text-muted-foreground">{user.email}</p>
+                      <Badge variant="secondary" className="mt-1">
+                        Membre depuis {new Date(user.createdAt).getFullYear()}
+                      </Badge>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Localisation</label>
-                    {isEditing ? (
-                      <div className="flex items-center gap-2 mt-1">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                  {/* Informations */}
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Email
+                      </label>
+                      <div className="mt-1 flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span>{user.email}</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Localisation
+                      </label>
+                      {isEditing ? (
+                        <div className="mt-1 flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <Input
+                            {...register('location')}
+                            placeholder="Votre localisation"
+                          />
+                        </div>
+                      ) : (
+                        <div className="mt-1 flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span>{user.location || 'Non précisée'}</span>
+                        </div>
+                      )}
+                      {errors.location && (
+                        <p className="mt-1 text-sm text-destructive">
+                          {errors.location.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Nom d'affichage
+                      </label>
+                      {isEditing ? (
                         <Input
-                          value={formData.location}
-                          onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                          placeholder="Votre localisation"
+                          {...register('displayName')}
+                          placeholder="Votre nom d'affichage"
+                          className="mt-1"
                         />
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 mt-1">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span>{user.location || 'Non précisée'}</span>
-                      </div>
-                    )}
+                      ) : (
+                        <span className="mt-1 block">{user.displayName}</span>
+                      )}
+                      {errors.displayName && (
+                        <p className="mt-1 text-sm text-destructive">
+                          {errors.displayName.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="text-sm font-medium text-muted-foreground">
+                        URL de l'avatar
+                      </label>
+                      {isEditing ? (
+                        <Input
+                          {...register('avatarUrl')}
+                          placeholder="https://example.com/avatar.jpg"
+                          className="mt-1"
+                        />
+                      ) : (
+                        <span className="mt-1 block">
+                          {user.avatarUrl || 'Aucune URL'}
+                        </span>
+                      )}
+                      {errors.avatarUrl && (
+                        <p className="mt-1 text-sm text-destructive">
+                          {errors.avatarUrl.message}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
+                  {/* Bio */}
                   <div>
-                    <label className="text-sm font-medium text-muted-foreground">Prénom</label>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Biographie
+                    </label>
                     {isEditing ? (
-                      <Input
-                        value={formData.firstName}
-                        onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                        placeholder="Votre prénom"
+                      <textarea
+                        {...register('bio')}
+                        placeholder="Parlez-nous de vous..."
+                        className="mt-1 min-h-[100px] w-full resize-none rounded-md border border-input bg-background p-3 text-sm"
                       />
                     ) : (
-                      <span>{user.firstName || 'Non renseigné'}</span>
+                      <p className="mt-1 text-sm">
+                        {user.bio || 'Aucune biographie renseignée'}
+                      </p>
+                    )}
+                    {errors.bio && (
+                      <p className="mt-1 text-sm text-destructive">
+                        {errors.bio.message}
+                      </p>
                     )}
                   </div>
 
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Nom</label>
-                    {isEditing ? (
-                      <Input
-                        value={formData.lastName}
-                        onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                        placeholder="Votre nom"
-                      />
-                    ) : (
-                      <span>{user.lastName || 'Non renseigné'}</span>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Téléphone</label>
-                    {isEditing ? (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <Input
-                          value={formData.phone}
-                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                          placeholder="Votre numéro de téléphone"
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span>{user.phone || 'Non renseigné'}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Bio */}
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">Biographie</label>
-                  {isEditing ? (
-                    <textarea
-                      value={formData.bio}
-                      onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                      placeholder="Parlez-nous de vous..."
-                      className="w-full mt-1 p-3 border border-input bg-background rounded-md text-sm min-h-[100px] resize-none"
-                    />
-                  ) : (
-                    <p className="mt-1 text-sm">
-                      {user.bio || 'Aucune biographie renseignée'}
-                    </p>
+                  {isEditing && (
+                    <div className="flex gap-2">
+                      <Button type="submit" disabled={isLoading}>
+                        {isLoading ? 'Sauvegarde...' : 'Sauvegarder'}
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => setIsEditing(false)}
+                        variant="outline"
+                      >
+                        Annuler
+                      </Button>
+                    </div>
                   )}
-                </div>
-
-                {isEditing && (
-                  <div className="flex gap-2">
-                    <Button onClick={handleSave}>Sauvegarder</Button>
-                    <Button onClick={() => setIsEditing(false)} variant="outline">
-                      Annuler
-                    </Button>
-                  </div>
-                )}
+                </form>
               </CardContent>
             </Card>
           </motion.div>
@@ -251,15 +332,21 @@ export default function ProfilePage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Objets publiés</span>
+                  <span className="text-sm text-muted-foreground">
+                    Objets publiés
+                  </span>
                   <Badge variant="secondary">0</Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Échanges initiés</span>
+                  <span className="text-sm text-muted-foreground">
+                    Échanges initiés
+                  </span>
                   <Badge variant="secondary">0</Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Échanges reçus</span>
+                  <span className="text-sm text-muted-foreground">
+                    Échanges reçus
+                  </span>
                   <Badge variant="secondary">0</Badge>
                 </div>
               </CardContent>
@@ -278,9 +365,59 @@ export default function ProfilePage() {
                 </Button>
               </CardContent>
             </Card>
+
+            <Card className="border-destructive">
+              <CardHeader>
+                <CardTitle className="text-destructive">
+                  Zone de danger
+                </CardTitle>
+                <CardDescription>
+                  Actions irréversibles sur votre compte
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="w-full">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Supprimer mon compte
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        Êtes-vous absolument sûr ?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Cette action ne peut pas être annulée. Cela supprimera
+                        définitivement votre compte et toutes les données
+                        associées de nos serveurs.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Annuler</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDeleteAccount}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Supprimer définitivement
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </CardContent>
+            </Card>
           </motion.div>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <ProtectedRoute>
+      <ProfilePageContent />
+    </ProtectedRoute>
   );
 }

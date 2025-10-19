@@ -1,14 +1,20 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'react-hot-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/store/auth';
@@ -16,15 +22,18 @@ import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email('Email invalide'),
-  password: z.string().min(6, 'Le mot de passe doit contenir au moins 6 caractères'),
+  password: z
+    .string()
+    .min(10, 'Le mot de passe doit contenir au moins 10 caractères'),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
+function LoginPageContent() {
   const [showPassword, setShowPassword] = useState(false);
   const { login, isLoading } = useAuthStore();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const {
     register,
@@ -36,16 +45,17 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginForm) => {
     try {
-      await login(data.email, data.password);
+      await login(data);
       toast.success('Connexion réussie !');
-      router.push('/');
+      const next = searchParams.get('next') || '/';
+      router.push(next);
     } catch (error) {
       toast.error('Email ou mot de passe incorrect');
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -76,7 +86,9 @@ export default function LoginPage() {
                   />
                 </div>
                 {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email.message}</p>
+                  <p className="text-sm text-destructive">
+                    {errors.email.message}
+                  </p>
                 )}
               </div>
 
@@ -102,7 +114,9 @@ export default function LoginPage() {
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="text-sm text-destructive">{errors.password.message}</p>
+                  <p className="text-sm text-destructive">
+                    {errors.password.message}
+                  </p>
                 )}
               </div>
 
@@ -123,5 +137,19 @@ export default function LoginPage() {
         </Card>
       </motion.div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="h-32 w-32 animate-spin rounded-full border-b-2 border-primary"></div>
+        </div>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
   );
 }

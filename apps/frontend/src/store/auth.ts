@@ -1,23 +1,18 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { User } from '@/types';
+import { User, LoginDto, RegisterDto, UpdateProfileDto } from '@/types';
 import apiClient from '@/lib/api';
 
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (userData: {
-    email: string;
-    username: string;
-    password: string;
-    firstName?: string;
-    lastName?: string;
-  }) => Promise<void>;
+  login: (data: LoginDto) => Promise<void>;
+  register: (data: RegisterDto) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
-  updateProfile: (userData: Partial<User>) => Promise<void>;
+  updateProfile: (userData: UpdateProfileDto) => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -27,10 +22,10 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: false,
 
-      login: async (email: string, password: string) => {
+      login: async (data: LoginDto) => {
         set({ isLoading: true });
         try {
-          const response = await apiClient.login(email, password);
+          const response = await apiClient.login(data);
           set({
             user: response.user,
             isAuthenticated: true,
@@ -42,10 +37,10 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      register: async (userData) => {
+      register: async (data: RegisterDto) => {
         set({ isLoading: true });
         try {
-          const response = await apiClient.register(userData);
+          const response = await apiClient.register(data);
           set({
             user: response.user,
             isAuthenticated: true,
@@ -96,12 +91,27 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      updateProfile: async (userData) => {
+      updateProfile: async (userData: UpdateProfileDto) => {
         set({ isLoading: true });
         try {
           const updatedUser = await apiClient.updateProfile(userData);
           set({
             user: updatedUser,
+            isLoading: false,
+          });
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
+        }
+      },
+
+      deleteAccount: async () => {
+        set({ isLoading: true });
+        try {
+          await apiClient.deleteAccount();
+          set({
+            user: null,
+            isAuthenticated: false,
             isLoading: false,
           });
         } catch (error) {

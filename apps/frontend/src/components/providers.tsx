@@ -1,8 +1,19 @@
 'use client';
 
 import { useEffect } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/auth';
 import { useThemeStore } from '@/store/theme';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const { checkAuth } = useAuthStore();
@@ -15,9 +26,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
     // Handle theme changes
     const handleThemeChange = () => {
       if (theme === 'system') {
-        const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
+          .matches
+          ? 'dark'
+          : 'light';
         setResolvedTheme(systemTheme);
-        document.documentElement.classList.toggle('dark', systemTheme === 'dark');
+        document.documentElement.classList.toggle(
+          'dark',
+          systemTheme === 'dark'
+        );
       }
     };
 
@@ -33,5 +50,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     };
   }, [checkAuth, theme, setResolvedTheme]);
 
-  return <>{children}</>;
+  return (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
 }
