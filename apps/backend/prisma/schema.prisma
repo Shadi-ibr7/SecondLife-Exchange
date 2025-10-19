@@ -23,6 +23,34 @@ enum ExchangeStatus {
   CANCELLED
 }
 
+enum ItemCondition {
+  NEW
+  GOOD
+  FAIR
+  TO_REPAIR
+}
+
+enum ItemStatus {
+  AVAILABLE
+  PENDING
+  TRADED
+  ARCHIVED
+}
+
+enum ItemCategory {
+  CLOTHING
+  ELECTRONICS
+  BOOKS
+  HOME
+  TOOLS
+  TOYS
+  SPORTS
+  ART
+  VINTAGE
+  HANDCRAFT
+  OTHER
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -37,6 +65,7 @@ model User {
   refreshTokens RefreshToken[]
   exchangesRequested Exchange[] @relation("ExchangeRequester")
   exchangesResponded Exchange[] @relation("ExchangeResponder")
+  items        Item[]
 
   @@map("users")
   @@index([email])
@@ -91,4 +120,86 @@ model Exchange {
   @@index([responderId])
   @@index([status])
   @@index([createdAt])
+}
+
+model Item {
+  id              String        @id @default(cuid())
+  ownerId         String
+  owner           User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  title           String
+  description     String
+  category        ItemCategory
+  condition       ItemCondition
+  status          ItemStatus    @default(AVAILABLE)
+  photos          ItemPhoto[]
+  tags            String[]
+  aiSummary       String?       // résumé concis proposé par l'IA
+  aiRepairTip     String?       // conseil réparation basique
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("items")
+  @@index([ownerId])
+  @@index([category, condition, status])
+}
+
+model ItemPhoto {
+  id        String   @id @default(cuid())
+  itemId    String
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  url       String   // URL publique (CDN Cloudinary)
+  publicId  String   // identifiant Cloudinary pour suppression
+  width     Int?
+  height    Int?
+  createdAt DateTime @default(now())
+
+  @@map("item_photos")
+  @@index([itemId])
+}
+
+model WeeklyTheme {
+  id          String      @id @default(cuid())
+  title       String
+  slug        String      @unique
+  startOfWeek DateTime    // Lundi 00:00:00 local (ou UTC) du thème
+  impactText  String?     // Texte sur l'impact écologique du thème (exigence sujet)
+  isActive    Boolean     @default(false)
+  suggestions SuggestedItem[]
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("weekly_themes")
+  @@index([startOfWeek])
+  @@index([isActive])
+}
+
+model SuggestedItem {
+  id              String   @id @default(cuid())
+  themeId         String
+  theme           WeeklyTheme @relation(fields: [themeId], references: [id], onDelete: Cascade)
+
+  // Champs issus de l'IA Gemini
+  name            String
+  category        String
+  country         String
+  era             String?
+  materials       String?
+  ecoReason       String?
+  repairDifficulty String?   // "faible|moyenne|elevee"
+  popularity      Int?       // 1..5
+  tags            String[]
+  photoRef        String?
+
+  // Traces & contrôle qualité
+  aiModel         String?
+  aiPromptHash    String?
+  aiRaw           Json?
+
+  createdAt       DateTime @default(now())
+
+  @@map("suggested_items")
+  @@index([themeId, country])
+  @@index([category])
+  @@index([name])
 }

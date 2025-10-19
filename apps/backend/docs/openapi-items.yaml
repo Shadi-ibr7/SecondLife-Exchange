@@ -1,0 +1,896 @@
+openapi: 3.0.3
+info:
+  title: SecondLife Exchange - Items API
+  description: |
+    API pour la gestion des objets d'échange dans SecondLife Exchange.
+
+    ## Fonctionnalités principales
+    - Création et gestion d'objets avec analyse IA automatique
+    - Upload sécurisé d'images via Cloudinary
+    - Recherche et filtrage avancés
+    - Gestion des catégories et états
+
+    ## Authentification
+    La plupart des endpoints nécessitent une authentification JWT.
+    Incluez le token dans l'en-tête `Authorization: Bearer <token>`.
+
+    ## Analyse IA
+    L'analyse IA automatique utilise Google Gemini pour :
+    - Auto-catégorisation des objets
+    - Génération de tags pertinents
+    - Résumé concis de l'objet
+    - Conseils de réparation basiques
+  version: 1.0.0
+  contact:
+    name: SecondLife Exchange API
+    email: support@secondlife-exchange.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:4000/api/v1
+    description: Serveur de développement
+  - url: https://api.secondlife-exchange.com/api/v1
+    description: Serveur de production
+
+tags:
+  - name: Items
+    description: Gestion des objets d'échange
+  - name: Uploads
+    description: Gestion des uploads d'images
+
+paths:
+  /items:
+    get:
+      tags:
+        - Items
+      summary: Lister les objets
+      description: |
+        Récupère une liste paginée d'objets avec filtres et recherche.
+
+        ## Filtres disponibles
+        - **category** : Filtrer par catégorie
+        - **condition** : Filtrer par état
+        - **status** : Filtrer par statut
+        - **ownerId** : Filtrer par propriétaire
+        - **q** : Recherche textuelle sur titre et description
+
+        ## Tri
+        Utilisez le paramètre `sort` avec :
+        - `-createdAt` : Plus récent en premier (défaut)
+        - `createdAt` : Plus ancien en premier
+        - `-title` : Tri alphabétique descendant
+        - `title` : Tri alphabétique ascendant
+      parameters:
+        - name: page
+          in: query
+          description: Numéro de page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Nombre d'éléments par page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - name: q
+          in: query
+          description: Mot-clé de recherche
+          required: false
+          schema:
+            type: string
+            example: "vintage"
+        - name: category
+          in: query
+          description: Filtrer par catégorie
+          required: false
+          schema:
+            $ref: '#/components/schemas/ItemCategory'
+        - name: condition
+          in: query
+          description: Filtrer par état
+          required: false
+          schema:
+            $ref: '#/components/schemas/ItemCondition'
+        - name: status
+          in: query
+          description: Filtrer par statut
+          required: false
+          schema:
+            $ref: '#/components/schemas/ItemStatus'
+        - name: ownerId
+          in: query
+          description: Filtrer par propriétaire
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: sort
+          in: query
+          description: Tri des résultats
+          required: false
+          schema:
+            type: string
+            default: "-createdAt"
+            example: "-createdAt"
+      responses:
+        '200':
+          description: Liste des objets récupérée avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedItems'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags:
+        - Items
+      summary: Créer un objet
+      description: |
+        Crée un nouvel objet d'échange.
+
+        ## Analyse IA automatique
+        Activez `aiAuto: true` pour que l'IA analyse automatiquement :
+        - La catégorie appropriée
+        - Des tags pertinents
+        - Un résumé concis
+        - Des conseils de réparation
+
+        Si l'analyse IA échoue, l'objet sera créé avec la catégorie `OTHER`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateItemDto'
+            examples:
+              basic:
+                summary: Création basique
+                value:
+                  title: "iPhone 12 Pro Max"
+                  description: "iPhone 12 Pro Max en excellent état, 128GB, couleur bleu pacifique. Quelques micro-rayures sur l'écran mais fonctionne parfaitement."
+                  category: "ELECTRONICS"
+                  condition: "GOOD"
+                  tags: ["smartphone", "apple", "5g"]
+              with_ai:
+                summary: Avec analyse IA
+                value:
+                  title: "Livre vintage de cuisine française"
+                  description: "Ancien livre de recettes de cuisine française des années 1970, en bon état général avec quelques pages jaunies."
+                  condition: "FAIR"
+                  aiAuto: true
+      responses:
+        '201':
+          description: Objet créé avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemWithPhotos'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /items/{id}:
+    get:
+      tags:
+        - Items
+      summary: Récupérer un objet par ID
+      description: Récupère les détails complets d'un objet par son identifiant.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identifiant de l'objet
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Détails de l'objet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemWithPhotos'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags:
+        - Items
+      summary: Mettre à jour un objet
+      description: |
+        Met à jour un objet existant. Seul le propriétaire peut modifier ses objets.
+
+        ## Analyse IA
+        Si `aiAuto: true` est fourni, l'IA réanalysera l'objet avec les nouvelles données.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identifiant de l'objet
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateItemDto'
+      responses:
+        '200':
+          description: Objet mis à jour avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemWithPhotos'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Items
+      summary: Supprimer un objet
+      description: Supprime un objet. Seul le propriétaire peut supprimer ses objets.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identifiant de l'objet
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Objet supprimé avec succès
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /items/{id}/status:
+    patch:
+      tags:
+        - Items
+      summary: Mettre à jour le statut d'un objet
+      description: Met à jour le statut d'un objet (disponible, en attente, échangé, archivé).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identifiant de l'objet
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  $ref: '#/components/schemas/ItemStatus'
+      responses:
+        '200':
+          description: Statut mis à jour avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemWithPhotos'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /items/user/me:
+    get:
+      tags:
+        - Items
+      summary: Récupérer mes objets
+      description: Récupère tous les objets de l'utilisateur connecté.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Numéro de page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Nombre d'éléments par page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - name: q
+          in: query
+          description: Mot-clé de recherche
+          required: false
+          schema:
+            type: string
+        - name: category
+          in: query
+          description: Filtrer par catégorie
+          required: false
+          schema:
+            $ref: '#/components/schemas/ItemCategory'
+        - name: condition
+          in: query
+          description: Filtrer par état
+          required: false
+          schema:
+            $ref: '#/components/schemas/ItemCondition'
+        - name: status
+          in: query
+          description: Filtrer par statut
+          required: false
+          schema:
+            $ref: '#/components/schemas/ItemStatus'
+        - name: sort
+          in: query
+          description: Tri des résultats
+          required: false
+          schema:
+            type: string
+            default: "-createdAt"
+      responses:
+        '200':
+          description: Liste des objets de l'utilisateur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedItems'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /items/uploads/signature:
+    post:
+      tags:
+        - Uploads
+      summary: Générer une signature d'upload
+      description: |
+        Génère une signature sécurisée pour l'upload direct d'images vers Cloudinary.
+
+        ## Processus d'upload
+        1. Appelez cet endpoint pour obtenir la signature
+        2. Utilisez la signature pour uploader directement vers Cloudinary
+        3. Appelez `POST /items/{id}/photos` pour attacher l'image à l'objet
+
+        ## Sécurité
+        - Signature valide 5 minutes
+        - Formats autorisés : jpg, jpeg, png, webp
+        - Taille maximale : 3MB par défaut
+        - Transformation automatique (webp, resize)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - folder
+              properties:
+                folder:
+                  type: string
+                  description: Dossier de destination (ex: "items/item-id")
+                  example: "items/cmgwmo0y60007gb51gxyqqyet"
+                maxBytes:
+                  type: integer
+                  description: Taille maximale en bytes
+                  default: 3000000
+                  example: 3000000
+      responses:
+        '200':
+          description: Signature générée avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignedUploadParams'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /items/{id}/photos:
+    post:
+      tags:
+        - Uploads
+      summary: Attacher une photo à un objet
+      description: |
+        Attache une photo déjà uploadée vers Cloudinary à un objet.
+
+        ## Processus
+        1. Upload de l'image vers Cloudinary avec la signature
+        2. Appel de cet endpoint avec les métadonnées de l'image
+        3. L'image est attachée à l'objet
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identifiant de l'objet
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttachPhotoDto'
+      responses:
+        '201':
+          description: Photo attachée avec succès
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /items/photos/{photoId}:
+    delete:
+      tags:
+        - Uploads
+      summary: Supprimer une photo
+      description: Supprime une photo d'un objet. Seul le propriétaire peut supprimer les photos.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: photoId
+          in: path
+          required: true
+          description: Identifiant de la photo
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Photo supprimée avec succès
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Token JWT obtenu via l'endpoint d'authentification.
+        Format : `Bearer <token>`
+
+  schemas:
+    ItemCategory:
+      type: string
+      enum:
+        - CLOTHING
+        - ELECTRONICS
+        - BOOKS
+        - HOME
+        - TOOLS
+        - TOYS
+        - SPORTS
+        - ART
+        - VINTAGE
+        - HANDCRAFT
+        - OTHER
+      description: |
+        Catégories d'objets disponibles :
+        - **CLOTHING** : Vêtements et accessoires
+        - **ELECTRONICS** : Électronique et informatique
+        - **BOOKS** : Livres et documents
+        - **HOME** : Maison et décoration
+        - **TOOLS** : Outils et bricolage
+        - **TOYS** : Jouets et jeux
+        - **SPORTS** : Sport et loisirs
+        - **ART** : Art et artisanat
+        - **VINTAGE** : Objets vintage et collection
+        - **HANDCRAFT** : Artisanat et fait main
+        - **OTHER** : Autres catégories
+
+    ItemCondition:
+      type: string
+      enum:
+        - NEW
+        - GOOD
+        - FAIR
+        - TO_REPAIR
+      description: |
+        États des objets :
+        - **NEW** : Neuf, jamais utilisé
+        - **GOOD** : Bon état, utilisation normale
+        - **FAIR** : État correct, quelques signes d'usage
+        - **TO_REPAIR** : Nécessite des réparations
+
+    ItemStatus:
+      type: string
+      enum:
+        - AVAILABLE
+        - PENDING
+        - TRADED
+        - ARCHIVED
+      description: |
+        Statuts des objets :
+        - **AVAILABLE** : Disponible pour échange
+        - **PENDING** : Échange en cours
+        - **TRADED** : Échangé
+        - **ARCHIVED** : Archivé
+
+    CreateItemDto:
+      type: object
+      required:
+        - title
+        - description
+        - condition
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 120
+          description: Titre de l'objet
+          example: "iPhone 12 Pro Max"
+        description:
+          type: string
+          minLength: 10
+          maxLength: 2000
+          description: Description détaillée de l'objet
+          example: "iPhone 12 Pro Max en excellent état, 128GB, couleur bleu pacifique. Quelques micro-rayures sur l'écran mais fonctionne parfaitement."
+        category:
+          $ref: '#/components/schemas/ItemCategory'
+          description: Catégorie de l'objet (optionnel si aiAuto=true)
+        condition:
+          $ref: '#/components/schemas/ItemCondition'
+          description: État de l'objet
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 10
+          description: Tags pour faciliter la recherche
+          example: ["smartphone", "apple", "5g", "caméra"]
+        aiAuto:
+          type: boolean
+          default: false
+          description: Activer l'analyse automatique par IA pour catégorisation et tags
+          example: true
+
+    UpdateItemDto:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 3
+          maxLength: 120
+          description: Titre de l'objet
+        description:
+          type: string
+          minLength: 10
+          maxLength: 2000
+          description: Description détaillée de l'objet
+        category:
+          $ref: '#/components/schemas/ItemCategory'
+          description: Catégorie de l'objet
+        condition:
+          $ref: '#/components/schemas/ItemCondition'
+          description: État de l'objet
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 10
+          description: Tags pour faciliter la recherche
+        aiAuto:
+          type: boolean
+          description: Activer l'analyse automatique par IA
+
+    ItemPhoto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identifiant de la photo
+        url:
+          type: string
+          format: uri
+          description: URL publique de la photo
+        width:
+          type: integer
+          description: Largeur de la photo en pixels
+        height:
+          type: integer
+          description: Hauteur de la photo en pixels
+        createdAt:
+          type: string
+          format: date-time
+          description: Date de création
+
+    ItemOwner:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identifiant de l'utilisateur
+        displayName:
+          type: string
+          description: Nom d'affichage
+        avatarUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: URL de l'avatar
+
+    ItemWithPhotos:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identifiant de l'objet
+        ownerId:
+          type: string
+          format: uuid
+          description: Identifiant du propriétaire
+        title:
+          type: string
+          description: Titre de l'objet
+        description:
+          type: string
+          description: Description de l'objet
+        category:
+          $ref: '#/components/schemas/ItemCategory'
+        condition:
+          $ref: '#/components/schemas/ItemCondition'
+        status:
+          $ref: '#/components/schemas/ItemStatus'
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags de l'objet
+        aiSummary:
+          type: string
+          nullable: true
+          description: Résumé généré par l'IA
+        aiRepairTip:
+          type: string
+          nullable: true
+          description: Conseil de réparation généré par l'IA
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemPhoto'
+          description: Photos de l'objet
+        owner:
+          $ref: '#/components/schemas/ItemOwner'
+        createdAt:
+          type: string
+          format: date-time
+          description: Date de création
+        updatedAt:
+          type: string
+          format: date-time
+          description: Date de dernière modification
+
+    PaginatedItems:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemWithPhotos'
+          description: Liste des objets
+        total:
+          type: integer
+          description: Nombre total d'objets
+        page:
+          type: integer
+          description: Page actuelle
+        limit:
+          type: integer
+          description: Nombre d'éléments par page
+        totalPages:
+          type: integer
+          description: Nombre total de pages
+
+    SignedUploadParams:
+      type: object
+      properties:
+        signature:
+          type: string
+          description: Signature de sécurité
+        timestamp:
+          type: integer
+          description: Timestamp de la signature
+        folder:
+          type: string
+          description: Dossier de destination
+        public_id:
+          type: string
+          description: Identifiant public Cloudinary
+        allowed_formats:
+          type: array
+          items:
+            type: string
+          description: Formats autorisés
+        max_bytes:
+          type: integer
+          description: Taille maximale en bytes
+        transformation:
+          type: string
+          description: Transformation Cloudinary
+
+    AttachPhotoDto:
+      type: object
+      required:
+        - url
+        - publicId
+      properties:
+        url:
+          type: string
+          format: uri
+          description: URL publique de la photo
+        publicId:
+          type: string
+          description: Identifiant public Cloudinary
+        width:
+          type: integer
+          description: Largeur de la photo en pixels
+        height:
+          type: integer
+          description: Hauteur de la photo en pixels
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Message d'erreur
+        error:
+          type: string
+          description: Type d'erreur
+        statusCode:
+          type: integer
+          description: Code de statut HTTP
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp de l'erreur
+        path:
+          type: string
+          description: Chemin de la requête
+
+  responses:
+    BadRequest:
+      description: Requête invalide
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: "Données de validation invalides"
+            error: "Bad Request"
+            statusCode: 400
+            timestamp: "2025-10-18T18:00:00.000Z"
+            path: "/api/v1/items"
+
+    Unauthorized:
+      description: Non authentifié
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: "Token JWT invalide ou expiré"
+            error: "Unauthorized"
+            statusCode: 401
+            timestamp: "2025-10-18T18:00:00.000Z"
+            path: "/api/v1/items"
+
+    Forbidden:
+      description: Accès non autorisé
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: "Vous ne pouvez modifier que vos propres objets"
+            error: "Forbidden"
+            statusCode: 403
+            timestamp: "2025-10-18T18:00:00.000Z"
+            path: "/api/v1/items/item-id"
+
+    NotFound:
+      description: Ressource non trouvée
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: "Objet non trouvé"
+            error: "Not Found"
+            statusCode: 404
+            timestamp: "2025-10-18T18:00:00.000Z"
+            path: "/api/v1/items/item-id"
+
+    InternalServerError:
+      description: Erreur interne du serveur
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: "Erreur interne du serveur"
+            error: "Internal Server Error"
+            statusCode: 500
+            timestamp: "2025-10-18T18:00:00.000Z"
+            path: "/api/v1/items"
