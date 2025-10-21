@@ -1,146 +1,106 @@
+import { notificationsApi } from './notifications.api';
 import { toast } from 'react-hot-toast';
 
-interface NotificationPermission {
-  granted: boolean;
-  denied: boolean;
-  default: boolean;
-}
+export class NotificationService {
+  private static instance: NotificationService;
+  private permission: NotificationPermission = 'default';
 
-class NotificationService {
-  private vapidKey: string | null = null;
-  private registration: ServiceWorkerRegistration | null = null;
+  private constructor() {
+    this.checkPermission();
+  }
 
-  constructor() {
-    this.vapidKey = process.env.NEXT_PUBLIC_FCM_VAPID_KEY || null;
+  public static getInstance(): NotificationService {
+    if (!NotificationService.instance) {
+      NotificationService.instance = new NotificationService();
+    }
+    return NotificationService.instance;
+  }
+
+  /**
+   * Vérifie l'état actuel des permissions
+   */
+  private checkPermission(): void {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      this.permission = Notification.permission;
+    }
   }
 
   /**
    * Demande la permission pour les notifications
    */
-  async requestPermission(): Promise<NotificationPermission> {
-    if (!('Notification' in window)) {
+  async requestPermission(): Promise<boolean> {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
       toast.error('Les notifications ne sont pas supportées par ce navigateur');
-      return { granted: false, denied: true, default: false };
+      return false;
     }
 
-    if (Notification.permission === 'granted') {
-      return { granted: true, denied: false, default: false };
-    }
-
-    if (Notification.permission === 'denied') {
-      toast.error(
-        'Les notifications ont été bloquées. Vous pouvez les activer dans les paramètres du navigateur.'
-      );
-      return { granted: false, denied: true, default: false };
+    if (this.permission === 'granted') {
+      return true;
     }
 
     try {
       const permission = await Notification.requestPermission();
+      this.permission = permission;
 
       if (permission === 'granted') {
         toast.success('Notifications activées !');
-        await this.registerServiceWorker();
-        return { granted: true, denied: false, default: false };
+        return true;
+      } else if (permission === 'denied') {
+        toast.error(
+          'Notifications refusées. Vous pouvez les activer dans les paramètres du navigateur.'
+        );
+        return false;
       } else {
         toast.error('Permission de notification refusée');
-        return { granted: false, denied: true, default: false };
+        return false;
       }
     } catch (error) {
       console.error('Erreur lors de la demande de permission:', error);
       toast.error("Erreur lors de l'activation des notifications");
-      return { granted: false, denied: false, default: true };
+      return false;
     }
   }
 
   /**
-   * Enregistre le service worker
+   * Obtient un token de notification (Web Push)
    */
-  private async registerServiceWorker(): Promise<void> {
-    if (!('serviceWorker' in navigator)) {
-      console.warn('Service Worker non supporté');
-      return;
-    }
-
-    try {
-      this.registration = await navigator.serviceWorker.register(
-        '/firebase-messaging-sw.js'
-      );
-      console.log('Service Worker enregistré:', this.registration);
-    } catch (error) {
-      console.error(
-        "Erreur lors de l'enregistrement du Service Worker:",
-        error
-      );
-    }
-  }
-
-  /**
-   * Obtient le token FCM pour les notifications push
-   */
-  async getFCMToken(): Promise<string | null> {
-    if (!this.vapidKey) {
-      console.warn('Clé VAPID non configurée');
-      return null;
-    }
-
-    if (!this.registration) {
-      await this.registerServiceWorker();
-    }
-
-    if (!this.registration) {
+  async getToken(): Promise<string | null> {
+    if (this.permission !== 'granted') {
       return null;
     }
 
     try {
-      // Import dynamique de Firebase pour éviter les erreurs côté serveur
-      const { getMessaging, getToken } = await import('firebase/messaging');
-      const { initializeApp, getApps } = await import('firebase/app');
+      // Vérifier si le service worker est enregistré
+      if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.ready;
 
-      // Configuration Firebase (placeholder)
-      const firebaseConfig = {
-        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-      };
+        // Simuler l'obtention d'un token (dans un vrai projet, utiliser Firebase)
+        const token = this.generateMockToken();
 
-      // Initialiser Firebase si pas déjà fait
-      if (getApps().length === 0) {
-        initializeApp(firebaseConfig);
+        // Enregistrer le token côté serveur
+        await this.registerToken(token);
+
+        return token;
       }
 
-      const messaging = getMessaging();
-      const token = await getToken(messaging, {
-        vapidKey: this.vapidKey,
-        serviceWorkerRegistration: this.registration,
-      });
-
-      return token;
+      return null;
     } catch (error) {
-      console.error("Erreur lors de l'obtention du token FCM:", error);
+      console.error("Erreur lors de l'obtention du token:", error);
       return null;
     }
   }
 
   /**
-   * Enregistre le token FCM côté serveur
+   * Enregistre un token de notification côté serveur
    */
   async registerToken(token: string): Promise<boolean> {
     try {
-      const response = await fetch('/api/v1/notifications/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token }),
+      await notificationsApi.registerToken({
+        token,
+        provider: 'webpush',
       });
 
-      if (!response.ok) {
-        throw new Error("Erreur lors de l'enregistrement du token");
-      }
-
+      console.log('Token de notification enregistré');
       return true;
     } catch (error) {
       console.error("Erreur lors de l'enregistrement du token:", error);
@@ -149,82 +109,107 @@ class NotificationService {
   }
 
   /**
-   * Affiche une notification toast
+   * Envoie une notification de test
    */
-  showToast(
-    title: string,
-    message: string,
-    type: 'success' | 'error' | 'info' = 'info'
-  ) {
-    const fullMessage = `${title}: ${message}`;
-
-    switch (type) {
-      case 'success':
-        toast.success(fullMessage);
-        break;
-      case 'error':
-        toast.error(fullMessage);
-        break;
-      default:
-        toast(fullMessage);
-    }
-  }
-
-  /**
-   * Affiche une notification native
-   */
-  showNativeNotification(title: string, options?: NotificationOptions) {
-    if (Notification.permission !== 'granted') {
-      return;
-    }
-
+  async sendTestNotification(): Promise<boolean> {
     try {
-      new Notification(title, {
-        icon: '/icons/icon-192x192.png',
-        badge: '/icons/icon-72x72.png',
-        ...options,
+      const response = await notificationsApi.sendTestNotification({
+        title: 'Test SecondLife',
+        body: 'Ceci est une notification de test !',
       });
+
+      if (response.success) {
+        toast.success(
+          `Notification envoyée à ${response.sentCount} appareil(s)`
+        );
+        return true;
+      } else {
+        toast.error("Erreur lors de l'envoi de la notification");
+        return false;
+      }
     } catch (error) {
-      console.error("Erreur lors de l'affichage de la notification:", error);
-    }
-  }
-
-  /**
-   * Initialise le service de notifications
-   */
-  async initialize(): Promise<boolean> {
-    const permission = await this.requestPermission();
-
-    if (!permission.granted) {
+      console.error(
+        "Erreur lors de l'envoi de la notification de test:",
+        error
+      );
+      toast.error("Erreur lors de l'envoi de la notification");
       return false;
     }
+  }
 
-    // Essayer d'obtenir et enregistrer le token FCM
-    if (this.vapidKey) {
-      const token = await this.getFCMToken();
-      if (token) {
-        await this.registerToken(token);
-        return true;
-      }
+  /**
+   * Affiche une notification locale
+   */
+  showLocalNotification(title: string, options?: NotificationOptions): void {
+    if (this.permission === 'granted') {
+      new Notification(title, {
+        icon: '/logo.svg',
+        badge: '/badge.png',
+        tag: 'secondlife-notification',
+        ...options,
+      });
     }
-
-    // Fallback: utiliser les notifications natives
-    return true;
   }
 
   /**
    * Vérifie si les notifications sont supportées
    */
   isSupported(): boolean {
-    return 'Notification' in window;
+    return 'Notification' in window && 'serviceWorker' in navigator;
   }
 
   /**
-   * Vérifie si les notifications sont activées
+   * Vérifie si les notifications sont autorisées
    */
-  isEnabled(): boolean {
-    return Notification.permission === 'granted';
+  isGranted(): boolean {
+    return this.permission === 'granted';
+  }
+
+  /**
+   * Obtient l'état des permissions
+   */
+  getPermissionStatus(): NotificationPermission {
+    return this.permission;
+  }
+
+  /**
+   * Génère un token mock pour les tests
+   */
+  private generateMockToken(): string {
+    const chars =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 64; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  }
+
+  /**
+   * Initialise le service de notifications
+   */
+  async initialize(): Promise<boolean> {
+    if (!this.isSupported()) {
+      console.warn('Les notifications ne sont pas supportées');
+      return false;
+    }
+
+    // Enregistrer le service worker si nécessaire
+    if ('serviceWorker' in navigator) {
+      try {
+        await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        console.log('Service Worker enregistré');
+      } catch (error) {
+        console.error(
+          "Erreur lors de l'enregistrement du Service Worker:",
+          error
+        );
+      }
+    }
+
+    return true;
   }
 }
 
-export const notificationService = new NotificationService();
+// Instance singleton
+export const notificationService = NotificationService.getInstance();

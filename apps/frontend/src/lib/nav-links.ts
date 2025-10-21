@@ -8,6 +8,14 @@ export interface NavLink {
 export const NAV_LINKS: NavLink[] = [
   { href: '/', label: 'Accueil', icon: 'Home' },
   { href: '/explore', label: 'Explorer', icon: 'Search' },
+  { href: '/discover', label: 'Découvrir', icon: 'Leaf' },
+  { href: '/community', label: 'Communauté', icon: 'Users' },
+  {
+    href: '/matching',
+    label: 'Recommandations',
+    icon: 'Heart',
+    protected: true,
+  },
   { href: '/themes', label: 'Thèmes', icon: 'Calendar' },
   {
     href: '/exchanges',

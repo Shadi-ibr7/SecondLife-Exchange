@@ -5,6 +5,7 @@ export interface User {
   avatarUrl?: string;
   bio?: string;
   location?: string;
+  roles: 'USER' | 'ADMIN';
   createdAt: string;
   updatedAt: string;
 }
@@ -31,6 +32,7 @@ export interface Item {
   tags: string[];
   aiSummary?: string;
   aiRepairTip?: string;
+  popularityScore: number;
   photos: ItemPhoto[];
   createdAt: string;
   updatedAt: string;
@@ -273,4 +275,271 @@ export interface ListThemesParams {
 export interface ListSuggestionsParams {
   page?: number;
   limit?: number;
+}
+
+// Types pour le matching
+export interface RecommendationReason {
+  type:
+    | 'category'
+    | 'condition'
+    | 'tags'
+    | 'popularity'
+    | 'rarity'
+    | 'location'
+    | 'history';
+  score: number;
+  description: string;
+}
+
+export interface Recommendation {
+  item: {
+    id: string;
+    title: string;
+    description: string;
+    category: string;
+    condition: string;
+    tags: string[];
+    popularityScore: number;
+    owner: {
+      id: string;
+      displayName: string;
+      avatarUrl?: string;
+    };
+    photos: Array<{
+      id: string;
+      url: string;
+      width?: number;
+      height?: number;
+    }>;
+    createdAt: string;
+  };
+  score: number;
+  reasons: RecommendationReason[];
+}
+
+export interface RecommendationsResponse {
+  recommendations: Recommendation[];
+  total: number;
+  userPreferences?: {
+    preferredCategories: string[];
+    preferredConditions: string[];
+    country?: string;
+  };
+}
+
+export interface SavePreferencesDto {
+  preferredCategories?: string[];
+  dislikedCategories?: string[];
+  preferredConditions?: string[];
+  locale?: string;
+  country?: string;
+  radiusKm?: number;
+}
+
+export interface PreferencesResponse {
+  preferences: {
+    userId: string;
+    preferredCategories: string[];
+    dislikedCategories: string[];
+    preferredConditions: string[];
+    locale?: string;
+    country?: string;
+    radiusKm?: number;
+  };
+}
+
+export interface GetRecommendationsParams {
+  limit?: number;
+}
+
+// Types pour le contenu éco
+export interface EcoContent {
+  id: string;
+  kind: 'ARTICLE' | 'VIDEO' | 'STAT';
+  title: string;
+  url: string;
+  locale?: string;
+  tags: string[];
+  source?: string;
+  summary?: string;
+  kpis?: any;
+  publishedAt?: string;
+  createdAt: string;
+}
+
+export interface PaginatedEcoContentResponse {
+  items: EcoContent[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface ListEcoContentParams {
+  kind?: 'ARTICLE' | 'VIDEO' | 'STAT';
+  tag?: string;
+  locale?: string;
+  q?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface CreateEcoContentDto {
+  kind: 'ARTICLE' | 'VIDEO' | 'STAT';
+  title: string;
+  url: string;
+  locale?: string;
+  tags?: string[];
+  source?: string;
+  publishedAt?: string;
+}
+
+export interface UpdateEcoContentDto {
+  kind?: 'ARTICLE' | 'VIDEO' | 'STAT';
+  title?: string;
+  url?: string;
+  locale?: string;
+  tags?: string[];
+  source?: string;
+  publishedAt?: string;
+}
+
+export interface EnrichEcoContentResponse {
+  summary: string;
+  tags: string[];
+  kpis?: any;
+}
+
+export interface EcoContentStats {
+  total: number;
+  byKind: Record<string, number>;
+  byLocale: Record<string, number>;
+}
+
+// Types pour la communauté
+export interface Thread {
+  id: string;
+  scope: 'THEME' | 'CATEGORY' | 'ITEM' | 'GENERAL';
+  scopeRef?: string;
+  title: string;
+  authorId: string;
+  author: {
+    id: string;
+    displayName: string;
+    avatarUrl?: string;
+  };
+  postsCount: number;
+  lastPostAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Post {
+  id: string;
+  threadId: string;
+  authorId: string;
+  content: string;
+  createdAt: string;
+  editedAt?: string;
+  repliesTo?: string;
+  author: {
+    id: string;
+    displayName: string;
+    avatarUrl?: string;
+  };
+  repliesCount: number;
+  isEdited: boolean;
+}
+
+export interface PaginatedThreadsResponse {
+  items: Thread[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface PaginatedPostsResponse {
+  items: Post[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface ListThreadsParams {
+  scope?: 'THEME' | 'CATEGORY' | 'ITEM' | 'GENERAL';
+  ref?: string;
+  q?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface ListPostsParams {
+  page?: number;
+  limit?: number;
+}
+
+export interface CreateThreadDto {
+  scope: 'THEME' | 'CATEGORY' | 'ITEM' | 'GENERAL';
+  scopeRef?: string;
+  title: string;
+  contentFirst: string;
+}
+
+export interface CreatePostDto {
+  content: string;
+  repliesTo?: string;
+}
+
+export interface UpdatePostDto {
+  content: string;
+}
+
+// Types pour les notifications
+export interface NotificationToken {
+  id: string;
+  userId: string;
+  provider: 'webpush' | 'fcm';
+  token: string;
+  createdAt: string;
+}
+
+export interface RegisterTokenDto {
+  token: string;
+  provider?: 'webpush' | 'fcm';
+}
+
+export interface SendTestNotificationDto {
+  userId?: string;
+  title?: string;
+  body?: string;
+}
+
+export interface SendNotificationResponse {
+  success: boolean;
+  message: string;
+  sentCount: number;
+}
+
+// Types pour le calendrier des thèmes
+export interface CalendarWeek {
+  weekStart: string;
+  weekEnd: string;
+  title: string;
+  isActive: boolean;
+  themeId: string | null;
+  theme: {
+    id: string;
+    title: string;
+    description: string;
+    startOfWeek: string;
+    slug: string;
+  } | null;
+}
+
+export interface CalendarResponse {
+  weeks: CalendarWeek[];
+  totalWeeks: number;
+  currentWeek: number;
 }

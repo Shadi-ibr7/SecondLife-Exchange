@@ -86,7 +86,7 @@ function ExchangesPageContent() {
     resetParams();
   };
 
-  if (error) {
+  if (error && !data) {
     return (
       <div className="flex min-h-screen items-center justify-center text-destructive">
         <div className="text-center">

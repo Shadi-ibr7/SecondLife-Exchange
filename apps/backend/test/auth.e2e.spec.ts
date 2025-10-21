@@ -16,6 +16,9 @@ describe('Auth (e2e)', () => {
     app = moduleFixture.createNestApplication();
     prismaService = moduleFixture.get<PrismaService>(PrismaService);
 
+    // Configurer le préfixe global comme dans main.ts
+    app.setGlobalPrefix('api/v1');
+
     await app.init();
   });
 

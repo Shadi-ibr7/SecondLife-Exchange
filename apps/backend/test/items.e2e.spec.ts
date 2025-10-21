@@ -22,6 +22,9 @@ describe('Items (e2e)', () => {
     prismaService = moduleFixture.get<PrismaService>(PrismaService);
     authService = moduleFixture.get<AuthService>(AuthService);
 
+    // Configurer le préfixe global comme dans main.ts
+    app.setGlobalPrefix('api/v1');
+
     await app.init();
   });
 
@@ -38,7 +41,7 @@ describe('Items (e2e)', () => {
       displayName: 'Test Items User',
     });
 
-    userId = user.id;
+    userId = user.user.id;
     accessToken = user.accessToken;
   });
 

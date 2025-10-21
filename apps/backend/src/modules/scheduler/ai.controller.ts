@@ -9,7 +9,7 @@ import { WeeklyCronService } from './weekly-cron.service';
 import { JwtAccessGuard } from '../../common/guards/jwt-access.guard';
 
 @ApiTags('AI')
-@Controller('api/v1/ai')
+@Controller('ai')
 export class AiController {
   constructor(private readonly weeklyCronService: WeeklyCronService) {}
 

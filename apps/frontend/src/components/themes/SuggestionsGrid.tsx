@@ -129,18 +129,18 @@ export function SuggestionsGrid({
                 )}
 
                 {/* Tags */}
-                {item.tags.length > 0 && (
+                {item.tags && item.tags.length > 0 && (
                   <div>
                     <p className="mb-2 text-xs font-medium text-muted-foreground">
                       Tags
                     </p>
                     <div className="flex flex-wrap gap-1">
-                      {item.tags.slice(0, 3).map((tag) => (
+                      {item.tags?.slice(0, 3).map((tag) => (
                         <Badge key={tag} variant="outline" className="text-xs">
                           {tag}
                         </Badge>
                       ))}
-                      {item.tags.length > 3 && (
+                      {item.tags && item.tags.length > 3 && (
                         <Badge variant="outline" className="text-xs">
                           +{item.tags.length - 3}
                         </Badge>

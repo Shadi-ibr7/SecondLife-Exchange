@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,16 +26,32 @@ export function ThemeCalendar({
   >([]);
 
   // Récupérer les suggestions du thème sélectionné
-  const { data: suggestionsData, isLoading: suggestionsLoading } = useQuery({
+  const {
+    data: suggestionsData,
+    isLoading: suggestionsLoading,
+    error: suggestionsError,
+  } = useQuery({
     queryKey: ['theme-suggestions', selectedThemeId],
     queryFn: () => themesApi.getThemeSuggestions(selectedThemeId!),
     enabled: !!selectedThemeId,
+    retry: false,
+    refetchOnWindowFocus: false,
   });
+
+  // Utiliser les suggestions de l'API (avec fallback intégré)
+  const displaySuggestions = suggestionsData?.items || [];
 
   const handleThemeSelect = async (theme: WeeklyTheme) => {
     setSelectedThemeId(theme.id);
     setSelectedSuggestions(theme.suggestions || []);
   };
+
+  // Mettre à jour les suggestions affichées quand les données changent
+  useEffect(() => {
+    if (suggestionsData?.items) {
+      setSelectedSuggestions(suggestionsData.items);
+    }
+  }, [suggestionsData]);
 
   const handleLoadMoreSuggestions = () => {
     if (

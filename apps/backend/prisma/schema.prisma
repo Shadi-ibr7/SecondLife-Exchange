@@ -62,10 +62,14 @@ model User {
 
   // Relations
   profile      UserProfile?
+  preferences  Preference?
   refreshTokens RefreshToken[]
   exchangesRequested Exchange[] @relation("ExchangeRequester")
   exchangesResponded Exchange[] @relation("ExchangeResponder")
   items        Item[]
+  threads      Thread[]
+  posts        Post[]
+  notificationTokens NotificationToken[]
 
   @@map("users")
   @@index([email])
@@ -82,6 +86,21 @@ model UserProfile {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_profiles")
+}
+
+model Preference {
+  userId              String   @id
+  preferredCategories String[]
+  dislikedCategories  String[]
+  preferredConditions String[]
+  locale              String?
+  country             String?
+  radiusKm            Int?
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("preferences")
 }
 
 model RefreshToken {
@@ -107,6 +126,7 @@ model Exchange {
   responderId         String
   requestedItemTitle  String
   offeredItemTitle    String
+  message             String?
   status              ExchangeStatus  @default(PENDING)
   createdAt           DateTime        @default(now())
   completedAt         DateTime?
@@ -135,12 +155,14 @@ model Item {
   tags            String[]
   aiSummary       String?       // résumé concis proposé par l'IA
   aiRepairTip     String?       // conseil réparation basique
+  popularityScore Int           @default(0) // score de popularité (votes/vues)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
   @@map("items")
   @@index([ownerId])
   @@index([category, condition, status])
+  @@index([popularityScore])
 }
 
 model ItemPhoto {
@@ -202,4 +224,78 @@ model SuggestedItem {
   @@index([themeId, country])
   @@index([category])
   @@index([name])
+}
+
+model EcoContent {
+  id          String    @id @default(cuid())
+  kind        String    // 'ARTICLE' | 'VIDEO' | 'STAT'
+  title       String
+  url         String
+  locale      String?   // 'fr', 'en', ...
+  tags        String[]
+  source      String?
+  summary     String?   // résumé généré (Gemini)
+  kpis        Json?     // stats clés (ex: CO2 épargné)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@map("eco_content")
+  @@index([kind])
+  @@index([locale])
+  @@index([tags])
+  @@index([publishedAt])
+}
+
+model Thread {
+  id        String   @id @default(cuid())
+  scope     String   // 'THEME' | 'CATEGORY' | 'ITEM' | 'GENERAL'
+  scopeRef  String?  // themeId | category | itemId | null
+  title     String
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  posts  Post[]
+
+  @@map("threads")
+  @@index([scope, scopeRef])
+  @@index([createdAt])
+}
+
+model Post {
+  id        String    @id @default(cuid())
+  threadId  String
+  authorId  String
+  content   String
+  createdAt DateTime  @default(now())
+  editedAt  DateTime?
+  repliesTo String?   // postId
+
+  // Relations
+  thread  Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  author  User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  replies Post[] @relation("PostReplies")
+  parent  Post?  @relation("PostReplies", fields: [repliesTo], references: [id])
+
+  @@map("posts")
+  @@index([threadId])
+  @@index([createdAt])
+}
+
+model NotificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  provider  String   // 'webpush' | 'fcm'
+  token     String
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@map("notification_tokens")
+  @@index([userId])
+  @@index([provider])
 }

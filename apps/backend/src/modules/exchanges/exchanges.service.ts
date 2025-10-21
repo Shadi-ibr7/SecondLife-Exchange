@@ -14,7 +14,8 @@ export class ExchangesService {
   constructor(private prisma: PrismaService) {}
 
   async createExchange(requesterId: string, input: CreateExchangeInput) {
-    const { responderId, requestedItemTitle, offeredItemTitle } = input;
+    const { responderId, requestedItemTitle, offeredItemTitle, message } =
+      input;
 
     // Vérifier que le répondant existe
     const responder = await this.prisma.user.findUnique({
@@ -38,6 +39,7 @@ export class ExchangesService {
         responderId,
         requestedItemTitle,
         offeredItemTitle,
+        message,
         status: 'PENDING',
       },
       include: {
@@ -129,7 +131,7 @@ export class ExchangesService {
     pagination: PaginationInput,
     status?: string,
   ) {
-    const { page = 1, limit = 20 } = pagination;
+    const { page = 1, limit = 20, sort = '-createdAt' } = pagination;
     const skip = (page - 1) * limit;
 
     const where: any = {
@@ -140,12 +142,23 @@ export class ExchangesService {
       where.status = status;
     }
 
+    // Gérer le tri
+    let orderBy: any = { createdAt: 'desc' };
+    if (sort) {
+      if (sort.startsWith('-')) {
+        const field = sort.substring(1);
+        orderBy = { [field]: 'desc' };
+      } else {
+        orderBy = { [sort]: 'asc' };
+      }
+    }
+
     const [exchanges, total] = await Promise.all([
       this.prisma.exchange.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         include: {
           requester: {
             select: {

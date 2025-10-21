@@ -10,6 +10,10 @@ import { ItemsModule } from './modules/items/items.module';
 import { ThemesModule } from './modules/themes/themes.module';
 import { SuggestionsModule } from './modules/suggestions/suggestions.module';
 import { SchedulerModule } from './modules/scheduler/scheduler.module';
+import { MatchingModule } from './modules/matching/matching.module';
+import { EcoModule } from './modules/eco/eco.module';
+import { CommunityModule } from './modules/community/community.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import appConfig from './config/app.config';
 import securityConfig from './config/security.config';
 import prismaConfig from './config/prisma.config';
@@ -35,6 +39,11 @@ import prismaConfig from './config/prisma.config';
         ttl: 60 * 1000, // 1 minute
         limit: 5, // 5 login attempts per minute
       },
+      {
+        name: 'recommendations',
+        ttl: 60 * 1000, // 1 minute
+        limit: 10, // 10 recommendations per minute
+      },
     ]),
 
     // Base de données
@@ -49,6 +58,10 @@ import prismaConfig from './config/prisma.config';
     ThemesModule,
     SuggestionsModule,
     SchedulerModule,
+    MatchingModule,
+    EcoModule,
+    CommunityModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

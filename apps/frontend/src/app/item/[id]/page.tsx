@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { ItemPhotos } from '@/components/items/ItemPhotos';
 import { ItemOwnerActions } from '@/components/items/ItemOwnerActions';
 import { ProposeExchangeModal } from '@/components/exchanges/ProposeExchangeModal';
+import { MatchBanner } from '@/components/matching/MatchBanner';
 import { itemsApi } from '@/lib/items.api';
 import { useAuthStore } from '@/store/auth';
 import {
@@ -110,6 +111,9 @@ export default function ItemDetailPage() {
             </Link>
           </Button>
         </div>
+
+        {/* Match Banner */}
+        <MatchBanner item={item} />
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           {/* Contenu principal */}

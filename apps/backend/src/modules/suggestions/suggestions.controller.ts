@@ -3,11 +3,11 @@ import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { SuggestionsService } from './suggestions.service';
 
 @ApiTags('Suggestions')
-@Controller('api/v1')
+@Controller('themes')
 export class SuggestionsController {
   constructor(private readonly suggestionsService: SuggestionsService) {}
 
-  @Get('themes/:id/suggestions')
+  @Get(':id/suggestions')
   @ApiOperation({ summary: "Récupérer les suggestions d'un thème" })
   @ApiResponse({
     status: 200,
@@ -46,7 +46,7 @@ export class SuggestionsController {
     );
   }
 
-  @Get('themes/:id/suggestions/stats')
+  @Get(':id/suggestions/stats')
   @ApiOperation({
     summary: "Récupérer les statistiques des suggestions d'un thème",
   })

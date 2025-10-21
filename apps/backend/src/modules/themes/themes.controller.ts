@@ -24,7 +24,7 @@ import { UpdateThemeDto } from './dtos/update-theme.dto';
 import { JwtAccessGuard } from '../../common/guards/jwt-access.guard';
 
 @ApiTags('Themes')
-@Controller('api/v1/themes')
+@Controller('themes')
 export class ThemesController {
   constructor(private readonly themesService: ThemesService) {}
 
@@ -64,12 +64,34 @@ export class ThemesController {
     description: 'Date de fin (ISO)',
   })
   async listThemes(
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
   ) {
-    return this.themesService.listThemes(page, limit, from, to);
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const limitNum = limit ? parseInt(limit, 10) : 20;
+    return this.themesService.listThemes(pageNum, limitNum, from, to);
+  }
+
+  @Get('calendar')
+  @ApiOperation({
+    summary: 'Récupérer le calendrier des thèmes',
+    description: 'Retourne une grille de thèmes par semaine pour le calendrier',
+  })
+  @ApiQuery({
+    name: 'weeks',
+    required: false,
+    type: Number,
+    description: 'Nombre de semaines à récupérer (défaut: 12)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Calendrier des thèmes',
+  })
+  async getCalendar(@Query('weeks') weeks?: string) {
+    const weeksNum = weeks ? parseInt(weeks, 10) : 12;
+    return this.themesService.getCalendar(weeksNum);
   }
 
   @Get(':id')

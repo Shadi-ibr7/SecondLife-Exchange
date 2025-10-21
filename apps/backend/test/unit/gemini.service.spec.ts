@@ -75,11 +75,17 @@ describe('GeminiService', () => {
 
     it("devrait retourner null si la clé API n'est pas configurée", async () => {
       // Créer un nouveau service avec une configuration sans clé API
-      const serviceWithoutKey = new GeminiService({
+      const mockConfigService = {
         get: jest.fn().mockReturnValue({
           geminiApiKey: null,
         }),
-      });
+        internalConfig: {},
+        isCacheEnabled: false,
+        cache: new Map(),
+        _changes$: null,
+      } as any;
+
+      const serviceWithoutKey = new GeminiService(mockConfigService);
 
       const result = await serviceWithoutKey.analyzeItem({
         title: 'Test Item',

@@ -34,6 +34,11 @@ describe('AuthService', () => {
     userProfile: {
       create: jest.fn(),
     },
+    refreshToken: {
+      create: jest.fn(),
+      findUnique: jest.fn(),
+      delete: jest.fn(),
+    },
     $transaction: jest.fn(),
   };
 
@@ -62,8 +67,8 @@ describe('AuthService', () => {
 
     // Setup default mocks
     mockConfigService.get.mockReturnValue('test-secret');
-    mockedBcrypt.hash.mockResolvedValue('hashed-password');
-    mockedBcrypt.compare.mockResolvedValue(true);
+    (mockedBcrypt.hash as jest.Mock).mockResolvedValue('hashed-password');
+    (mockedBcrypt.compare as jest.Mock).mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -83,6 +88,7 @@ describe('AuthService', () => {
         return callback({
           user: { create: jest.fn().mockResolvedValue(mockUser) },
           userProfile: { create: jest.fn().mockResolvedValue({}) },
+          refreshToken: { create: jest.fn().mockResolvedValue({}) },
         });
       });
       mockJwtService.signAsync.mockResolvedValue('jwt-token');
@@ -118,6 +124,7 @@ describe('AuthService', () => {
       };
 
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.refreshToken.create.mockResolvedValue({});
       mockJwtService.signAsync.mockResolvedValue('jwt-token');
 
       const result = await service.login(loginInput);
@@ -134,7 +141,7 @@ describe('AuthService', () => {
       };
 
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockedBcrypt.compare.mockResolvedValue(false);
+      (mockedBcrypt.compare as jest.Mock).mockResolvedValue(false);
 
       await expect(service.login(loginInput)).rejects.toThrow(
         UnauthorizedException,

@@ -279,4 +279,79 @@ export class ThemesService {
 
     return theme;
   }
+
+  /**
+   * Récupère le calendrier des thèmes par semaine
+   */
+  async getCalendar(weeks: number = 12) {
+    const now = new Date();
+    const startDate = new Date(now);
+    startDate.setDate(now.getDate() - 3 * 7); // 3 semaines passées
+
+    const endDate = new Date(now);
+    endDate.setDate(now.getDate() + (weeks - 3) * 7); // 8 semaines futures
+
+    // Récupérer tous les thèmes dans la période
+    const themes = await this.prisma.weeklyTheme.findMany({
+      where: {
+        startOfWeek: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      orderBy: {
+        startOfWeek: 'asc',
+      },
+    });
+
+    // Créer la grille de semaines
+    const calendar = [];
+    const currentDate = new Date(startDate);
+
+    // S'assurer que currentDate commence un lundi
+    const dayOfWeek = currentDate.getDay();
+    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    currentDate.setDate(currentDate.getDate() + daysToMonday);
+
+    for (let week = 0; week < weeks; week++) {
+      const weekStart = new Date(currentDate);
+      const weekEnd = new Date(currentDate);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+
+      // Trouver le thème actif pour cette semaine
+      const activeTheme = themes.find((theme) => {
+        const themeStart = new Date(theme.startOfWeek);
+        const themeEnd = new Date(themeStart);
+        themeEnd.setDate(themeEnd.getDate() + 6);
+        return themeStart <= weekEnd && themeEnd >= weekStart;
+      });
+
+      calendar.push({
+        weekStart: weekStart.toISOString(),
+        weekEnd: weekEnd.toISOString(),
+        title: activeTheme?.title || 'Aucun thème',
+        isActive: !!activeTheme,
+        themeId: activeTheme?.id || null,
+        theme: activeTheme
+          ? {
+              id: activeTheme.id,
+              title: activeTheme.title,
+              startOfWeek: activeTheme.startOfWeek.toISOString(),
+              slug: activeTheme.slug,
+            }
+          : null,
+      });
+
+      // Passer à la semaine suivante
+      currentDate.setDate(currentDate.getDate() + 7);
+    }
+
+    return {
+      weeks: calendar,
+      totalWeeks: weeks,
+      currentWeek: Math.floor(
+        (now.getTime() - startDate.getTime()) / (7 * 24 * 60 * 60 * 1000),
+      ),
+    };
+  }
 }
