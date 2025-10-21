@@ -77,10 +77,20 @@ export class ItemsService {
       aiRepairTip: aiAnalysis?.aiRepairTip,
     };
 
-    // Vérifier que la catégorie est définie
+    // Vérifier que la catégorie est définie et valide
     if (!finalItemData.category) {
       throw new BadRequestException(
         'Catégorie requise (spécifiez category ou utilisez aiAuto=true)',
+      );
+    }
+
+    // Vérifier que la catégorie est valide
+    const validCategories = [
+      'ELECTRONICS', 'CLOTHING', 'BOOKS', 'FURNITURE', 'SPORTS', 'TOYS', 'OTHER'
+    ];
+    if (!validCategories.includes(finalItemData.category)) {
+      throw new BadRequestException(
+        `Catégorie invalide. Catégories valides: ${validCategories.join(', ')}`,
       );
     }
 
@@ -123,7 +133,11 @@ export class ItemsService {
       ownerId,
       sort = '-createdAt',
     } = query;
-    const skip = (page - 1) * limit;
+    
+    // Convertir en numbers pour éviter les erreurs Prisma
+    const pageNum = typeof page === 'string' ? parseInt(page, 10) : page;
+    const limitNum = typeof limit === 'string' ? parseInt(limit, 10) : limit;
+    const skip = (pageNum - 1) * limitNum;
 
     // Construire les filtres
     const where: Prisma.ItemWhereInput = {
@@ -165,7 +179,7 @@ export class ItemsService {
         where,
         orderBy,
         skip,
-        take: limit,
+        take: limitNum,
         include: {
           photos: {
             select: {
@@ -191,9 +205,9 @@ export class ItemsService {
     return {
       items,
       total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      page: pageNum,
+      limit: limitNum,
+      totalPages: Math.ceil(total / limitNum),
     };
   }
 

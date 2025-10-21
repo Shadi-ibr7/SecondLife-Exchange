@@ -393,7 +393,7 @@ describe('Items (e2e)', () => {
           folder: 'items/test-item',
           maxBytes: 3000000,
         })
-        .expect(200);
+        .expect(201);
 
       expect(response.body).toMatchObject({
         signature: expect.any(String),

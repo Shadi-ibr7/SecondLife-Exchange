@@ -27,10 +27,13 @@ describe('Auth (e2e)', () => {
   });
 
   beforeEach(async () => {
-    // Nettoyer la base de données avant chaque test
+    // Nettoyer la base de données avant chaque test (ordre important pour les contraintes FK)
     await prismaService.refreshToken.deleteMany();
     await prismaService.userProfile.deleteMany();
     await prismaService.user.deleteMany();
+
+    // Attendre un peu pour s'assurer que les suppressions sont terminées
+    await new Promise((resolve) => setTimeout(resolve, 100));
   });
 
   describe('/auth/register (POST)', () => {

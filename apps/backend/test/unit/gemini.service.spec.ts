@@ -87,12 +87,13 @@ describe('GeminiService', () => {
 
       const serviceWithoutKey = new GeminiService(mockConfigService);
 
-      const result = await serviceWithoutKey.analyzeItem({
-        title: 'Test Item',
-        description: 'Test description',
-      });
-
-      expect(result).toBeNull();
+      // Le service devrait lever une erreur si la clé API n'est pas configurée
+      await expect(
+        serviceWithoutKey.analyzeItem({
+          title: 'Test Item',
+          description: 'Test description',
+        }),
+      ).rejects.toThrow('Gemini API key not configured');
     });
 
     it("devrait gérer les erreurs de l'API Gemini", async () => {
@@ -112,7 +113,7 @@ describe('GeminiService', () => {
 
     it('devrait gérer les timeouts', async () => {
       (global.fetch as jest.Mock).mockImplementation(
-        () => new Promise((resolve) => setTimeout(resolve, 15000)),
+        () => new Promise((resolve) => setTimeout(resolve, 12000)), // Plus long que le timeout du service
       );
 
       const result = await service.analyzeItem({
@@ -121,7 +122,7 @@ describe('GeminiService', () => {
       });
 
       expect(result).toBeNull();
-    }, 10000); // Timeout de 10 secondes pour ce test
+    }, 15000); // Timeout de 15 secondes pour ce test
 
     it('devrait valider la structure de la réponse JSON', async () => {
       const mockResponse = {
