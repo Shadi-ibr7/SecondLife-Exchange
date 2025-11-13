@@ -1,9 +1,9 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/providers';
 import { Toaster } from 'react-hot-toast';
-import { Header } from '@/components/common/Header';
+import { Navbar } from '@/components/layout/navbar';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -11,9 +11,6 @@ export const metadata: Metadata = {
   title: 'SecondLife Exchange',
   description: "Plateforme d'échange d'objets avec suggestions IA",
   manifest: '/manifest.webmanifest',
-  themeColor: '#000000',
-  viewport:
-    'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -30,6 +27,14 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  themeColor: '#000000',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export default function RootLayout({
   children,
 }: {
@@ -38,8 +43,8 @@ export default function RootLayout({
   return (
     <html lang="fr" className="dark" suppressHydrationWarning>
       <head>
-        <link rel="icon" href="/icons/icon-192x192.png" />
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="icon" href="/logo.svg" />
+        <link rel="apple-touch-icon" href="/logo.svg" />
         <meta name="theme-color" content="#802ADB" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -47,7 +52,7 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <Providers>
-          <Header />
+          <Navbar />
           {children}
           <Toaster
             position="top-right"

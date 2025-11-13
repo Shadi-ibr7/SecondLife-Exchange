@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
+import * as bcrypt from 'bcrypt';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/common/prisma/prisma.service';
 
@@ -27,13 +28,19 @@ describe('Auth (e2e)', () => {
   });
 
   beforeEach(async () => {
-    // Nettoyer la base de données avant chaque test (ordre important pour les contraintes FK)
+    // Nettoyer la base de données avant chaque test
+    // Désactiver temporairement les contraintes FK pour un nettoyage complet
+    await prismaService.$executeRaw`SET session_replication_role = replica;`;
+
     await prismaService.refreshToken.deleteMany();
     await prismaService.userProfile.deleteMany();
     await prismaService.user.deleteMany();
 
+    // Réactiver les contraintes FK
+    await prismaService.$executeRaw`SET session_replication_role = DEFAULT;`;
+
     // Attendre un peu pour s'assurer que les suppressions sont terminées
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 200));
   });
 
   describe('/auth/register (POST)', () => {
@@ -81,17 +88,24 @@ describe('Auth (e2e)', () => {
           password: '123', // Trop court
           displayName: 'T', // Trop court
         })
-        .expect(400);
+        .expect(400)
+        .expect((res) => {
+          expect(res.body.message).toContain('validation');
+        });
     });
   });
 
   describe('/auth/login (POST)', () => {
     beforeEach(async () => {
-      // Créer un utilisateur pour les tests de login
-      await request(app.getHttpServer()).post('/api/v1/auth/register').send({
-        email: 'login@example.com',
-        password: 'Password123!',
-        displayName: 'Login User',
+      // Créer un utilisateur directement dans la base de données pour éviter les contraintes FK
+      const hashedPassword = await bcrypt.hash('Password123!', 10);
+      await prismaService.user.create({
+        data: {
+          email: 'login@example.com',
+          passwordHash: hashedPassword,
+          displayName: 'Login User',
+          roles: 'USER',
+        },
       });
     });
 

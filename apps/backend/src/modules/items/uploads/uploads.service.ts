@@ -54,13 +54,12 @@ export class UploadsService {
     const timestamp = Math.round(new Date().getTime() / 1000);
     const publicId = `${folder}/${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Créer la signature
+    // Créer la signature Cloudinary uniquement avec les paramètres supportés
+    // Ne PAS inclure allowed_formats ou max_bytes dans la signature
     const paramsToSign = {
       timestamp,
       folder,
       public_id: publicId,
-      allowed_formats: allowedFormats.join(','),
-      max_bytes: maxBytes,
       transformation: 'f_webp,q_auto,w_800,h_600,c_fill',
     };
 
@@ -111,6 +110,45 @@ export class UploadsService {
         height: photoData.height,
       },
     });
+  }
+
+  /**
+   * Attache plusieurs photos à un item en une transaction
+   */
+  async attachPhotos(itemId: string, photos: AttachPhotoDto[]): Promise<void> {
+    if (!Array.isArray(photos) || photos.length === 0) {
+      throw new BadRequestException('Aucune photo fournie');
+    }
+
+    // Vérifier l'item
+    const item = await this.prisma.item.findUnique({ where: { id: itemId } });
+    if (!item) {
+      throw new NotFoundException('Item non trouvé');
+    }
+
+    // Vérifier la limite
+    const existing = await this.prisma.itemPhoto.count({ where: { itemId } });
+    const remaining = this.cloudinaryConfig.maxPhotosPerItem - existing;
+    if (remaining <= 0) {
+      throw new BadRequestException(
+        `Nombre maximum de photos atteint (${this.cloudinaryConfig.maxPhotosPerItem})`,
+      );
+    }
+    const toInsert = photos.slice(0, remaining);
+
+    await this.prisma.$transaction(
+      toInsert.map((p) =>
+        this.prisma.itemPhoto.create({
+          data: {
+            itemId,
+            url: p.url,
+            publicId: p.publicId,
+            width: p.width,
+            height: p.height,
+          },
+        }),
+      ),
+    );
   }
 
   /**
@@ -205,12 +243,12 @@ export class UploadsService {
     }
 
     // Vérifier la signature
+    // Doit correspondre exactement aux paramètres envoyés à Cloudinary
     const expectedSignature = this.createSignature({
       timestamp,
       folder,
       public_id,
-      allowed_formats: allowed_formats.join(','),
-      max_bytes,
+      transformation: 'f_webp,q_auto,w_800,h_600,c_fill',
     });
 
     if (signature !== expectedSignature) {

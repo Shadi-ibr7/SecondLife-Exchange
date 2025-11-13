@@ -86,7 +86,13 @@ export class ItemsService {
 
     // Vérifier que la catégorie est valide
     const validCategories = [
-      'ELECTRONICS', 'CLOTHING', 'BOOKS', 'FURNITURE', 'SPORTS', 'TOYS', 'OTHER'
+      'ELECTRONICS',
+      'CLOTHING',
+      'BOOKS',
+      'FURNITURE',
+      'SPORTS',
+      'TOYS',
+      'OTHER',
     ];
     if (!validCategories.includes(finalItemData.category)) {
       throw new BadRequestException(
@@ -133,7 +139,7 @@ export class ItemsService {
       ownerId,
       sort = '-createdAt',
     } = query;
-    
+
     // Convertir en numbers pour éviter les erreurs Prisma
     const pageNum = typeof page === 'string' ? parseInt(page, 10) : page;
     const limitNum = typeof limit === 'string' ? parseInt(limit, 10) : limit;
@@ -173,42 +179,58 @@ export class ItemsService {
       orderBy[sort] = 'asc';
     }
 
-    // Requêtes parallèles
-    const [items, total] = await Promise.all([
-      this.prisma.item.findMany({
-        where,
-        orderBy,
-        skip,
-        take: limitNum,
-        include: {
-          photos: {
-            select: {
-              id: true,
-              url: true,
-              width: true,
-              height: true,
-              createdAt: true,
+    // Requêtes parallèles avec gestion d'erreur
+    try {
+      const [items, total] = await Promise.all([
+        this.prisma.item.findMany({
+          where,
+          orderBy,
+          skip,
+          take: limitNum,
+          include: {
+            photos: {
+              select: {
+                id: true,
+                url: true,
+                width: true,
+                height: true,
+                createdAt: true,
+              },
+            },
+            owner: {
+              select: {
+                id: true,
+                displayName: true,
+                avatarUrl: true,
+              },
             },
           },
-          owner: {
-            select: {
-              id: true,
-              displayName: true,
-              avatarUrl: true,
-            },
-          },
-        },
-      }),
-      this.prisma.item.count({ where }),
-    ]);
+        }),
+        this.prisma.item.count({ where }),
+      ]);
 
-    return {
-      items,
-      total,
-      page: pageNum,
-      limit: limitNum,
-      totalPages: Math.ceil(total / limitNum),
-    };
+      return {
+        items,
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
+      };
+    } catch (error: any) {
+      // Si erreur de connexion Prisma, retourner une liste vide
+      if (error.code === 'P1010' || error.message?.includes('denied access')) {
+        console.error('Erreur Prisma P1010:', error.message);
+        return {
+          items: [],
+          total: 0,
+          page: pageNum,
+          limit: limitNum,
+          totalPages: 0,
+        };
+      }
+      // Propager les autres erreurs
+      throw error;
+    }
   }
 
   /**

@@ -38,6 +38,7 @@ import {
   LogOut,
   Trash2,
 } from 'lucide-react';
+import { AvatarUpload } from '@/components/profile/AvatarUpload';
 import ProtectedRoute from '../(auth)/protected';
 
 const profileSchema = z.object({
@@ -62,6 +63,8 @@ function ProfilePageContent() {
     handleSubmit,
     formState: { errors },
     reset,
+    setValue,
+    watch,
   } = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
@@ -71,6 +74,8 @@ function ProfilePageContent() {
       avatarUrl: user?.avatarUrl || '',
     },
   });
+
+  const avatarUrl = watch('avatarUrl');
 
   useEffect(() => {
     if (user) {
@@ -175,17 +180,12 @@ function ProfilePageContent() {
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                   {/* Avatar et nom */}
                   <div className="flex items-center gap-4">
-                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-2xl font-bold">
-                      {user.avatarUrl ? (
-                        <img
-                          src={user.avatarUrl}
-                          alt="Avatar"
-                          className="h-full w-full rounded-full object-cover"
-                        />
-                      ) : (
-                        <UserIcon className="h-8 w-8" />
-                      )}
-                    </div>
+                    <AvatarUpload
+                      currentAvatarUrl={avatarUrl || user?.avatarUrl}
+                      displayName={user?.displayName || ''}
+                      onUploadComplete={(url) => setValue('avatarUrl', url)}
+                      disabled={!isEditing}
+                    />
                     <div>
                       <h2 className="text-2xl font-semibold">
                         {user.displayName}
@@ -250,28 +250,6 @@ function ProfilePageContent() {
                       {errors.displayName && (
                         <p className="mt-1 text-sm text-destructive">
                           {errors.displayName.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="md:col-span-2">
-                      <label className="text-sm font-medium text-muted-foreground">
-                        URL de l'avatar
-                      </label>
-                      {isEditing ? (
-                        <Input
-                          {...register('avatarUrl')}
-                          placeholder="https://example.com/avatar.jpg"
-                          className="mt-1"
-                        />
-                      ) : (
-                        <span className="mt-1 block">
-                          {user.avatarUrl || 'Aucune URL'}
-                        </span>
-                      )}
-                      {errors.avatarUrl && (
-                        <p className="mt-1 text-sm text-destructive">
-                          {errors.avatarUrl.message}
                         </p>
                       )}
                     </div>

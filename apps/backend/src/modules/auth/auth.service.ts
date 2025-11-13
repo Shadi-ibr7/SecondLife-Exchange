@@ -23,10 +23,21 @@ export class AuthService {
   async register(input: AuthRegisterInput): Promise<TokenResponse> {
     const { email, password, displayName } = input;
 
-    // Vérifier si l'utilisateur existe déjà
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email },
-    });
+    // Vérifier si l'utilisateur existe déjà avec gestion d'erreur
+    let existingUser;
+    try {
+      existingUser = await this.prisma.user.findUnique({
+        where: { email },
+      });
+    } catch (error: any) {
+      if (error.code === 'P1010' || error.message?.includes('denied access')) {
+        console.error('Erreur Prisma P1010 dans register:', error.message);
+        throw new ConflictException(
+          'Service temporairement indisponible. Veuillez réessayer plus tard.',
+        );
+      }
+      throw error;
+    }
 
     if (existingUser) {
       throw new ConflictException('Un utilisateur avec cet email existe déjà');
@@ -54,44 +65,107 @@ export class AuthService {
         },
       });
 
-      return user;
+      // Générer les tokens dans la transaction
+      const accessToken = await this.jwtService.signAsync(
+        { sub: user.id, email: user.email, roles: [user.roles] },
+        { expiresIn: '15m' },
+      );
+
+      const refreshToken = await this.jwtService.signAsync(
+        { sub: user.id, type: 'refresh' },
+        { expiresIn: '7d' },
+      );
+
+      const saltRounds = 10;
+      const tokenHash = await bcrypt.hash(refreshToken, saltRounds);
+
+      // Créer le refresh token dans la transaction
+      await tx.refreshToken.create({
+        data: {
+          userId: user.id,
+          tokenHash,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 jours
+        },
+      });
+
+      return {
+        accessToken,
+        refreshToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          displayName: user.displayName,
+          avatarUrl: user.avatarUrl,
+          roles: [user.roles],
+          createdAt: user.createdAt,
+        },
+      };
     });
 
-    // Générer les tokens
-    const tokens = await this.generateTokens(result.id, result.email, [
-      result.roles,
-    ]);
-
-    return {
-      ...tokens,
-      user: {
-        id: result.id,
-        email: result.email,
-        displayName: result.displayName,
-        avatarUrl: result.avatarUrl,
-        roles: [result.roles],
-        createdAt: result.createdAt,
-      },
-    };
+    return result;
   }
 
   async login(input: AuthLoginInput): Promise<TokenResponse> {
     const { email, password } = input;
 
-    // Trouver l'utilisateur
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-    });
+    // Trouver l'utilisateur avec gestion d'erreur Prisma
+    let user;
+    try {
+      user = await this.prisma.user.findUnique({
+        where: { email },
+      });
+    } catch (error: any) {
+      if (error.code === 'P1010' || error.message?.includes('denied access')) {
+        console.error('Erreur Prisma P1010 dans login:', error.message);
+        throw new UnauthorizedException(
+          'Service temporairement indisponible. Veuillez réessayer plus tard.',
+        );
+      }
+      throw error;
+    }
 
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
       throw new UnauthorizedException('Email ou mot de passe incorrect');
     }
 
     // Générer les tokens
-    const tokens = await this.generateTokens(user.id, user.email, [user.roles]);
+    const accessToken = await this.jwtService.signAsync(
+      { sub: user.id, email: user.email, roles: [user.roles] },
+      { expiresIn: '15m' },
+    );
+
+    const refreshToken = await this.jwtService.signAsync(
+      { sub: user.id, type: 'refresh' },
+      { expiresIn: '7d' },
+    );
+
+    const saltRounds = 10;
+    const tokenHash = await bcrypt.hash(refreshToken, saltRounds);
+
+    // Créer le refresh token avec gestion d'erreur
+    try {
+      await this.prisma.refreshToken.create({
+        data: {
+          userId: user.id,
+          tokenHash,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 jours
+        },
+      });
+    } catch (error: any) {
+      if (error.code === 'P1010' || error.message?.includes('denied access')) {
+        console.error(
+          'Erreur Prisma P1010 lors de la création du refresh token:',
+          error.message,
+        );
+        // On continue quand même - le token JWT est déjà généré
+      } else {
+        throw error;
+      }
+    }
 
     return {
-      ...tokens,
+      accessToken,
+      refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -127,11 +201,32 @@ export class AuthService {
     }
 
     // Générer de nouveaux tokens
-    const tokens = await this.generateTokens(
-      tokenRecord.user.id,
-      tokenRecord.user.email,
-      [tokenRecord.user.roles],
+    // Générer les nouveaux tokens
+    const accessToken = await this.jwtService.signAsync(
+      {
+        sub: tokenRecord.user.id,
+        email: tokenRecord.user.email,
+        roles: [tokenRecord.user.roles],
+      },
+      { expiresIn: '15m' },
     );
+
+    const newRefreshToken = await this.jwtService.signAsync(
+      { sub: tokenRecord.user.id, type: 'refresh' },
+      { expiresIn: '7d' },
+    );
+
+    const saltRounds = 10;
+    const tokenHash = await bcrypt.hash(newRefreshToken, saltRounds);
+
+    // Créer le nouveau refresh token
+    await this.prisma.refreshToken.create({
+      data: {
+        userId: tokenRecord.user.id,
+        tokenHash,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 jours
+      },
+    });
 
     // Révoquer l'ancien refresh token
     await this.prisma.refreshToken.update({
@@ -139,7 +234,10 @@ export class AuthService {
       data: { revokedAt: new Date() },
     });
 
-    return tokens;
+    return {
+      accessToken,
+      refreshToken: newRefreshToken,
+    };
   }
 
   async logout(refreshToken: string): Promise<void> {
@@ -152,48 +250,5 @@ export class AuthService {
       where: { tokenHash: refreshToken },
       data: { revokedAt: new Date() },
     });
-  }
-
-  private async generateTokens(
-    userId: string,
-    email: string,
-    roles: string[],
-  ): Promise<{ accessToken: string; refreshToken: string }> {
-    const accessTokenPayload = { sub: userId, email, roles };
-    const refreshTokenPayload = { sub: userId };
-
-    const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(accessTokenPayload, {
-        secret: this.configService.get<string>('security.jwtAccessSecret'),
-        expiresIn: this.configService.get<string>(
-          'security.jwtAccessExpiresIn',
-        ),
-      }),
-      this.jwtService.signAsync(refreshTokenPayload, {
-        secret: this.configService.get<string>('security.jwtRefreshSecret'),
-        expiresIn: this.configService.get<string>(
-          'security.jwtRefreshExpiresIn',
-        ),
-      }),
-    ]);
-
-    // Stocker le refresh token en base
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7); // 7 jours
-
-    const saltRounds = this.configService.get<number>(
-      'security.bcryptSaltRounds',
-    );
-    const tokenHash = await bcrypt.hash(refreshToken, saltRounds);
-
-    await this.prisma.refreshToken.create({
-      data: {
-        userId,
-        tokenHash,
-        expiresAt,
-      },
-    });
-
-    return { accessToken, refreshToken };
   }
 }

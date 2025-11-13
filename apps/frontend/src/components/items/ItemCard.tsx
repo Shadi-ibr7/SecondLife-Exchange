@@ -9,6 +9,7 @@ import { ITEM_CATEGORY_LABELS, ITEM_CONDITION_LABELS } from '@/lib/constants';
 import { MapPin, Calendar } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { toast } from 'react-hot-toast';
 
 interface ItemCardProps {
   item: Item;
@@ -23,6 +24,14 @@ export function ItemCard({ item, index = 0 }: ItemCardProps) {
     });
   };
 
+  const isMock = item.id.startsWith('mock-');
+  const handleMockClick: React.MouseEventHandler<HTMLAnchorElement> = (e) => {
+    if (isMock) {
+      e.preventDefault();
+      toast("Aperçu d'annonce. Publiez un objet pour voir la fiche détaillée.");
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -30,7 +39,10 @@ export function ItemCard({ item, index = 0 }: ItemCardProps) {
       transition={{ duration: 0.4, delay: index * 0.1 }}
     >
       <Card className="h-full cursor-pointer transition-shadow hover:shadow-lg">
-        <Link href={`/item/${item.id}`}>
+        <Link
+          href={isMock ? '/explore' : `/item/${item.id}`}
+          onClick={handleMockClick}
+        >
           <div className="flex aspect-square items-center justify-center rounded-t-lg bg-muted">
             {item.photos.length > 0 ? (
               <img

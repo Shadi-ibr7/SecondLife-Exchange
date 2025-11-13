@@ -5,13 +5,17 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateExchangeInput } from './dtos/create-exchange.dto';
 import { UpdateExchangeStatusInput } from './dtos/update-exchange-status.dto';
 import { PaginationInput } from '../../common/dtos/pagination.dto';
 
 @Injectable()
 export class ExchangesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async createExchange(requesterId: string, input: CreateExchangeInput) {
     const { responderId, requestedItemTitle, offeredItemTitle, message } =
@@ -33,7 +37,7 @@ export class ExchangesService {
       );
     }
 
-    return this.prisma.exchange.create({
+    const exchange = await this.prisma.exchange.create({
       data: {
         requesterId,
         responderId,
@@ -61,6 +65,19 @@ export class ExchangesService {
         },
       },
     });
+
+    // Notifier le propriétaire (répondant) d'une nouvelle proposition
+    try {
+      await this.notifications.sendExchangeStatusNotification(
+        exchange.id,
+        'PENDING',
+        responderId,
+      );
+    } catch (e) {
+      // ne pas bloquer la création en cas d'échec d'envoi
+    }
+
+    return exchange;
   }
 
   async updateExchangeStatus(

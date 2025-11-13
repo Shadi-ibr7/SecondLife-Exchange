@@ -171,8 +171,12 @@ export interface ListItemsParams {
 
 export interface UploadSignature {
   signature: string;
-  timestamp: string;
+  timestamp: number | string;
   folder: string;
+  public_id?: string;
+  allowed_formats?: string[];
+  max_bytes?: number;
+  transformation?: string;
 }
 
 export interface PhotoMeta {

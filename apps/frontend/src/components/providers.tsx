@@ -1,28 +1,24 @@
 'use client';
 
-import { useEffect } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { getQueryClient } from '@/lib/query-client';
 import { useAuthStore } from '@/store/auth';
 import { useThemeStore } from '@/store/theme';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      refetchOnWindowFocus: false,
-    },
-  },
-});
-
 export function Providers({ children }: { children: React.ReactNode }) {
+  // Créer le QueryClient une seule fois avec useState
+  const [queryClient] = useState(() => getQueryClient());
   const { checkAuth } = useAuthStore();
   const { theme, setResolvedTheme } = useThemeStore();
 
   useEffect(() => {
-    // Check authentication on mount
+    // Check authentication on mount (une seule fois)
     checkAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Exécuter uniquement au mount
 
+  useEffect(() => {
     // Handle theme changes
     const handleThemeChange = () => {
       if (theme === 'system') {
@@ -48,7 +44,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     return () => {
       mediaQuery.removeEventListener('change', handleThemeChange);
     };
-  }, [checkAuth, theme, setResolvedTheme]);
+  }, [theme, setResolvedTheme]); // Retirer checkAuth des dépendances pour éviter les appels répétés
 
   return (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>

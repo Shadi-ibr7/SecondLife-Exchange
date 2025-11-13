@@ -8,6 +8,7 @@ import {
   MaxLength,
   ArrayMaxSize,
   ArrayMinSize,
+  ValidateIf,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ItemCategory, ItemCondition } from '@prisma/client';
@@ -42,7 +43,11 @@ export class CreateItemDto {
     example: ItemCategory.ELECTRONICS,
   })
   @IsOptional()
-  @IsEnum(ItemCategory)
+  @ValidateIf((o) => o.category !== undefined)
+  @IsEnum(ItemCategory, {
+    message:
+      'Catégorie invalide. Catégories valides: ELECTRONICS, CLOTHING, BOOKS, FURNITURE, SPORTS, TOYS, OTHER',
+  })
   category?: ItemCategory;
 
   @ApiProperty({

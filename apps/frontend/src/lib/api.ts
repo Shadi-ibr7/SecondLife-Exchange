@@ -14,6 +14,11 @@ import {
 
 class ApiClient {
   public client: AxiosInstance;
+  private isRefreshing = false;
+  private failedQueue: Array<{
+    resolve: (value?: any) => void;
+    reject: (error?: any) => void;
+  }> = [];
 
   constructor() {
     this.client = axios.create({
@@ -49,31 +54,96 @@ class ApiClient {
       async (error) => {
         const originalRequest = error.config;
 
+        // Ne pas intercepter les erreurs de l'endpoint /auth/refresh lui-même
+        if (
+          originalRequest?.url?.includes('/auth/refresh') ||
+          originalRequest?._skipAuthRefresh
+        ) {
+          // Si c'est un refresh qui échoue, nettoyer et rediriger
+          if (error.response?.status === 401) {
+            this.clearTokens();
+            // Ne pas rediriger si on est déjà sur la page de login
+            if (
+              typeof window !== 'undefined' &&
+              !window.location.pathname.includes('/login')
+            ) {
+              window.location.href = '/login';
+            }
+          }
+          return Promise.reject(error);
+        }
+
         if (error.response?.status === 401 && !originalRequest._retry) {
+          // Si on est déjà en train de rafraîchir, mettre la requête en file d'attente
+          if (this.isRefreshing) {
+            return new Promise((resolve, reject) => {
+              this.failedQueue.push({ resolve, reject });
+            })
+              .then((token) => {
+                originalRequest.headers.Authorization = `Bearer ${token}`;
+                return this.client(originalRequest);
+              })
+              .catch((err) => {
+                return Promise.reject(err);
+              });
+          }
+
           originalRequest._retry = true;
+          this.isRefreshing = true;
 
           try {
             const refreshToken = this.getRefreshToken();
-            if (refreshToken) {
-              const response = await this.refreshToken(refreshToken);
-              this.setTokens(response.accessToken, response.refreshToken);
-
-              // Retry the original request
-              originalRequest.headers.Authorization = `Bearer ${response.accessToken}`;
-              return this.client(originalRequest);
+            if (!refreshToken) {
+              throw new Error('Aucun refresh token disponible');
             }
+
+            const response = await this.refreshToken(refreshToken);
+            this.setTokens(response.accessToken, response.refreshToken);
+
+            // Retry the original request
+            originalRequest.headers.Authorization = `Bearer ${response.accessToken}`;
+
+            // Traiter toutes les requêtes en file d'attente
+            this.failedQueue.forEach(({ resolve }) => {
+              resolve(response.accessToken);
+            });
+            this.failedQueue = [];
+            this.isRefreshing = false;
+
+            return this.client(originalRequest);
           } catch (refreshError) {
+            // Échec du refresh, nettoyer et rediriger
             this.clearTokens();
-            window.location.href = '/login';
+            this.failedQueue.forEach(({ reject }) => {
+              reject(refreshError);
+            });
+            this.failedQueue = [];
+            this.isRefreshing = false;
+
+            // Ne pas rediriger si on est déjà sur la page de login
+            if (
+              typeof window !== 'undefined' &&
+              !window.location.pathname.includes('/login')
+            ) {
+              window.location.href = '/login';
+            }
             return Promise.reject(refreshError);
           }
         }
 
-        // Afficher les erreurs à l'utilisateur
-        if (error.response?.data?.message) {
-          toast.error(error.response.data.message);
-        } else if (error.message) {
-          toast.error(error.message);
+        // Afficher les erreurs à l'utilisateur (sauf pour les erreurs de refresh)
+        if (
+          error.response?.status !== 401 ||
+          !originalRequest?.url?.includes('/auth/refresh')
+        ) {
+          if (error.response?.data?.message) {
+            // Ne pas afficher les erreurs pour les requêtes qui ont échoué silencieusement
+            if (!originalRequest?._skipErrorToast) {
+              toast.error(error.response.data.message);
+            }
+          } else if (error.message && !originalRequest?._skipErrorToast) {
+            toast.error(error.message);
+          }
         }
 
         return Promise.reject(error);
@@ -135,10 +205,14 @@ class ApiClient {
   async refreshToken(
     refreshToken: string
   ): Promise<{ accessToken: string; refreshToken: string }> {
+    // Marquer cette requête pour qu'elle ne déclenche pas l'interceptor
     const response = await this.client.post<{
       accessToken: string;
       refreshToken: string;
-    }>('/auth/refresh', { refreshToken });
+    }>('/auth/refresh', { refreshToken }, {
+      _skipAuthRefresh: true,
+      _skipErrorToast: true,
+    } as any);
     return response.data;
   }
 

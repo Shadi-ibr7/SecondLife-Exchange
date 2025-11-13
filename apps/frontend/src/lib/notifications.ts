@@ -166,6 +166,13 @@ export class NotificationService {
   }
 
   /**
+   * Vérifie si les notifications sont activées (alias pour isGranted)
+   */
+  isEnabled(): boolean {
+    return this.isGranted();
+  }
+
+  /**
    * Obtient l'état des permissions
    */
   getPermissionStatus(): NotificationPermission {

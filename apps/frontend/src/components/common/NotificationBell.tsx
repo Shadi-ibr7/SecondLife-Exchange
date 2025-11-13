@@ -15,19 +15,17 @@ export function NotificationBell() {
     try {
       const permission = await notificationService.requestPermission();
 
-      if (permission.granted) {
+      if (permission) {
         // Essayer d'enregistrer le token FCM
-        const token = await notificationService.getFCMToken();
+        const token = await notificationService.getToken();
         if (token) {
           await notificationService.registerToken(token);
           toast.success('Notifications activées !');
         } else {
           toast.success('Notifications activées (mode local)');
         }
-      } else if (permission.denied) {
-        toast.error('Notifications bloquées dans les paramètres du navigateur');
       } else {
-        toast('Notifications non activées');
+        toast.error('Notifications bloquées dans les paramètres du navigateur');
       }
     } catch (error) {
       console.error("Erreur lors de l'activation des notifications:", error);

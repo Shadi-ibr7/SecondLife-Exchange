@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,6 +5,234 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String         @id @default(cuid())
+  email              String         @unique
+  createdAt          DateTime       @default(now())
+  avatarUrl          String?
+  displayName        String
+  passwordHash       String
+  roles              UserRole       @default(USER)
+  exchangesRequested Exchange[]     @relation("ExchangeRequester")
+  exchangesResponded Exchange[]     @relation("ExchangeResponder")
+  items              Item[]
+  preferences        Preference?
+  refreshTokens      RefreshToken[]
+  profile            UserProfile?
+  threads            Thread[]
+  posts              Post[]
+  notificationTokens NotificationToken[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model UserProfile {
+  id              String  @id @default(cuid())
+  userId          String  @unique
+  bio             String?
+  location        String?
+  preferencesJson Json?
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model Preference {
+  userId              String   @id
+  preferredCategories String[]
+  dislikedCategories  String[]
+  preferredConditions String[]
+  locale              String?
+  country             String?
+  radiusKm            Int?
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("preferences")
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+  tokenHash String    @unique
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model Exchange {
+  id                 String         @id @default(cuid())
+  status             ExchangeStatus @default(PENDING)
+  createdAt          DateTime       @default(now())
+  completedAt        DateTime?
+  offeredItemTitle   String
+  requestedItemTitle String
+  requesterId        String
+  responderId        String
+  message            String?
+  requester          User           @relation("ExchangeRequester", fields: [requesterId], references: [id])
+  responder          User           @relation("ExchangeResponder", fields: [responderId], references: [id])
+
+  @@index([requesterId])
+  @@index([responderId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("exchanges")
+}
+
+model Item {
+  id              String        @id @default(cuid())
+  ownerId         String
+  title           String
+  description     String
+  category        ItemCategory
+  condition       ItemCondition
+  status          ItemStatus    @default(AVAILABLE)
+  tags            String[]
+  aiSummary       String?
+  aiRepairTip     String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  popularityScore Int           @default(0)
+  photos          ItemPhoto[]
+  owner           User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+  @@index([category, condition, status])
+  @@index([popularityScore])
+  @@map("items")
+}
+
+model ItemPhoto {
+  id        String   @id @default(cuid())
+  itemId    String
+  url       String
+  publicId  String
+  width     Int?
+  height    Int?
+  createdAt DateTime @default(now())
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@map("item_photos")
+}
+
+model WeeklyTheme {
+  id          String          @id @default(cuid())
+  title       String
+  slug        String          @unique
+  startOfWeek DateTime
+  impactText  String?
+  isActive    Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  suggestions SuggestedItem[]
+
+  @@index([startOfWeek])
+  @@index([isActive])
+  @@map("weekly_themes")
+}
+
+model SuggestedItem {
+  id               String      @id @default(cuid())
+  themeId          String
+  name             String
+  category         String
+  country          String
+  era              String?
+  materials        String?
+  ecoReason        String?
+  repairDifficulty String?
+  popularity       Int?
+  tags             String[]
+  photoRef         String?
+  aiModel          String?
+  aiPromptHash     String?
+  aiRaw            Json?
+  createdAt        DateTime    @default(now())
+  theme            WeeklyTheme @relation(fields: [themeId], references: [id], onDelete: Cascade)
+
+  @@index([themeId, country])
+  @@index([category])
+  @@index([name])
+  @@map("suggested_items")
+}
+
+model EcoContent {
+  id          String    @id @default(cuid())
+  kind        String
+  title       String
+  url         String
+  locale      String?
+  tags        String[]
+  source      String?
+  summary     String?
+  kpis        Json?
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([kind])
+  @@index([locale])
+  @@index([tags])
+  @@index([publishedAt])
+  @@map("eco_content")
+}
+
+model Thread {
+  id        String   @id @default(cuid())
+  scope     String
+  scopeRef  String?
+  title     String
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  posts     Post[]
+
+  @@index([scope, scopeRef])
+  @@index([createdAt])
+  @@map("threads")
+}
+
+model Post {
+  id        String    @id @default(cuid())
+  threadId  String
+  authorId  String
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime  @default(now())
+  editedAt  DateTime?
+  repliesTo String?
+  parent    Post?     @relation("PostReplies", fields: [repliesTo], references: [id])
+  replies   Post[]    @relation("PostReplies")
+  thread    Thread    @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId])
+  @@index([createdAt])
+  @@map("posts")
+}
+
+model NotificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  provider  String
+  token     String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+
+  @@index([userId])
+  @@index([provider])
+  @@map("notification_tokens")
 }
 
 enum UserRole {
@@ -18,9 +243,9 @@ enum UserRole {
 enum ExchangeStatus {
   PENDING
   ACCEPTED
-  DECLINED
   COMPLETED
   CANCELLED
+  DECLINED
 }
 
 enum ItemCondition {
@@ -49,253 +274,4 @@ enum ItemCategory {
   VINTAGE
   HANDCRAFT
   OTHER
-}
-
-model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  displayName  String
-  avatarUrl    String?
-  roles        UserRole @default(USER)
-  createdAt    DateTime @default(now())
-
-  // Relations
-  profile      UserProfile?
-  preferences  Preference?
-  refreshTokens RefreshToken[]
-  exchangesRequested Exchange[] @relation("ExchangeRequester")
-  exchangesResponded Exchange[] @relation("ExchangeResponder")
-  items        Item[]
-  threads      Thread[]
-  posts        Post[]
-  notificationTokens NotificationToken[]
-
-  @@map("users")
-  @@index([email])
-}
-
-model UserProfile {
-  id              String  @id @default(cuid())
-  userId          String  @unique
-  bio             String?
-  location        String?
-  preferencesJson Json?
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("user_profiles")
-}
-
-model Preference {
-  userId              String   @id
-  preferredCategories String[]
-  dislikedCategories  String[]
-  preferredConditions String[]
-  locale              String?
-  country             String?
-  radiusKm            Int?
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("preferences")
-}
-
-model RefreshToken {
-  id        String    @id @default(cuid())
-  userId    String
-  tokenHash String    @unique
-  expiresAt DateTime
-  revokedAt DateTime?
-  createdAt DateTime  @default(now())
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("refresh_tokens")
-  @@index([userId])
-  @@index([tokenHash])
-  @@index([expiresAt])
-}
-
-model Exchange {
-  id                  String          @id @default(cuid())
-  requesterId         String
-  responderId         String
-  requestedItemTitle  String
-  offeredItemTitle    String
-  message             String?
-  status              ExchangeStatus  @default(PENDING)
-  createdAt           DateTime        @default(now())
-  completedAt         DateTime?
-
-  // Relations
-  requester User @relation("ExchangeRequester", fields: [requesterId], references: [id])
-  responder User @relation("ExchangeResponder", fields: [responderId], references: [id])
-
-  @@map("exchanges")
-  @@index([requesterId])
-  @@index([responderId])
-  @@index([status])
-  @@index([createdAt])
-}
-
-model Item {
-  id              String        @id @default(cuid())
-  ownerId         String
-  owner           User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  title           String
-  description     String
-  category        ItemCategory
-  condition       ItemCondition
-  status          ItemStatus    @default(AVAILABLE)
-  photos          ItemPhoto[]
-  tags            String[]
-  aiSummary       String?       // résumé concis proposé par l'IA
-  aiRepairTip     String?       // conseil réparation basique
-  popularityScore Int           @default(0) // score de popularité (votes/vues)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  @@map("items")
-  @@index([ownerId])
-  @@index([category, condition, status])
-  @@index([popularityScore])
-}
-
-model ItemPhoto {
-  id        String   @id @default(cuid())
-  itemId    String
-  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  url       String   // URL publique (CDN Cloudinary)
-  publicId  String   // identifiant Cloudinary pour suppression
-  width     Int?
-  height    Int?
-  createdAt DateTime @default(now())
-
-  @@map("item_photos")
-  @@index([itemId])
-}
-
-model WeeklyTheme {
-  id          String      @id @default(cuid())
-  title       String
-  slug        String      @unique
-  startOfWeek DateTime    // Lundi 00:00:00 local (ou UTC) du thème
-  impactText  String?     // Texte sur l'impact écologique du thème (exigence sujet)
-  isActive    Boolean     @default(false)
-  suggestions SuggestedItem[]
-
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-
-  @@map("weekly_themes")
-  @@index([startOfWeek])
-  @@index([isActive])
-}
-
-model SuggestedItem {
-  id              String   @id @default(cuid())
-  themeId         String
-  theme           WeeklyTheme @relation(fields: [themeId], references: [id], onDelete: Cascade)
-
-  // Champs issus de l'IA Gemini
-  name            String
-  category        String
-  country         String
-  era             String?
-  materials       String?
-  ecoReason       String?
-  repairDifficulty String?   // "faible|moyenne|elevee"
-  popularity      Int?       // 1..5
-  tags            String[]
-  photoRef        String?
-
-  // Traces & contrôle qualité
-  aiModel         String?
-  aiPromptHash    String?
-  aiRaw           Json?
-
-  createdAt       DateTime @default(now())
-
-  @@map("suggested_items")
-  @@index([themeId, country])
-  @@index([category])
-  @@index([name])
-}
-
-model EcoContent {
-  id          String    @id @default(cuid())
-  kind        String    // 'ARTICLE' | 'VIDEO' | 'STAT'
-  title       String
-  url         String
-  locale      String?   // 'fr', 'en', ...
-  tags        String[]
-  source      String?
-  summary     String?   // résumé généré (Gemini)
-  kpis        Json?     // stats clés (ex: CO2 épargné)
-  publishedAt DateTime?
-  createdAt   DateTime  @default(now())
-
-  @@map("eco_content")
-  @@index([kind])
-  @@index([locale])
-  @@index([tags])
-  @@index([publishedAt])
-}
-
-model Thread {
-  id        String   @id @default(cuid())
-  scope     String   // 'THEME' | 'CATEGORY' | 'ITEM' | 'GENERAL'
-  scopeRef  String?  // themeId | category | itemId | null
-  title     String
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  posts  Post[]
-
-  @@map("threads")
-  @@index([scope, scopeRef])
-  @@index([createdAt])
-}
-
-model Post {
-  id        String    @id @default(cuid())
-  threadId  String
-  authorId  String
-  content   String
-  createdAt DateTime  @default(now())
-  editedAt  DateTime?
-  repliesTo String?   // postId
-
-  // Relations
-  thread  Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  author  User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  replies Post[] @relation("PostReplies")
-  parent  Post?  @relation("PostReplies", fields: [repliesTo], references: [id])
-
-  @@map("posts")
-  @@index([threadId])
-  @@index([createdAt])
-}
-
-model NotificationToken {
-  id        String   @id @default(cuid())
-  userId    String
-  provider  String   // 'webpush' | 'fcm'
-  token     String
-  createdAt DateTime @default(now())
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, provider])
-  @@map("notification_tokens")
-  @@index([userId])
-  @@index([provider])
 }

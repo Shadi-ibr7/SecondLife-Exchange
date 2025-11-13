@@ -74,6 +74,12 @@ describe('GeminiService', () => {
     });
 
     it("devrait retourner null si la clé API n'est pas configurée", async () => {
+      // Sauvegarder la variable d'environnement originale
+      const originalEnv = process.env.AI_GEMINI_API_KEY;
+
+      // Supprimer la variable d'environnement
+      delete process.env.AI_GEMINI_API_KEY;
+
       // Créer un nouveau service avec une configuration sans clé API
       const mockConfigService = {
         get: jest.fn().mockReturnValue({
@@ -87,13 +93,18 @@ describe('GeminiService', () => {
 
       const serviceWithoutKey = new GeminiService(mockConfigService);
 
-      // Le service devrait lever une erreur si la clé API n'est pas configurée
-      await expect(
-        serviceWithoutKey.analyzeItem({
-          title: 'Test Item',
-          description: 'Test description',
-        }),
-      ).rejects.toThrow('Gemini API key not configured');
+      // Le service devrait retourner null si la clé API n'est pas configurée
+      const result = await serviceWithoutKey.analyzeItem({
+        title: 'Test Item',
+        description: 'Test description',
+      });
+
+      expect(result).toBeNull();
+
+      // Restaurer la variable d'environnement
+      if (originalEnv) {
+        process.env.AI_GEMINI_API_KEY = originalEnv;
+      }
     });
 
     it("devrait gérer les erreurs de l'API Gemini", async () => {

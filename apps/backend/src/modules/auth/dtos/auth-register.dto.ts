@@ -38,5 +38,8 @@ export class AuthRegisterDto {
   @MinLength(2, {
     message: "Le nom d'affichage doit contenir au moins 2 caractères",
   })
+  @Matches(/^.{2,50}$/, {
+    message: "Le nom d'affichage doit contenir entre 2 et 50 caractères",
+  })
   displayName: string;
 }

@@ -35,15 +35,82 @@ export default function ItemDetailPage() {
   const { user } = useAuthStore();
   const itemId = params.id as string;
 
+  const isMock = itemId?.startsWith('mock-');
+
+  const MOCK_ITEM = isMock
+    ? {
+        id: itemId,
+        ownerId: 'u-mock',
+        title:
+          itemId === 'mock-1'
+            ? 'Chaise vintage en bois'
+            : itemId === 'mock-2'
+              ? 'Roman policier - état neuf'
+              : 'Perceuse sans fil 18V',
+        description:
+          itemId === 'mock-1'
+            ? 'Chaise en bois massif restaurée, idéale pour un intérieur rétro.'
+            : itemId === 'mock-2'
+              ? 'Livre lu une fois, comme neuf. Échange contre livre de science-fiction.'
+              : 'Outil en bon état, batterie récente. Échange contre outils de jardinage.',
+        category:
+          itemId === 'mock-2'
+            ? 'BOOKS'
+            : itemId === 'mock-3'
+              ? 'TOOLS'
+              : 'HOME',
+        condition: itemId === 'mock-2' ? 'NEW' : 'GOOD',
+        status: 'AVAILABLE',
+        tags:
+          itemId === 'mock-1'
+            ? ['vintage', 'bois', 'restauré']
+            : itemId === 'mock-2'
+              ? ['livre', 'roman', 'policier']
+              : ['outil', 'bricolage'],
+        aiSummary: undefined,
+        aiRepairTip: undefined,
+        popularityScore: 0,
+        photos: [
+          {
+            id: 'p-mock',
+            itemId,
+            url:
+              itemId === 'mock-1'
+                ? 'https://images.unsplash.com/photo-1549187774-b4e9b0445b41?q=80&w=1200&auto=format&fit=crop'
+                : itemId === 'mock-2'
+                  ? 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0ea?q=80&w=1200&auto=format&fit=crop'
+                  : 'https://images.unsplash.com/photo-1563453392212-326f5e854473?q=80&w=1200&auto=format&fit=crop',
+            publicId: 'mock',
+            createdAt: new Date().toISOString(),
+          },
+        ],
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+        updatedAt: new Date().toISOString(),
+        owner: {
+          id: 'u-mock',
+          email: 'mock@example.com',
+          displayName: 'Utilisateur démo',
+          avatarUrl: undefined,
+          bio: undefined,
+          location: 'France',
+          roles: 'USER' as const,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      }
+    : null;
+
   const {
-    data: item,
+    data: itemApi,
     isLoading,
     error,
   } = useQuery({
     queryKey: ['item', itemId],
     queryFn: () => itemsApi.getItem(itemId),
-    enabled: !!itemId,
+    enabled: !!itemId && !isMock,
   });
+
+  const item = (isMock ? MOCK_ITEM : itemApi) as any;
 
   const isOwner = Boolean(user && item && user.id === item.ownerId);
 
@@ -74,7 +141,7 @@ export default function ItemDetailPage() {
     );
   }
 
-  if (error || !item) {
+  if (!isMock && (error || !item)) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
@@ -254,12 +321,20 @@ export default function ItemDetailPage() {
                   <p className="mb-4 text-sm text-muted-foreground">
                     Proposez un de vos objets en échange
                   </p>
-                  <ProposeExchangeModal
-                    requestedItem={item}
-                    responderId={item.ownerId}
-                  >
-                    <Button className="w-full">Proposer un échange</Button>
-                  </ProposeExchangeModal>
+                  {user ? (
+                    <ProposeExchangeModal
+                      requestedItem={item}
+                      responderId={item.ownerId}
+                    >
+                      <Button className="w-full">Proposer un échange</Button>
+                    </ProposeExchangeModal>
+                  ) : (
+                    <Button className="w-full" asChild>
+                      <Link href={`/login?next=/item/${item.id}`}>
+                        Se connecter pour contacter
+                      </Link>
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             )}

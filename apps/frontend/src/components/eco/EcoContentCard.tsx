@@ -182,15 +182,20 @@ export function EcoContentCard({
           {/* Actions */}
           <div className="flex gap-2 pt-2">
             <Button asChild className="flex-1" size="sm">
-              <Link
-                href={content.url}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Voir le contenu
-                <ExternalLink className="ml-2 h-4 w-4" />
-              </Link>
+              <Link href={`/discover/${content.id}`}>Voir le contenu</Link>
             </Button>
+            {content.url && (
+              <Button asChild variant="outline" size="sm">
+                <Link
+                  href={content.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Source
+                  <ExternalLink className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -78,11 +78,56 @@ async function main() {
     },
   });
 
+  // Créer des articles éco-éducatifs (blog)
+  const now = new Date();
+  await prisma.ecoContent.createMany({
+    data: [
+      {
+        kind: 'ARTICLE',
+        title:
+          'Réduire ses déchets au quotidien: 10 gestes simples et efficaces',
+        url: 'https://secondlife.exchange/blog/reduire-dechets-quotidien',
+        locale: 'fr',
+        tags: ['zéro déchet', 'maison', 'écologie'],
+        source: 'SecondLife Exchange',
+        publishedAt: now,
+        summary:
+          "Adopter une routine zéro déchet n'est pas compliqué. Voici 10 gestes concrets applicables dès aujourd'hui pour réduire vos déchets à la maison.",
+      } as any,
+      {
+        kind: 'ARTICLE',
+        title:
+          'Réparer au lieu de jeter: le guide pratique pour débuter facilement',
+        url: 'https://secondlife.exchange/blog/reparer-au-lieu-de-jeter',
+        locale: 'fr',
+        tags: ['réparation', 'bricolage', 'durabilité'],
+        source: 'SecondLife Exchange',
+        publishedAt: new Date(now.getTime() - 1000 * 60 * 60 * 24 * 3),
+        summary:
+          'Réparer ses objets prolonge leur durée de vie et économise des ressources. Découvrez les bases, les outils essentiels et où trouver de l’aide.',
+      } as any,
+      {
+        kind: 'ARTICLE',
+        title:
+          'Donner une seconde vie à ses objets: astuces pour échanger intelligemment',
+        url: 'https://secondlife.exchange/blog/seconde-vie-astuces-echanges',
+        locale: 'fr',
+        tags: ['échange', 'seconde main', 'astuces'],
+        source: 'SecondLife Exchange',
+        publishedAt: new Date(now.getTime() - 1000 * 60 * 60 * 24 * 7),
+        summary:
+          "Bien décrire son objet, prendre de bonnes photos et fixer les bonnes attentes: les clés d'un échange réussi et satisfaisant.",
+      } as any,
+    ],
+    skipDuplicates: true,
+  });
+
   console.log('✅ Seed completed successfully!');
   console.log(
     `👤 Created users: ${user1.displayName} (${user1.email}), ${user2.displayName} (${user2.email})`,
   );
   console.log('📚 Created sample exchanges');
+  console.log('📰 Created eco-educational blog articles');
 }
 
 main()

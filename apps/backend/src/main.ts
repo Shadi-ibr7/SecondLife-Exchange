@@ -3,7 +3,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import helmet from 'helmet';
-import * as cors from 'cors';
+import cors from 'cors';
 import { AppModule } from './app.module';
 import { ValidationPipe as CustomValidationPipe } from './common/pipes/validation.pipe';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';

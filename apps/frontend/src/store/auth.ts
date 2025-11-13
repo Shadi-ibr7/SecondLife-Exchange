@@ -68,9 +68,14 @@ export const useAuthStore = create<AuthState>()(
       },
 
       checkAuth: async () => {
+        // Éviter les appels répétés si on est déjà en train de charger
+        if (get().isLoading) {
+          return;
+        }
+
         const token = localStorage.getItem('accessToken');
         if (!token) {
-          set({ isAuthenticated: false, user: null });
+          set({ isAuthenticated: false, user: null, isLoading: false });
           return;
         }
 
@@ -82,12 +87,23 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
           });
-        } catch (error) {
-          set({
-            user: null,
-            isAuthenticated: false,
-            isLoading: false,
-          });
+        } catch (error: any) {
+          // Si l'erreur est 401 et que le refresh token est aussi invalide,
+          // nettoyer et ne pas créer de boucle
+          if (error?.response?.status === 401) {
+            // L'interceptor s'occupera du refresh ou de la redirection
+            set({
+              user: null,
+              isAuthenticated: false,
+              isLoading: false,
+            });
+          } else {
+            set({
+              user: null,
+              isAuthenticated: false,
+              isLoading: false,
+            });
+          }
         }
       },
 

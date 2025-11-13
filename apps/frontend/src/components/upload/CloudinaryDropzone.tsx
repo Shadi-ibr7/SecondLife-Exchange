@@ -45,13 +45,15 @@ export function CloudinaryDropzone({
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
-      const newFiles: UploadFile[] = acceptedFiles.map((file) => ({
-        ...file,
-        id: Math.random().toString(36).substr(2, 9),
-        preview: URL.createObjectURL(file),
-        status: 'pending',
-        progress: 0,
-      }));
+      const newFiles: UploadFile[] = acceptedFiles.map((file) => {
+        const uploadFile = Object.assign(file, {
+          id: Math.random().toString(36).substr(2, 9),
+          preview: URL.createObjectURL(file),
+          status: 'pending' as const,
+          progress: 0,
+        });
+        return uploadFile as UploadFile; // conserve l'instance File (Blob)
+      });
 
       setFiles((prev) => [...prev, ...newFiles].slice(0, maxFiles));
     },
@@ -81,6 +83,30 @@ export function CloudinaryDropzone({
   const uploadFiles = async () => {
     if (files.length === 0) return;
 
+    // Vérifier que Cloudinary est configuré
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
+
+    if (!cloudName || !apiKey) {
+      console.error('Variables Cloudinary manquantes:', {
+        cloudName: !!cloudName,
+        apiKey: !!apiKey,
+        env: {
+          NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME:
+            process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+          NEXT_PUBLIC_CLOUDINARY_API_KEY: process.env
+            .NEXT_PUBLIC_CLOUDINARY_API_KEY
+            ? '***'
+            : undefined,
+        },
+      });
+
+      toast.error(
+        'Configuration Cloudinary manquante. Vérifiez que NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME et NEXT_PUBLIC_CLOUDINARY_API_KEY sont définies dans .env.local et redémarrez le serveur.'
+      );
+      return;
+    }
+
     setIsUploading(true);
     onUploadStart?.();
 
@@ -98,11 +124,16 @@ export function CloudinaryDropzone({
           folder: `items/${itemId}`,
         });
 
+        // Vérifier que la signature est valide
+        if (!signature || !signature.signature || !signature.timestamp) {
+          throw new Error('Signature invalide reçue du serveur');
+        }
+
         // Upload vers Cloudinary
         const result = await uploadApi.uploadToCloudinary(
           file,
           signature,
-          process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || ''
+          cloudName
         );
 
         // Mettre à jour avec le succès
@@ -115,20 +146,26 @@ export function CloudinaryDropzone({
         );
 
         return result;
-      } catch (error) {
+      } catch (error: any) {
         // Mettre à jour avec l'erreur
+        const errorMessage =
+          error?.response?.data?.message ||
+          error?.message ||
+          "Erreur inconnue lors de l'upload";
+
         setFiles((prev) =>
           prev.map((f) =>
             f.id === file.id
               ? {
                   ...f,
                   status: 'error',
-                  error:
-                    error instanceof Error ? error.message : 'Erreur inconnue',
+                  error: errorMessage,
                 }
               : f
           )
         );
+
+        console.error('Erreur upload:', error);
         return null;
       }
     });
@@ -227,7 +264,9 @@ export function CloudinaryDropzone({
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{file.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                    {file.size
+                      ? `${(file.size / 1024 / 1024).toFixed(2)} MB`
+                      : 'Taille inconnue'}
                   </p>
                   {file.status === 'uploading' && (
                     <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-muted">

@@ -11,6 +11,7 @@ import {
   Request,
   HttpCode,
   HttpStatus,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -215,15 +216,19 @@ export class ItemsController {
   async attachPhoto(
     @Param('id') itemId: string,
     @Request() req: any,
-    @Body() photoData: AttachPhotoDto,
+    @Body('photos') photos: AttachPhotoDto[] | AttachPhotoDto,
   ): Promise<void> {
     // Vérifier que l'utilisateur est le propriétaire
     const item = await this.itemsService.getItemById(itemId);
     if (item.owner.id !== req.user.id) {
-      throw new Error('Accès non autorisé');
+      throw new ForbiddenException('Accès non autorisé');
     }
 
-    return this.uploadsService.attachPhoto(itemId, photoData);
+    // Accepter un tableau ou un seul objet pour compatibilité
+    if (Array.isArray(photos)) {
+      return this.uploadsService.attachPhotos(itemId, photos);
+    }
+    return this.uploadsService.attachPhoto(itemId, photos);
   }
 
   @Delete('photos/:photoId')

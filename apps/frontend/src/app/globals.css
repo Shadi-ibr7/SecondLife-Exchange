@@ -4,50 +4,86 @@
 
 @layer base {
   :root {
-    /* Light mode colors */
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 270 67% 47%; /* #802ADB */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 84% 4.9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 270 67% 47%; /* Primary ring */
-    --radius: 1rem; /* rounded-2xl */
+    /* Light mode colors - SecondLife Exchange Design */
+    --background: 0 0% 98%; /* #FAFAFA */
+    --foreground: 240 5% 5%; /* #0B0B0D */
+    --card: 0 0% 100%; /* #FFFFFF */
+    --card-foreground: 240 5% 5%; /* #0B0B0D */
+    --popover: 0 0% 100%; /* #FFFFFF */
+    --popover-foreground: 240 5% 5%; /* #0B0B0D */
+    --primary: 158 64% 52%; /* #10B981 - Green primary */
+    --primary-foreground: 0 0% 100%; /* #FFFFFF */
+    --secondary: 158 64% 95%; /* #F0FDF4 - Light green */
+    --secondary-foreground: 158 64% 52%; /* #10B981 */
+    --muted: 0 0% 96%; /* #F5F5F7 */
+    --muted-foreground: 240 5% 45%; /* #71717A */
+    --accent: 158 64% 52%; /* #10B981 */
+    --accent-foreground: 0 0% 100%; /* #FFFFFF */
+    --destructive: 0 84% 60%; /* #EF4444 */
+    --destructive-foreground: 0 0% 100%; /* #FFFFFF */
+    --border: 240 6% 90%; /* #E4E4E7 */
+    --input: 0 0% 96%; /* #F5F5F7 */
+    --input-background: 0 0% 96%; /* #F5F5F7 */
+    --switch-background: 240 6% 90%; /* #E4E4E7 */
+    --ring: 158 64% 52%; /* #10B981 */
+    --radius: 0.625rem; /* 10px */
+
+    /* Chart colors */
+    --chart-1: 158 64% 52%; /* #10B981 */
+    --chart-2: 184 60% 60%; /* oklch(0.6 0.118 184.704) */
+    --chart-3: 70 77% 70%; /* oklch(0.769 0.188 70.08) */
+    --chart-4: 304 63% 63%; /* oklch(0.627 0.265 303.9) */
+    --chart-5: 16 65% 65%; /* oklch(0.645 0.246 16.439) */
+
+    /* Sidebar colors */
+    --sidebar: 0 0% 100%; /* #FFFFFF */
+    --sidebar-foreground: 240 5% 5%; /* #0B0B0D */
+    --sidebar-primary: 158 64% 52%; /* #10B981 */
+    --sidebar-primary-foreground: 0 0% 100%; /* #FFFFFF */
+    --sidebar-accent: 0 0% 96%; /* #F5F5F7 */
+    --sidebar-accent-foreground: 240 5% 5%; /* #0B0B0D */
+    --sidebar-border: 240 6% 90%; /* #E4E4E7 */
+    --sidebar-ring: 158 64% 52%; /* #10B981 */
   }
 
   .dark {
-    /* Dark mode colors - SecondLife Exchange theme */
-    --background: 240 10% 3.9%; /* #0B0B0D */
-    --foreground: 240 5% 93.1%; /* #EDEDEE */
-    --card: 240 10% 6.9%; /* #121216 */
-    --card-foreground: 240 5% 93.1%;
-    --popover: 240 10% 6.9%;
-    --popover-foreground: 240 5% 93.1%;
-    --primary: 270 67% 47%; /* #802ADB */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 3.7% 15.9%; /* #1A1A1F */
-    --secondary-foreground: 240 5% 93.1%;
-    --muted: 240 3.7% 15.9%; /* #1A1A1F */
-    --muted-foreground: 240 5% 64.9%; /* #A8A8AD */
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 240 5% 93.1%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 240 5% 93.1%;
-    --border: 240 3.7% 15.9%; /* #25252A */
-    --input: 240 3.7% 15.9%;
-    --ring: 270 67% 47%; /* Primary ring */
+    /* Dark mode colors - SecondLife Exchange Design */
+    --background: 240 5% 4%; /* #0B0B0D */
+    --foreground: 240 5% 93%; /* #EDEDEE */
+    --card: 240 5% 7%; /* #121216 */
+    --card-foreground: 240 5% 93%; /* #EDEDEE */
+    --popover: 240 5% 10%; /* #1A1A1F */
+    --popover-foreground: 240 5% 93%; /* #EDEDEE */
+    --primary: 158 64% 52%; /* #10B981 - Same green */
+    --primary-foreground: 0 0% 100%; /* #FFFFFF */
+    --secondary: 240 5% 10%; /* #1A1A1F */
+    --secondary-foreground: 240 5% 93%; /* #EDEDEE */
+    --muted: 240 5% 10%; /* #1A1A1F */
+    --muted-foreground: 240 5% 65%; /* #A1A1AA */
+    --accent: 158 64% 52%; /* #10B981 */
+    --accent-foreground: 0 0% 100%; /* #FFFFFF */
+    --destructive: 0 84% 60%; /* #EF4444 */
+    --destructive-foreground: 0 0% 100%; /* #FFFFFF */
+    --border: 240 5% 16%; /* #27272A */
+    --input: 240 5% 10%; /* #1A1A1F */
+    --ring: 158 64% 52%; /* #10B981 */
+
+    /* Chart colors for dark mode */
+    --chart-1: 158 64% 52%; /* #10B981 */
+    --chart-2: 162 70% 70%; /* oklch(0.696 0.17 162.48) */
+    --chart-3: 70 77% 70%; /* oklch(0.769 0.188 70.08) */
+    --chart-4: 304 63% 63%; /* oklch(0.627 0.265 303.9) */
+    --chart-5: 16 65% 65%; /* oklch(0.645 0.246 16.439) */
+
+    /* Sidebar colors for dark mode */
+    --sidebar: 240 5% 7%; /* #121216 */
+    --sidebar-foreground: 240 5% 93%; /* #EDEDEE */
+    --sidebar-primary: 158 64% 52%; /* #10B981 */
+    --sidebar-primary-foreground: 0 0% 100%; /* #FFFFFF */
+    --sidebar-accent: 240 5% 10%; /* #1A1A1F */
+    --sidebar-accent-foreground: 240 5% 93%; /* #EDEDEE */
+    --sidebar-border: 240 5% 16%; /* #27272A */
+    --sidebar-ring: 158 64% 52%; /* #10B981 */
   }
 }
 
@@ -110,4 +146,150 @@
 
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out;
+}
+
+/* SecondLife Exchange Design - Additional Styles */
+@layer base {
+  /* Typography improvements */
+  :where(:not(:has([class*=' text-']), :not(:has([class^='text-'])))) {
+    h1 {
+      font-size: 1.5rem; /* text-2xl */
+      font-weight: 600; /* font-medium */
+      line-height: 1.5;
+    }
+
+    h2 {
+      font-size: 1.25rem; /* text-xl */
+      font-weight: 600; /* font-medium */
+      line-height: 1.5;
+    }
+
+    h3 {
+      font-size: 1.125rem; /* text-lg */
+      font-weight: 600; /* font-medium */
+      line-height: 1.5;
+    }
+
+    h4 {
+      font-size: 1rem; /* text-base */
+      font-weight: 600; /* font-medium */
+      line-height: 1.5;
+    }
+
+    p {
+      font-size: 1rem; /* text-base */
+      font-weight: 400; /* font-normal */
+      line-height: 1.5;
+    }
+
+    label {
+      font-size: 1rem; /* text-base */
+      font-weight: 600; /* font-medium */
+      line-height: 1.5;
+    }
+
+    button {
+      font-size: 1rem; /* text-base */
+      font-weight: 600; /* font-medium */
+      line-height: 1.5;
+    }
+
+    input {
+      font-size: 1rem; /* text-base */
+      font-weight: 400; /* font-normal */
+      line-height: 1.5;
+    }
+  }
+}
+
+/* Backdrop blur support */
+@supports (
+  (-webkit-backdrop-filter: blur(8px)) or (backdrop-filter: blur(8px))
+) {
+  .backdrop-blur-card {
+    background-color: hsl(var(--card) / 0.8);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+}
+
+/* Enhanced hover effects */
+.group:hover .group-hover\:scale-105 {
+  transform: scale(1.05);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(
+    135deg,
+    hsl(var(--primary)),
+    hsl(var(--primary) / 0.6)
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Card hover effects */
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 10px 25px -5px hsl(var(--primary) / 0.1),
+    0 8px 10px -6px hsl(var(--primary) / 0.1);
+}
+
+/* Status colors for condition badges */
+.condition-excellent {
+  @apply border-green-500/20 bg-green-500/10 text-green-400;
+}
+
+.condition-very-good {
+  @apply border-blue-500/20 bg-blue-500/10 text-blue-400;
+}
+
+.condition-good {
+  @apply border-yellow-500/20 bg-yellow-500/10 text-yellow-400;
+}
+
+.condition-fair {
+  @apply border-orange-500/20 bg-orange-500/10 text-orange-400;
+}
+
+/* Responsive improvements */
+@media (max-width: 640px) {
+  .container {
+    @apply px-4;
+  }
+
+  .hero-title {
+    @apply text-3xl;
+  }
+
+  .hero-subtitle {
+    @apply text-base;
+  }
+}
+
+/* Enhanced mobile navigation */
+@media (max-width: 768px) {
+  .mobile-nav-item {
+    @apply px-4 py-3 text-lg;
+  }
+}
+
+/* Improved card responsiveness */
+@media (max-width: 1024px) {
+  .grid-responsive {
+    @apply grid-cols-1 sm:grid-cols-2;
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid-responsive {
+    @apply grid-cols-4;
+  }
 }

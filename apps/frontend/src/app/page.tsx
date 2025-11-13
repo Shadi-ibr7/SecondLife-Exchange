@@ -1,274 +1,274 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { WeeklyTheme, SuggestedItem } from '@/types';
-import { themesApi } from '@/lib/themes.api';
-import { ActiveTheme } from '@/components/themes/ActiveTheme';
-import { SuggestionsGrid } from '@/components/themes/SuggestionsGrid';
-import { NotificationBanner } from '@/components/notifications/NotificationBanner';
-import { Sparkles, ArrowRight, Calendar } from 'lucide-react';
+import { ItemCard } from '@/components/ui/item-card';
+import { ThemeCard } from '@/components/ui/theme-card';
+import { Footer } from '@/components/layout/footer';
+import { Sparkles, ArrowRight, TrendingUp, Leaf } from 'lucide-react';
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
 
 export default function HomePage() {
-  const {
-    data: theme,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ['activeTheme'],
-    queryFn: () => themesApi.getActiveTheme(),
-  });
+  // Temporairement désactivé pour tester l'affichage
+  // const {
+  //   data: theme,
+  //   isLoading,
+  //   error,
+  // } = useQuery({
+  //   queryKey: ['activeTheme'],
+  //   queryFn: () => themesApi.getActiveTheme(),
+  // });
+
+  const isLoading = false;
+  const theme = null;
+
+  // Données de démonstration pour les suggestions IA
+  const aiSuggestions = [
+    {
+      id: '1',
+      title: 'Fauteuil vintage années 70',
+      image:
+        'https://images.unsplash.com/photo-1577176434922-803273eba97a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx2aW50YWdlJTIwZnVybml0dXJlfGVufDF8fHx8MTc2MTA3NTk1N3ww&ixlib=rb-4.1.0&q=80&w=1080',
+      category: 'Mobilier',
+      condition: 'Très bon',
+      location: 'Paris',
+      tags: ['Vintage', 'Réparable', 'Unique'],
+      aiSuggested: true,
+    },
+    {
+      id: '2',
+      title: 'Veste en cuir artisanale',
+      image:
+        'https://images.unsplash.com/photo-1534639077088-d702bcf685e7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdXN0YWluYWJsZSUyMGZhc2hpb258ZW58MXx8fHwxNzYxMDkyNzE1fDA&ixlib=rb-4.1.0&q=80&w=1080',
+      category: 'Mode',
+      condition: 'Comme neuf',
+      location: 'Lyon',
+      tags: ['Artisanal', 'Durable', 'Tendance'],
+      aiSuggested: true,
+    },
+    {
+      id: '3',
+      title: 'Céramique fait-main',
+      image:
+        'https://images.unsplash.com/photo-1506806732259-39c2d0268443?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxoYW5kbWFkZSUyMGNyYWZ0c3xlbnwxfHx8fDE3NjEwNTgxODN8MA&ixlib=rb-4.1.0&q=80&w=1080',
+      category: 'Artisanat',
+      condition: 'Comme neuf',
+      location: 'Bordeaux',
+      tags: ['Fait-main', 'Unique', 'Local'],
+      aiSuggested: true,
+    },
+    {
+      id: '4',
+      title: 'Appareil photo rétro',
+      image:
+        'https://images.unsplash.com/photo-1510222755157-fc26750f1199?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyZXRybyUyMGVsZWN0cm9uaWNzfGVufDF8fHx8MTc2MTEzNDM2MXww&ixlib=rb-4.1.0&q=80&w=1080',
+      category: 'Électronique',
+      condition: 'Bon',
+      location: 'Marseille',
+      tags: ['Rétro', 'Fonctionnel', 'Collection'],
+      aiSuggested: true,
+    },
+  ];
+
+  const ecoContent = [
+    {
+      title: "L'impact de la surconsommation",
+      description:
+        'Découvrez comment donner une seconde vie aux objets réduit notre empreinte carbone.',
+      stat: '70% de CO₂ en moins',
+    },
+    {
+      title: 'Économie circulaire',
+      description:
+        'Rejoignez un mouvement global pour un mode de vie plus responsable.',
+      stat: '50k+ objets échangés',
+    },
+    {
+      title: 'Guide de réparation',
+      description:
+        'Apprenez à réparer et entretenir vos objets pour prolonger leur durée de vie.',
+      stat: '200+ tutoriels',
+    },
+  ];
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-32 w-32 animate-spin rounded-full border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted">
-        <NotificationBanner />
-
-        {/* Hero Section */}
-        <section className="container mx-auto px-4 py-16">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="mb-16 text-center"
-          >
-            <h1 className="mb-6 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-4xl font-bold text-transparent md:text-6xl">
-              SecondLife Exchange
-            </h1>
-            <p className="mx-auto mb-8 max-w-2xl text-xl text-muted-foreground">
-              Donnez une seconde vie à vos objets et découvrez de nouveaux
-              trésors grâce à notre plateforme d'échange intelligente.
-            </p>
-            <div className="flex flex-col justify-center gap-4 sm:flex-row">
-              <Button asChild size="lg" className="px-8 text-lg">
-                <Link href="/explore">
-                  Explorer les objets
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className="px-8 text-lg"
-              >
-                <Link href="/register">Créer un compte</Link>
-              </Button>
-            </div>
-          </motion.div>
-
-          {/* Message d'erreur discret */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="mb-16"
-          >
-            <Card className="border-yellow-200 bg-yellow-50">
-              <CardContent className="p-6 text-center">
-                <p className="text-yellow-800">
-                  ⚠️ Le backend n'est pas encore démarré. Les fonctionnalités
-                  avancées seront disponibles une fois le serveur lancé.
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Fonctionnalités clés */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="grid grid-cols-1 gap-8 md:grid-cols-3"
-          >
-            <Card className="text-center">
-              <CardHeader>
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <Sparkles className="h-6 w-6 text-primary" />
-                </div>
-                <CardTitle>Suggestions IA</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  Découvrez des idées d'objets à échanger grâce à notre IA qui
-                  génère des suggestions hebdomadaires personnalisées.
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center">
-              <CardHeader>
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <ArrowRight className="h-6 w-6 text-primary" />
-                </div>
-                <CardTitle>Échanges Faciles</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  Chat en temps réel, suivi des échanges et système de notation
-                  pour des échanges en toute confiance.
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center">
-              <CardHeader>
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <Calendar className="h-6 w-6 text-primary" />
-                </div>
-                <CardTitle>Thèmes Hebdomadaires</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  Chaque semaine, un nouveau thème inspirant pour vous
-                  encourager à échanger des objets spécifiques.
-                </CardDescription>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </section>
+      <div className="min-h-screen bg-background text-foreground">
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="h-32 w-32 animate-spin rounded-full border-b-2 border-primary"></div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
-      <NotificationBanner />
-
+    <div className="min-h-screen bg-background text-foreground">
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-16">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="mb-16 text-center"
-        >
-          <h1 className="mb-6 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-4xl font-bold text-transparent md:text-6xl">
-            SecondLife Exchange
-          </h1>
-          <p className="mx-auto mb-8 max-w-2xl text-xl text-muted-foreground">
-            Donnez une seconde vie à vos objets et découvrez de nouveaux trésors
-            grâce à notre plateforme d'échange intelligente.
-          </p>
-          <div className="flex flex-col justify-center gap-4 sm:flex-row">
-            <Button asChild size="lg" className="px-8 text-lg">
-              <Link href="/explore">
-                Explorer les objets
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
-            <Button
-              asChild
-              variant="outline"
-              size="lg"
-              className="px-8 text-lg"
-            >
-              <Link href="/register">Créer un compte</Link>
-            </Button>
-          </div>
-        </motion.div>
-
-        {/* Weekly Theme Section */}
-        {theme && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="mb-16"
-          >
-            <ActiveTheme theme={theme} />
-
-            <div className="mt-8">
-              <SuggestionsGrid
-                suggestions={theme.suggestions.slice(0, 6)}
-                title="Suggestions du thème"
-              />
-
-              {theme.suggestions.length > 6 && (
-                <div className="mt-6 text-center">
-                  <Button variant="outline" asChild>
-                    <Link href="/themes">
-                      Voir toutes les suggestions ({theme.suggestions.length})
-                    </Link>
-                  </Button>
-                </div>
-              )}
+      <section className="relative overflow-hidden border-b border-border bg-gradient-to-b from-primary/10 via-background to-background">
+        <div className="container mx-auto px-4 py-20 lg:px-8 lg:py-32">
+          <div className="mx-auto max-w-4xl space-y-8 text-center">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-primary">
+              <Sparkles className="h-4 w-4" />
+              <span className="text-sm">Plateforme propulsée par IA</span>
             </div>
-          </motion.div>
-        )}
 
-        {/* Features Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="grid grid-cols-1 gap-8 md:grid-cols-3"
-        >
-          <Card className="text-center">
-            <CardHeader>
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                <Sparkles className="h-6 w-6 text-primary" />
-              </div>
-              <CardTitle>Suggestions IA</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CardDescription>
-                Découvrez des idées d'objets à échanger grâce à notre IA qui
-                génère des suggestions hebdomadaires personnalisées.
-              </CardDescription>
-            </CardContent>
-          </Card>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl">
+              Donnez une seconde vie
+              <br />
+              <span className="text-primary">à vos objets</span>
+            </h1>
 
-          <Card className="text-center">
-            <CardHeader>
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                <ArrowRight className="h-6 w-6 text-primary" />
-              </div>
-              <CardTitle>Échanges Sécurisés</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CardDescription>
-                Chat en temps réel, suivi des échanges et système de notation
-                pour des échanges en toute confiance.
-              </CardDescription>
-            </CardContent>
-          </Card>
+            <p className="mx-auto max-w-2xl text-lg text-muted-foreground md:text-xl">
+              Échangez, revalorisez et découvrez des objets uniques grâce à
+              notre plateforme éco-responsable assistée par intelligence
+              artificielle.
+            </p>
 
-          <Card className="text-center">
-            <CardHeader>
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                <Calendar className="h-6 w-6 text-primary" />
+            <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+              <Button
+                size="lg"
+                asChild
+                className="bg-primary px-8 hover:bg-primary/90"
+              >
+                <Link href="/new-item">
+                  Proposer un objet
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
+              <Button size="lg" variant="outline" asChild>
+                <Link href="/explore">Explorer le catalogue</Link>
+              </Button>
+            </div>
+
+            <div className="mx-auto grid max-w-2xl grid-cols-3 gap-8 pt-12">
+              <div className="text-center">
+                <div className="mb-2 text-3xl">50k+</div>
+                <div className="text-sm text-muted-foreground">
+                  Objets échangés
+                </div>
               </div>
-              <CardTitle>Thèmes Hebdomadaires</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CardDescription>
-                Chaque semaine, un nouveau thème inspirant pour vous encourager
-                à échanger des objets spécifiques.
-              </CardDescription>
-            </CardContent>
-          </Card>
-        </motion.div>
+              <div className="text-center">
+                <div className="mb-2 text-3xl">12k+</div>
+                <div className="text-sm text-muted-foreground">
+                  Membres actifs
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="mb-2 text-3xl">-70%</div>
+                <div className="text-sm text-muted-foreground">
+                  CO₂ économisé
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
+
+      {/* Thème de la semaine */}
+      <section className="container mx-auto px-4 py-16 lg:px-8">
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <div className="mb-2 flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              <span className="text-sm text-primary">Cette semaine</span>
+            </div>
+            <h2>Thème hebdomadaire</h2>
+          </div>
+          <Button variant="ghost" asChild className="hidden sm:flex">
+            <Link href="/themes">
+              Voir le calendrier
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+
+        <ThemeCard
+          title="Mode Vintage & Rétro"
+          image="https://images.unsplash.com/photo-1534639077088-d702bcf685e7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdXN0YWluYWJsZSUyMGZhc2hpb258ZW58MXx8fHwxNzYxMDkyNzE1fDA&ixlib=rb-4.1.0&q=80&w=1080"
+          period="Du 20 au 26 octobre 2025"
+          description="Cette semaine, redécouvrez le charme du vintage ! Vêtements, accessoires et pièces uniques des années passées."
+          impact="En moyenne -45kg de CO₂ par vêtement échangé vs acheté neuf"
+          isActive={true}
+          onExplore={() => (window.location.href = '/explore')}
+        />
+      </section>
+
+      {/* Suggestions IA */}
+      <section className="container mx-auto bg-gradient-to-b from-transparent to-primary/5 px-4 py-16 lg:px-8">
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <div className="mb-2 flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <span className="text-sm text-primary">
+                Recommandations personnalisées
+              </span>
+            </div>
+            <h2>Suggestions par IA</h2>
+            <p className="mt-2 text-muted-foreground">
+              Objets sélectionnés spécialement pour vous selon vos intérêts
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {aiSuggestions.map((item) => (
+            <ItemCard
+              key={item.id}
+              {...item}
+              onClick={() => (window.location.href = '/item-detail')}
+            />
+          ))}
+        </div>
+
+        <div className="mt-8 text-center">
+          <Button variant="outline" asChild className="gap-2">
+            <Link href="/explore">
+              Voir toutes les suggestions
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      </section>
+
+      {/* Découverte écologique */}
+      <section className="container mx-auto px-4 py-16 lg:px-8">
+        <div className="mb-8">
+          <div className="mb-2 flex items-center gap-2">
+            <Leaf className="h-5 w-5 text-green-400" />
+            <span className="text-sm text-green-400">Impact positif</span>
+          </div>
+          <h2>Découverte écologique</h2>
+          <p className="mt-2 text-muted-foreground">
+            Apprenez-en plus sur l'économie circulaire et son impact
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          {ecoContent.map((content, index) => (
+            <Card
+              key={index}
+              className="group cursor-pointer space-y-4 border-border bg-card p-6 transition-all hover:border-primary/30"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500/10">
+                <Leaf className="h-6 w-6 text-green-400" />
+              </div>
+              <div>
+                <h3 className="mb-2 transition-colors group-hover:text-primary">
+                  {content.title}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {content.description}
+                </p>
+              </div>
+              <div className="border-t border-border pt-4">
+                <span className="text-primary">{content.stat}</span>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <Footer />
     </div>
   );
 }
