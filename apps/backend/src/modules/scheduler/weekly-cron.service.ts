@@ -1,25 +1,89 @@
+/**
+ * FICHIER: weekly-cron.service.ts
+ *
+ * DESCRIPTION:
+ * Ce service gère les tâches planifiées (cron jobs) pour l'application.
+ * Il exécute automatiquement la génération de suggestions hebdomadaires.
+ *
+ * TÂCHES PLANIFIÉES:
+ * - generateWeeklySuggestions: Exécutée le dimanche à 23h (par défaut)
+ *   Génère automatiquement des suggestions pour le thème actif de la semaine
+ * - cleanupOldSuggestions: Exécutée le premier dimanche de chaque mois
+ *   Nettoie les anciennes suggestions (plus de 6 mois)
+ *
+ * CONFIGURATION:
+ * - Expression cron configurable via les variables d'environnement
+ * - Fuseau horaire configurable (défaut: Europe/Paris)
+ *
+ * UTILISATION:
+ * - Les tâches s'exécutent automatiquement selon l'expression cron
+ * - Possibilité de déclencher manuellement via triggerManualGeneration()
+ */
+
+// Import des classes NestJS
 import { Injectable, Logger } from '@nestjs/common';
+
+// Import du module de scheduling
 import { Cron, CronExpression } from '@nestjs/schedule';
+
+// Import des services
 import { ConfigService } from '@nestjs/config';
 import { ThemesService } from '../themes/themes.service';
 import { SuggestionsService } from '../suggestions/suggestions.service';
 
+/**
+ * SERVICE: WeeklyCronService
+ *
+ * Service pour les tâches planifiées (cron jobs).
+ */
 @Injectable()
 export class WeeklyCronService {
+  /**
+   * Logger pour enregistrer les événements
+   */
   private readonly logger = new Logger(WeeklyCronService.name);
+
+  /**
+   * Configuration du scheduler
+   */
   private readonly scheduleConfig;
 
+  /**
+   * CONSTRUCTEUR
+   *
+   * Injection des dépendances.
+   */
   constructor(
     private readonly configService: ConfigService,
     private readonly themesService: ThemesService,
     private readonly suggestionsService: SuggestionsService,
   ) {
+    // Charger la configuration du scheduler
     this.scheduleConfig = this.configService.get('schedule');
   }
 
+  // ============================================
+  // TÂCHE CRON: generateWeeklySuggestions
+  // ============================================
+
   /**
-   * Job cron hebdomadaire pour générer les suggestions
-   * Exécuté le dimanche à 23h par défaut
+   * Job cron hebdomadaire pour générer les suggestions.
+   *
+   * EXPRESSION CRON: '0 23 * * 0'
+   * - 0: minute 0
+   * - 23: heure 23 (23:00)
+   * - *: tous les jours du mois
+   * - *: tous les mois
+   * - 0: dimanche
+   *
+   * Résultat: Tous les dimanches à 23:00
+   *
+   * PROCESSUS:
+   * 1. Trouve ou crée le thème actif pour cette semaine
+   * 2. Vérifie si des suggestions existent déjà
+   * 3. Génère les suggestions via l'IA
+   * 4. Sauvegarde les suggestions dans la base de données
+   * 5. Log les statistiques de génération
    */
   @Cron('0 23 * * 0', {
     name: 'weekly-suggestions-generation',
@@ -81,9 +145,28 @@ export class WeeklyCronService {
     }
   }
 
+  // ============================================
+  // TÂCHE CRON: cleanupOldSuggestions
+  // ============================================
+
   /**
-   * Job de nettoyage des anciennes suggestions (optionnel)
-   * Exécuté le premier dimanche de chaque mois
+   * Job de nettoyage des anciennes suggestions.
+   *
+   * EXPRESSION CRON: '0 2 1-7 * 0'
+   * - 0: minute 0
+   * - 2: heure 2 (02:00)
+   * - 1-7: jours 1 à 7 du mois
+   * - *: tous les mois
+   * - 0: dimanche
+   *
+   * Résultat: Le premier dimanche de chaque mois à 02:00
+   *
+   * FONCTIONNEMENT:
+   * - Supprime les suggestions de plus de 6 mois
+   * - Nettoie la base de données pour éviter l'accumulation
+   *
+   * NOTE: Cette fonctionnalité nécessiterait une méthode dans SuggestionsService
+   * pour être complètement implémentée.
    */
   @Cron('0 2 1-7 * 0', {
     name: 'cleanup-old-suggestions',
@@ -111,8 +194,20 @@ export class WeeklyCronService {
     }
   }
 
+  // ============================================
+  // MÉTHODE: triggerManualGeneration
+  // ============================================
+
   /**
-   * Méthode pour déclencher manuellement la génération (utile pour les tests)
+   * Déclenche manuellement la génération de suggestions.
+   *
+   * UTILISATION:
+   * - Tests et développement
+   * - Régénération de suggestions pour un thème spécifique
+   * - Appelée via l'endpoint POST /api/v1/ai/themes/:id/generate
+   *
+   * @param themeId - ID du thème (optionnel, utilise le thème actif si non fourni)
+   * @returns Résultat de la génération avec statistiques
    */
   async triggerManualGeneration(themeId?: string): Promise<{
     success: boolean;
@@ -149,8 +244,14 @@ export class WeeklyCronService {
     }
   }
 
+  // ============================================
+  // MÉTHODE: getSchedulerStatus
+  // ============================================
+
   /**
-   * Vérifie l'état du scheduler
+   * Vérifie l'état du scheduler.
+   *
+   * @returns État du scheduler (configuré, expression cron, timezone)
    */
   async getSchedulerStatus(): Promise<{
     isConfigured: boolean;

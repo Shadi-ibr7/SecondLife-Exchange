@@ -1,8 +1,11 @@
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { ExchangeStatus } from '@/types';
 
 interface StatusBadgeProps {
   status: ExchangeStatus;
+  className?: string;
+  variant?: 'default' | 'secondary' | 'destructive' | 'outline';
 }
 
 const STATUS_LABELS: Record<ExchangeStatus, string> = {
@@ -24,8 +27,13 @@ const STATUS_VARIANTS: Record<
   CANCELLED: 'secondary',
 };
 
-export function StatusBadge({ status }: StatusBadgeProps) {
+export function StatusBadge({ status, className, variant }: StatusBadgeProps) {
   return (
-    <Badge variant={STATUS_VARIANTS[status]}>{STATUS_LABELS[status]}</Badge>
+    <Badge
+      variant={variant ?? STATUS_VARIANTS[status]}
+      className={cn(className)}
+    >
+      {STATUS_LABELS[status]}
+    </Badge>
   );
 }

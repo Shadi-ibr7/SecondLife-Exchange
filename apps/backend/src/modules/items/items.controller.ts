@@ -1,3 +1,28 @@
+/**
+ * FICHIER: items.controller.ts
+ *
+ * DESCRIPTION:
+ * Ce contrôleur expose les endpoints HTTP pour la gestion des items (objets à échanger).
+ * Il gère les opérations CRUD (Create, Read, Update, Delete) et l'upload de photos.
+ *
+ * ROUTES:
+ * - POST /api/v1/items - Créer un item (authentifié)
+ * - GET /api/v1/items - Lister les items avec filtres (public)
+ * - GET /api/v1/items/:id - Récupérer un item par ID (public)
+ * - PATCH /api/v1/items/:id - Mettre à jour un item (propriétaire uniquement)
+ * - DELETE /api/v1/items/:id - Supprimer un item (propriétaire uniquement)
+ * - PATCH /api/v1/items/:id/status - Mettre à jour le statut (propriétaire uniquement)
+ * - GET /api/v1/items/user/me - Mes items (authentifié)
+ * - POST /api/v1/items/uploads/signature - Signature Cloudinary (authentifié)
+ * - POST /api/v1/items/:id/photos - Attacher des photos (propriétaire uniquement)
+ * - DELETE /api/v1/items/photos/:photoId - Supprimer une photo (propriétaire uniquement)
+ *
+ * SÉCURITÉ:
+ * - Routes de création/modification nécessitent une authentification JWT
+ * - Vérification que seul le propriétaire peut modifier ses items
+ */
+
+// Import des décorateurs NestJS
 import {
   Controller,
   Get,
@@ -13,6 +38,8 @@ import {
   HttpStatus,
   ForbiddenException,
 } from '@nestjs/common';
+
+// Import des décorateurs Swagger pour la documentation API
 import {
   ApiTags,
   ApiOperation,
@@ -20,21 +47,42 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
+
+// Import des services
 import { ItemsService, PaginatedItems, ItemWithPhotos } from './items.service';
 import {
   UploadsService,
   SignedUploadParams,
   AttachPhotoDto,
 } from './uploads/uploads.service';
+
+// Import des DTOs
 import { CreateItemDto } from './dtos/create-item.dto';
 import { UpdateItemDto } from './dtos/update-item.dto';
 import { ListItemsQueryDto } from './dtos/list-items.query.dto';
+
+// Import des guards
 import { JwtAccessGuard } from '../../common/guards/jwt-access.guard';
+
+// Import des types Prisma
 import { ItemStatus } from '@prisma/client';
 
+/**
+ * CONTRÔLEUR: ItemsController
+ *
+ * Contrôleur pour la gestion des items.
+ * Le préfixe 'items' signifie que toutes les routes commencent par /api/v1/items
+ *
+ * @ApiTags('Items'): Groupe les routes dans la documentation Swagger
+ */
 @ApiTags('Items')
 @Controller('items')
 export class ItemsController {
+  /**
+   * CONSTRUCTEUR
+   *
+   * Injection des services nécessaires
+   */
   constructor(
     private readonly itemsService: ItemsService,
     private readonly uploadsService: UploadsService,

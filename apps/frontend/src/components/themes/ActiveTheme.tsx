@@ -1,14 +1,53 @@
+/**
+ * FICHIER: ActiveTheme.tsx
+ *
+ * DESCRIPTION:
+ * Ce composant affiche le thème hebdomadaire actif de manière mise en avant.
+ * Il présente le titre, la période, et l'impact écologique du thème.
+ *
+ * FONCTIONNALITÉS:
+ * - Affichage du thème actif avec style spécial (bordure primaire)
+ * - Formatage de la période (semaine)
+ * - Animation d'apparition
+ * - Badge avec icône calendrier
+ *
+ * UTILISATION:
+ * Utilisé dans la page d'accueil et la page des thèmes pour mettre en avant
+ * le thème de la semaine actuelle.
+ */
+
+// Import de Framer Motion pour les animations
 import { motion } from 'framer-motion';
+
+// Import des composants UI
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+
+// Import des types
 import { WeeklyTheme } from '@/types';
+
+// Import des utilitaires
 import { formatWeekRange } from '@/lib/date';
+
+// Import des icônes
 import { Sparkles, Calendar } from 'lucide-react';
 
+/**
+ * INTERFACE: ActiveThemeProps
+ *
+ * Définit les propriétés acceptées par le composant.
+ */
 interface ActiveThemeProps {
-  theme: WeeklyTheme;
+  theme: WeeklyTheme; // Le thème hebdomadaire à afficher
 }
 
+/**
+ * COMPOSANT: ActiveTheme
+ *
+ * Affiche le thème hebdomadaire actif de manière mise en avant.
+ *
+ * @param theme - Le thème hebdomadaire à afficher
+ */
 export function ActiveTheme({ theme }: ActiveThemeProps) {
   const weekRange = formatWeekRange(new Date(theme.startOfWeek));
 

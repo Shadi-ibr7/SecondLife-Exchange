@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Card,
@@ -10,14 +10,19 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { ExchangeList } from '@/components/exchanges/ExchangeList';
 import { exchangesApi } from '@/lib/exchanges.api';
-import { ExchangeStatus, ListExchangesParams } from '@/types';
+import { ExchangeStatus } from '@/types';
 import { useQuery } from '@tanstack/react-query';
-import { usePagination } from '@/hooks/usePagination';
 import { useQueryParams } from '@/hooks/useQueryParams';
-import { Filter, RefreshCw } from 'lucide-react';
+import {
+  CheckCircle,
+  Filter,
+  MessageCircle,
+  RefreshCw,
+  Sparkles,
+} from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import ProtectedRoute from '../(auth)/protected';
 
 const STATUS_OPTIONS: { value: ExchangeStatus | ''; label: string }[] = [
@@ -47,19 +52,6 @@ function ExchangesPageContent() {
     sort: sortBy,
   };
 
-  const {
-    currentPage,
-    totalPages,
-    hasNextPage,
-    hasPreviousPage,
-    goToNextPage,
-    goToPreviousPage,
-  } = usePagination({
-    total: 0,
-    limit: queryParams.limit,
-    initialPage: queryParams.page,
-  });
-
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['exchanges', queryParams],
     queryFn: () => exchangesApi.listMyExchanges(queryParams),
@@ -88,7 +80,7 @@ function ExchangesPageContent() {
 
   if (error && !data) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-destructive">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted text-destructive">
         <div className="text-center">
           <p className="mb-4">Erreur lors du chargement des échanges</p>
           <Button onClick={() => refetch()} variant="outline">
@@ -100,27 +92,97 @@ function ExchangesPageContent() {
     );
   }
 
+  const stats = useMemo(() => {
+    const items = data?.items || [];
+    return [
+      {
+        label: 'Échanges en cours',
+        value: items.filter((exchange) => exchange.status === 'PENDING').length,
+        tone: 'border-blue-500/30 bg-blue-500/10 text-blue-400',
+        icon: MessageCircle,
+      },
+      {
+        label: 'Échanges terminés',
+        value: items.filter((exchange) => exchange.status === 'COMPLETED')
+          .length,
+        tone: 'border-green-500/30 bg-green-500/10 text-green-500',
+        icon: CheckCircle,
+      },
+      {
+        label: 'Total affiché',
+        value: items.length,
+        tone: 'border-primary/30 bg-primary/10 text-primary',
+        icon: Sparkles,
+      },
+    ];
+  }, [data]);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
+    <div className="min-h-screen">
+      {/* Hero */}
+      <div className="border-b border-border bg-gradient-to-b from-primary/15 via-background to-background">
+        <div className="container mx-auto px-4 py-12">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="mx-auto flex max-w-5xl flex-col gap-6 text-center"
+          >
+            <div className="inline-flex items-center justify-center gap-2 self-center rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-primary">
+              <Sparkles className="h-4 w-4" />
+              <span className="text-sm font-semibold uppercase tracking-wide">
+                Espace échanges
+              </span>
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold md:text-5xl">Mes échanges</h1>
+              <p className="mt-3 text-lg text-muted-foreground">
+                Retrouvez vos propositions, suivez les discussions et complétez
+                vos échanges en toute simplicité.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <Badge variant="outline" className="rounded-full px-4 py-1">
+                {data?.total || 0} échange{data && data.total > 1 ? 's' : ''}
+              </Badge>
+              <Button onClick={() => refetch()} variant="outline" size="sm">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Actualiser
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-10">
+        {/* Statistiques rapides */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="mb-8"
+          transition={{ duration: 0.5 }}
+          className="mb-10"
         >
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="mb-2 text-3xl font-bold">Mes échanges</h1>
-              <p className="text-muted-foreground">
-                Gérez vos propositions d'échange et suivez leur progression
-              </p>
-            </div>
-            <Button onClick={() => refetch()} variant="outline">
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Actualiser
-            </Button>
+          <div className="grid gap-4 md:grid-cols-3">
+            {stats.map((stat) => (
+              <Card
+                key={stat.label}
+                className="border-border/40 bg-card/60 backdrop-blur-sm"
+              >
+                <CardContent className="flex items-center gap-4 p-5">
+                  <div
+                    className={`flex h-11 w-11 items-center justify-center rounded-full border text-sm ${stat.tone}`}
+                  >
+                    <stat.icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                      {stat.label}
+                    </p>
+                    <p className="text-2xl font-semibold">{stat.value}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </motion.div>
 
@@ -128,24 +190,34 @@ function ExchangesPageContent() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="mb-8"
+          transition={{ duration: 0.5, delay: 0.05 }}
+          className="mb-10"
         >
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Filter className="h-5 w-5" />
-                Filtres
-              </CardTitle>
-              <CardDescription>
-                Affinez votre recherche d'échanges
-              </CardDescription>
+          <Card className="border-border/40 bg-card/60 backdrop-blur-sm">
+            <CardHeader className="pb-4">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <Filter className="h-5 w-5 text-primary" />
+                    Filtrer vos échanges
+                  </CardTitle>
+                  <CardDescription>
+                    Affinez la liste selon le statut ou la date
+                  </CardDescription>
+                </div>
+                <Button
+                  onClick={handleResetFilters}
+                  variant="outline"
+                  size="sm"
+                >
+                  Réinitialiser
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-4">
-                {/* Filtre par statut */}
-                <div className="min-w-48 flex-1">
-                  <label className="mb-2 block text-sm font-medium">
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
                     Statut
                   </label>
                   <select
@@ -153,7 +225,7 @@ function ExchangesPageContent() {
                     onChange={(e) =>
                       handleStatusChange(e.target.value as ExchangeStatus | '')
                     }
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className="w-full rounded-xl border border-border/60 bg-background/50 px-4 py-3 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   >
                     {STATUS_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -163,27 +235,19 @@ function ExchangesPageContent() {
                   </select>
                 </div>
 
-                {/* Tri */}
-                <div className="min-w-48 flex-1">
-                  <label className="mb-2 block text-sm font-medium">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
                     Trier par
                   </label>
                   <select
                     value={sortBy}
                     onChange={(e) => handleSortChange(e.target.value)}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className="w-full rounded-xl border border-border/60 bg-background/50 px-4 py-3 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   >
                     <option value="-createdAt">Plus récent</option>
                     <option value="createdAt">Plus ancien</option>
                     <option value="status">Statut</option>
                   </select>
-                </div>
-
-                {/* Bouton reset */}
-                <div className="flex items-end">
-                  <Button onClick={handleResetFilters} variant="outline">
-                    Réinitialiser
-                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -194,23 +258,19 @@ function ExchangesPageContent() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
         >
-          {data && (
-            <div className="mb-6 flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                {data.total} échange{data.total > 1 ? 's' : ''} trouvé
-                {data.total > 1 ? 's' : ''}
-              </p>
-              {data.total > 0 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    Page {data.page} sur {data.totalPages}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">
+              {data?.total || 0} échange{data && data.total > 1 ? 's' : ''}{' '}
+              trouvé{data && data.total > 1 ? 's' : ''}
+            </p>
+            {data?.totalPages && data.totalPages > 0 && (
+              <span className="text-sm text-muted-foreground">
+                Page {data.page} sur {data.totalPages}
+              </span>
+            )}
+          </div>
 
           <ExchangeList exchanges={data?.items || []} isLoading={isLoading} />
 
@@ -219,8 +279,8 @@ function ExchangesPageContent() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="mt-8 flex justify-center space-x-2"
+              transition={{ duration: 0.6, delay: 0.15 }}
+              className="mt-10 flex flex-wrap justify-center gap-3"
             >
               <Button
                 onClick={() => handlePageChange(data.page - 1)}

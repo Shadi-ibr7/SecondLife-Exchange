@@ -1,10 +1,35 @@
+/**
+ * FICHIER: threads.service.ts
+ *
+ * DESCRIPTION:
+ * Ce service gère la logique métier pour les threads (sujets de discussion) de la communauté.
+ * Les threads permettent aux utilisateurs de créer des discussions autour de différents sujets.
+ *
+ * FONCTIONNALITÉS:
+ * - Création de threads avec le premier post
+ * - Liste paginée avec filtres (scope, recherche textuelle)
+ * - Récupération d'un thread par ID
+ * - Suppression de threads (auteur ou admin uniquement)
+ *
+ * SCOPES:
+ * - GENERAL: Discussion générale (pas de scopeRef requis)
+ * - ITEM: Discussion liée à un item spécifique (scopeRef = itemId)
+ * - EXCHANGE: Discussion liée à un échange (scopeRef = exchangeId)
+ * - THEME: Discussion liée à un thème hebdomadaire (scopeRef = themeId)
+ */
+
+// Import des exceptions NestJS
 import {
   Injectable,
   NotFoundException,
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
+
+// Import du service Prisma
 import { PrismaService } from '../../common/prisma/prisma.service';
+
+// Import des DTOs
 import {
   CreateThreadInput,
   ListThreadsInput,
@@ -12,12 +37,34 @@ import {
   PaginatedThreadsResponse,
 } from './dtos/threads.dto';
 
+/**
+ * SERVICE: ThreadsService
+ *
+ * Service pour la gestion des threads de discussion.
+ */
 @Injectable()
 export class ThreadsService {
+  /**
+   * CONSTRUCTEUR
+   *
+   * Injection du service Prisma
+   */
   constructor(private prisma: PrismaService) {}
 
+  // ============================================
+  // MÉTHODE: listThreads (Lister les threads)
+  // ============================================
+
   /**
-   * Liste les threads avec filtres et pagination
+   * Liste les threads avec filtres et pagination.
+   *
+   * FILTRES DISPONIBLES:
+   * - scope: Type de thread (GENERAL, ITEM, EXCHANGE, THEME)
+   * - ref: ID de référence (itemId, exchangeId, themeId)
+   * - q: Recherche textuelle (titre ou contenu des posts)
+   *
+   * @param query - Paramètres de filtrage et pagination
+   * @returns Liste paginée de threads avec auteur et dernier post
    */
   async listThreads(
     query: ListThreadsInput,
@@ -84,8 +131,16 @@ export class ThreadsService {
     };
   }
 
+  // ============================================
+  // MÉTHODE: getThreadById (Récupérer un thread)
+  // ============================================
+
   /**
-   * Récupère un thread par ID
+   * Récupère un thread par son ID avec toutes ses informations.
+   *
+   * @param id - ID du thread
+   * @returns Thread avec auteur et nombre de posts
+   * @throws NotFoundException si le thread n'existe pas
    */
   async getThreadById(id: string): Promise<ThreadResponse> {
     const thread = await this.prisma.thread.findUnique({
@@ -113,8 +168,24 @@ export class ThreadsService {
     return this.mapToResponse(thread);
   }
 
+  // ============================================
+  // MÉTHODE: createThread (Créer un thread)
+  // ============================================
+
   /**
-   * Crée un nouveau thread avec le premier post
+   * Crée un nouveau thread avec le premier post en transaction atomique.
+   *
+   * VALIDATION:
+   * - Si scope !== 'GENERAL', scopeRef est obligatoire
+   *
+   * PROCESSUS:
+   * 1. Crée le thread
+   * 2. Crée automatiquement le premier post avec le contenu fourni
+   *
+   * @param authorId - ID de l'auteur du thread
+   * @param input - Données du thread (scope, scopeRef, title, contentFirst)
+   * @returns Thread créé avec auteur et nombre de posts
+   * @throws BadRequestException si scopeRef manquant pour un scope non-GENERAL
    */
   async createThread(
     authorId: string,
@@ -166,8 +237,22 @@ export class ThreadsService {
     return this.mapToResponse(result);
   }
 
+  // ============================================
+  // MÉTHODE: deleteThread (Supprimer un thread)
+  // ============================================
+
   /**
-   * Supprime un thread (seulement l'auteur ou admin)
+   * Supprime un thread.
+   *
+   * SÉCURITÉ:
+   * - Seul l'auteur du thread ou un admin peut le supprimer
+   * - Les posts associés sont supprimés en cascade (configuration Prisma)
+   *
+   * @param id - ID du thread à supprimer
+   * @param userId - ID de l'utilisateur qui demande la suppression
+   * @param userRole - Rôle de l'utilisateur (USER ou ADMIN)
+   * @throws NotFoundException si le thread n'existe pas
+   * @throws ForbiddenException si l'utilisateur n'a pas les permissions
    */
   async deleteThread(
     id: string,
@@ -192,8 +277,18 @@ export class ThreadsService {
     });
   }
 
+  // ============================================
+  // MÉTHODE PRIVÉE: mapToResponse
+  // ============================================
+
   /**
-   * Mappe un thread Prisma vers la réponse API
+   * Mappe un thread Prisma vers la réponse API.
+   *
+   * Transforme les données de la base de données en format de réponse
+   * avec les informations nécessaires pour le frontend.
+   *
+   * @param thread - Thread depuis Prisma
+   * @returns Thread formaté pour la réponse API
    */
   private mapToResponse(thread: any): ThreadResponse {
     const lastPost = thread.posts?.[0];
@@ -212,4 +307,3 @@ export class ThreadsService {
     };
   }
 }
-

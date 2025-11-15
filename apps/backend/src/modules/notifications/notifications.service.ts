@@ -1,26 +1,82 @@
+/**
+ * FICHIER: notifications.service.ts
+ *
+ * DESCRIPTION:
+ * Ce service gère l'envoi de notifications push aux utilisateurs.
+ * Il permet d'enregistrer des tokens de notification et d'envoyer
+ * des notifications pour différents événements (échanges, messages, thèmes).
+ *
+ * FONCTIONNALITÉS:
+ * - Enregistrement de tokens de notification (FCM, Web Push)
+ * - Envoi de notifications de test
+ * - Rappel hebdomadaire automatique pour les nouveaux thèmes (cron)
+ * - Notifications pour changements de statut d'échange
+ * - Notifications pour nouveaux messages dans les threads
+ *
+ * PROVIDERS SUPPORTÉS:
+ * - fcm: Firebase Cloud Messaging (Android/iOS)
+ * - webpush: Web Push API (navigateurs)
+ *
+ * NOTE:
+ * L'implémentation actuelle est un placeholder. Dans un vrai projet,
+ * il faudrait implémenter FCM HTTP v1 et Web Push avec VAPID.
+ */
+
+// Import des classes NestJS
 import {
   Injectable,
   Logger,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+
+// Import du service Prisma
 import { PrismaService } from '../../common/prisma/prisma.service';
+
+// Import des DTOs
 import {
   RegisterTokenInput,
   SendTestNotificationInput,
   NotificationTokenResponse,
   SendNotificationResponse,
 } from './dtos/notifications.dto';
+
+// Import du module de scheduling
 import { Cron, CronExpression } from '@nestjs/schedule';
 
+/**
+ * SERVICE: NotificationsService
+ *
+ * Service pour la gestion des notifications push.
+ */
 @Injectable()
 export class NotificationsService {
+  /**
+   * Logger pour enregistrer les événements
+   */
   private readonly logger = new Logger(NotificationsService.name);
 
+  /**
+   * CONSTRUCTEUR
+   *
+   * Injection du service Prisma
+   */
   constructor(private prisma: PrismaService) {}
 
+  // ============================================
+  // MÉTHODE: registerToken (Enregistrer un token)
+  // ============================================
+
   /**
-   * Enregistre un token de notification pour un utilisateur
+   * Enregistre un token de notification pour un utilisateur.
+   *
+   * FONCTIONNEMENT:
+   * - Si le token existe déjà pour cet utilisateur et provider, le retourne
+   * - Sinon, crée ou met à jour le token (upsert)
+   *
+   * @param userId - ID de l'utilisateur
+   * @param input - Données du token (token, provider)
+   * @returns Token enregistré
    */
   async registerToken(
     userId: string,
@@ -65,8 +121,22 @@ export class NotificationsService {
     return this.mapToResponse(notificationToken);
   }
 
+  // ============================================
+  // MÉTHODE: sendTestNotification
+  // ============================================
+
   /**
-   * Envoie une notification de test
+   * Envoie une notification de test à un utilisateur.
+   *
+   * UTILISATION:
+   * - Tests de configuration des notifications
+   * - Vérification que les tokens fonctionnent
+   *
+   * @param currentUserId - ID de l'utilisateur actuel (par défaut si userId non fourni)
+   * @param input - Données de la notification (userId?, title, body)
+   * @returns Résultat de l'envoi (nombre de notifications envoyées)
+   * @throws NotFoundException si aucun token trouvé
+   * @throws BadRequestException si aucune notification n'a pu être envoyée
    */
   async sendTestNotification(
     currentUserId: string,
@@ -140,8 +210,26 @@ export class NotificationsService {
     };
   }
 
+  // ============================================
+  // TÂCHE CRON: sendWeeklyThemeReminder
+  // ============================================
+
   /**
-   * Envoie un rappel hebdomadaire pour le nouveau thème
+   * Envoie un rappel hebdomadaire pour le nouveau thème.
+   *
+   * EXPRESSION CRON: '0 9 * * 1'
+   * - 0: minute 0
+   * - 9: heure 9 (09:00)
+   * - *: tous les jours du mois
+   * - *: tous les mois
+   * - 1: lundi
+   *
+   * Résultat: Tous les lundis à 09:00
+   *
+   * PROCESSUS:
+   * 1. Récupère le thème actif
+   * 2. Récupère tous les tokens de notification
+   * 3. Envoie une notification à tous les utilisateurs
    */
   @Cron('0 9 * * 1', {
     timeZone: 'Europe/Paris',
@@ -227,8 +315,23 @@ export class NotificationsService {
     }
   }
 
+  // ============================================
+  // MÉTHODE: sendExchangeStatusNotification
+  // ============================================
+
   /**
-   * Envoie une notification lors d'un changement de statut d'échange
+   * Envoie une notification lors d'un changement de statut d'échange.
+   *
+   * STATUTS:
+   * - PENDING: Nouvelle demande d'échange
+   * - ACCEPTED: Échange accepté
+   * - DECLINED: Échange décliné
+   * - COMPLETED: Échange terminé
+   * - CANCELLED: Échange annulé
+   *
+   * @param exchangeId - ID de l'échange
+   * @param status - Nouveau statut de l'échange
+   * @param recipientUserId - ID de l'utilisateur destinataire
    */
   async sendExchangeStatusNotification(
     exchangeId: string,
@@ -277,8 +380,17 @@ export class NotificationsService {
     }
   }
 
+  // ============================================
+  // MÉTHODE: sendNewMessageNotification
+  // ============================================
+
   /**
-   * Envoie une notification pour un nouveau message
+   * Envoie une notification pour un nouveau message dans un thread.
+   *
+   * @param threadId - ID du thread
+   * @param threadTitle - Titre du thread
+   * @param recipientUserId - ID de l'utilisateur destinataire
+   * @param senderName - Nom de l'expéditeur
    */
   async sendNewMessageNotification(
     threadId: string,
@@ -318,8 +430,21 @@ export class NotificationsService {
     }
   }
 
+  // ============================================
+  // MÉTHODE PRIVÉE: sendNotificationToToken
+  // ============================================
+
   /**
-   * Envoie une notification à un token spécifique
+   * Envoie une notification à un token spécifique.
+   *
+   * NOTE:
+   * Cette méthode est un placeholder. Dans un vrai projet, il faudrait:
+   * - Implémenter FCM HTTP v1 pour les tokens 'fcm'
+   * - Implémenter Web Push avec VAPID pour les tokens 'webpush'
+   *
+   * @param token - Token de notification
+   * @param provider - Provider (fcm ou webpush)
+   * @param payload - Données de la notification (title, body, icon, badge, data)
    */
   private async sendNotificationToToken(
     token: string,
@@ -353,8 +478,15 @@ export class NotificationsService {
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
+  // ============================================
+  // MÉTHODE PRIVÉE: mapToResponse
+  // ============================================
+
   /**
-   * Mappe un token Prisma vers la réponse API
+   * Mappe un token Prisma vers la réponse API.
+   *
+   * @param token - Token depuis Prisma
+   * @returns Token formaté pour la réponse API
    */
   private mapToResponse(token: any): NotificationTokenResponse {
     return {
@@ -366,4 +498,3 @@ export class NotificationsService {
     };
   }
 }
-

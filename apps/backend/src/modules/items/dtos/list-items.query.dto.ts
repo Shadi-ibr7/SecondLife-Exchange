@@ -1,3 +1,25 @@
+/**
+ * FICHIER: list-items.query.dto.ts
+ *
+ * DESCRIPTION:
+ * Ce fichier définit le DTO pour les paramètres de requête de la liste d'items.
+ * Il contient tous les filtres et options de pagination disponibles.
+ *
+ * FILTRES DISPONIBLES:
+ * - page: Numéro de page (défaut: 1)
+ * - limit: Nombre d'éléments par page (défaut: 20, max: 50)
+ * - q: Recherche textuelle (titre, description, tags)
+ * - category: Filtrer par catégorie
+ * - condition: Filtrer par état
+ * - status: Filtrer par statut (AVAILABLE, PENDING, TRADED, ARCHIVED)
+ * - ownerId: Filtrer par propriétaire
+ * - sort: Tri (ex: -createdAt pour plus récent en premier)
+ *
+ * NOTE:
+ * Tous les paramètres sont optionnels pour permettre une recherche flexible.
+ */
+
+// Import des décorateurs de validation
 import {
   IsOptional,
   IsString,
@@ -7,10 +29,21 @@ import {
   Max,
   IsUUID,
 } from 'class-validator';
+
+// Import des décorateurs Swagger
 import { ApiPropertyOptional } from '@nestjs/swagger';
+
+// Import de class-transformer pour la conversion de types
 import { Type } from 'class-transformer';
+
+// Import des types Prisma
 import { ItemCategory, ItemCondition, ItemStatus } from '@prisma/client';
 
+/**
+ * DTO: ListItemsQueryDto
+ *
+ * Classe pour valider les paramètres de requête de la liste d'items.
+ */
 export class ListItemsQueryDto {
   @ApiPropertyOptional({
     description: 'Numéro de page',

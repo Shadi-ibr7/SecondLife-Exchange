@@ -1,10 +1,36 @@
+/**
+ * FICHIER: eco.service.ts
+ *
+ * DESCRIPTION:
+ * Ce service gère les contenus éco-éducatifs de l'application.
+ * Il permet de créer, lister, mettre à jour et enrichir des contenus
+ * qui éduquent les utilisateurs sur l'impact écologique de l'échange d'objets.
+ *
+ * FONCTIONNALITÉS:
+ * - Création de contenus éco-éducatifs (articles, vidéos, statistiques)
+ * - Liste paginée avec filtres (type, tag, langue, recherche textuelle)
+ * - Mise à jour et suppression de contenus (admin uniquement)
+ * - Enrichissement automatique avec IA (résumé, tags, KPIs)
+ * - Statistiques des contenus (tags populaires, etc.)
+ *
+ * TYPES DE CONTENUS:
+ * - ARTICLE: Articles éducatifs
+ * - VIDEO: Vidéos éducatives
+ * - STAT: Statistiques et données
+ */
+
+// Import des exceptions NestJS
 import {
   Injectable,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+
+// Import des services
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { GeminiService } from './gemini.service';
+
+// Import des DTOs
 import {
   CreateEcoContentInput,
   UpdateEcoContentInput,
@@ -14,15 +40,38 @@ import {
   EnrichEcoContentResponse,
 } from './dtos/eco-content.dto';
 
+/**
+ * SERVICE: EcoService
+ *
+ * Service pour la gestion des contenus éco-éducatifs.
+ */
 @Injectable()
 export class EcoService {
+  /**
+   * CONSTRUCTEUR
+   *
+   * Injection des dépendances.
+   */
   constructor(
     private prisma: PrismaService,
     private geminiService: GeminiService,
   ) {}
 
+  // ============================================
+  // MÉTHODE: listEcoContent (Lister les contenus)
+  // ============================================
+
   /**
-   * Liste les contenus éco avec filtres et pagination
+   * Liste les contenus éco-éducatifs avec filtres et pagination.
+   *
+   * FILTRES DISPONIBLES:
+   * - kind: Type de contenu (ARTICLE, VIDEO, STAT)
+   * - tag: Filtrer par tag
+   * - locale: Filtrer par langue
+   * - q: Recherche textuelle (titre, résumé, source)
+   *
+   * @param query - Paramètres de filtrage et pagination
+   * @returns Liste paginée de contenus éco
    */
   async listEcoContent(
     query: ListEcoContentInput,
@@ -74,8 +123,16 @@ export class EcoService {
     };
   }
 
+  // ============================================
+  // MÉTHODE: getEcoContentById (Récupérer un contenu)
+  // ============================================
+
   /**
-   * Récupère un contenu éco par ID
+   * Récupère un contenu éco-éducatif par son ID.
+   *
+   * @param id - ID du contenu
+   * @returns Contenu éco avec toutes ses informations
+   * @throws NotFoundException si le contenu n'existe pas
    */
   async getEcoContentById(id: string): Promise<EcoContentResponse> {
     const item = await this.prisma.ecoContent.findUnique({
@@ -89,8 +146,15 @@ export class EcoService {
     return this.mapToResponse(item);
   }
 
+  // ============================================
+  // MÉTHODE: createEcoContent (Créer un contenu)
+  // ============================================
+
   /**
-   * Crée un nouveau contenu éco
+   * Crée un nouveau contenu éco-éducatif.
+   *
+   * @param input - Données du contenu à créer
+   * @returns Contenu créé
    */
   async createEcoContent(
     input: CreateEcoContentInput,

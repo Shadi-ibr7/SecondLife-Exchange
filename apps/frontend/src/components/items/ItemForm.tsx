@@ -1,21 +1,56 @@
+/**
+ * FICHIER: ItemForm.tsx
+ *
+ * DESCRIPTION:
+ * Ce composant affiche un formulaire pour créer ou modifier un item (objet).
+ * Il gère tous les champs nécessaires : titre, description, catégorie, condition, tags.
+ *
+ * FONCTIONNALITÉS:
+ * - Formulaire avec validation Zod
+ * - Gestion des tags (ajout/suppression, maximum 10)
+ * - Option d'aide IA (Gemini) pour catégorie et tags automatiques
+ * - Mode création ou édition
+ * - Validation en temps réel
+ * - Gestion des erreurs avec affichage
+ *
+ * CHAMPS:
+ * - title: Titre de l'item (3-120 caractères)
+ * - description: Description détaillée (10-2000 caractères)
+ * - category: Catégorie (optionnel si IA activée)
+ * - condition: État de l'item (requis)
+ * - tags: Tags personnalisés (max 10, 2-24 caractères chacun)
+ * - aiAuto: Activer l'aide IA (optionnel)
+ */
+
 'use client';
 
+// Import de React
 import { useState } from 'react';
+
+// Import de React Hook Form
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+
+// Import de Zod pour la validation
 import { z } from 'zod';
+
+// Import des composants UI
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+
+// Import des constantes
 import {
   ITEM_CATEGORIES,
   ITEM_CONDITIONS,
   ITEM_CATEGORY_LABELS,
   ITEM_CONDITION_LABELS,
 } from '@/lib/constants';
+
+// Import des types
 import {
   CreateItemDto,
   UpdateItemDto,
@@ -23,9 +58,18 @@ import {
   ItemCategory,
   ItemCondition,
 } from '@/types';
+
+// Import de react-hot-toast
 import { toast } from 'react-hot-toast';
+
+// Import des icônes
 import { Sparkles, Tag, X } from 'lucide-react';
 
+/**
+ * SCHÉMA DE VALIDATION: itemSchema
+ *
+ * Définit les règles de validation pour le formulaire d'item.
+ */
 const itemSchema = z.object({
   title: z
     .string()
@@ -35,7 +79,7 @@ const itemSchema = z.object({
     .string()
     .min(10, 'La description doit contenir au moins 10 caractères')
     .max(2000, 'La description ne peut pas dépasser 2000 caractères'),
-  category: z.string().optional(),
+  category: z.string().optional(), // Optionnel si IA activée
   condition: z.string().min(1, "L'état est requis"),
   tags: z
     .array(
@@ -45,18 +89,38 @@ const itemSchema = z.object({
         .max(24, 'Un tag ne peut pas dépasser 24 caractères')
     )
     .max(10, 'Maximum 10 tags'),
-  aiAuto: z.boolean().default(false),
+  aiAuto: z.boolean().default(false), // Aide IA activée ou non
 });
 
+/**
+ * TYPE: ItemFormData
+ *
+ * Type TypeScript dérivé du schéma Zod.
+ */
 type ItemFormData = z.infer<typeof itemSchema>;
 
+/**
+ * INTERFACE: ItemFormProps
+ *
+ * Définit les propriétés acceptées par le composant.
+ */
 interface ItemFormProps {
-  mode: 'create' | 'edit';
-  initialData?: Item;
-  onSubmit: (data: CreateItemDto | UpdateItemDto) => Promise<void>;
-  isLoading?: boolean;
+  mode: 'create' | 'edit'; // Mode création ou édition
+  initialData?: Item; // Données initiales (pour édition)
+  onSubmit: (data: CreateItemDto | UpdateItemDto) => Promise<void>; // Fonction de soumission
+  isLoading?: boolean; // État de chargement
 }
 
+/**
+ * COMPOSANT: ItemForm
+ *
+ * Formulaire pour créer ou modifier un item.
+ *
+ * @param mode - Mode création ou édition
+ * @param initialData - Données initiales (pour édition)
+ * @param onSubmit - Fonction appelée lors de la soumission
+ * @param isLoading - État de chargement
+ */
 export function ItemForm({
   mode,
   initialData,

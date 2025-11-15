@@ -1,14 +1,43 @@
+/**
+ * FICHIER: items.service.ts
+ *
+ * DESCRIPTION:
+ * Ce service gère toute la logique métier pour les objets (items) à échanger.
+ * Il permet de créer, lister, récupérer, mettre à jour et supprimer des items.
+ *
+ * FONCTIONNALITÉS:
+ * - Création d'items avec analyse IA optionnelle (catégorisation automatique)
+ * - Liste paginée avec filtres (catégorie, état, statut, recherche textuelle)
+ * - Récupération d'un item par ID
+ * - Mise à jour d'un item (propriétaire uniquement)
+ * - Suppression d'un item (propriétaire uniquement)
+ * - Mise à jour du statut d'un item
+ * - Recherche par tags
+ *
+ * SÉCURITÉ:
+ * - Vérification que seul le propriétaire peut modifier/supprimer ses items
+ * - Validation des catégories et états
+ * - Gestion des erreurs Prisma
+ */
+
+// Import des exceptions NestJS
 import {
   Injectable,
   NotFoundException,
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
+
+// Import des services
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { GeminiService } from '../ai/gemini.service';
+
+// Import des DTOs
 import { CreateItemDto } from './dtos/create-item.dto';
 import { UpdateItemDto } from './dtos/update-item.dto';
 import { ListItemsQueryDto } from './dtos/list-items.query.dto';
+
+// Import des types Prisma
 import {
   Item,
   ItemCategory,
@@ -17,6 +46,12 @@ import {
   Prisma,
 } from '@prisma/client';
 
+/**
+ * INTERFACE: ItemWithPhotos
+ *
+ * Étend l'interface Item de Prisma pour inclure les photos et le propriétaire.
+ * Utilisée pour typer les réponses des méthodes du service.
+ */
 export interface ItemWithPhotos extends Item {
   photos: Array<{
     id: string;
@@ -32,6 +67,11 @@ export interface ItemWithPhotos extends Item {
   };
 }
 
+/**
+ * INTERFACE: PaginatedItems
+ *
+ * Structure de réponse pour les listes paginées d'items.
+ */
 export interface PaginatedItems {
   items: ItemWithPhotos[];
   total: number;
@@ -40,23 +80,60 @@ export interface PaginatedItems {
   totalPages: number;
 }
 
+/**
+ * SERVICE: ItemsService
+ *
+ * Service principal pour la gestion des items.
+ */
 @Injectable()
 export class ItemsService {
+  /**
+   * CONSTRUCTEUR
+   *
+   * Injection des dépendances:
+   * - prisma: pour accéder à la base de données
+   * - geminiService: pour l'analyse IA des items
+   */
   constructor(
     private readonly prisma: PrismaService,
     private readonly geminiService: GeminiService,
   ) {}
 
+  // ============================================
+  // MÉTHODE: createItem (Créer un item)
+  // ============================================
+
   /**
-   * Crée un nouvel item
+   * Crée un nouvel item dans la base de données.
+   *
+   * FONCTIONNALITÉS:
+   * - Analyse IA optionnelle pour catégoriser automatiquement l'item
+   * - Validation de la catégorie
+   * - Association automatique avec le propriétaire (userId)
+   *
+   * @param userId - ID de l'utilisateur créateur (propriétaire)
+   * @param createItemDto - Données de l'item à créer
+   * @returns Item créé avec ses photos et le propriétaire
+   * @throws BadRequestException si la catégorie est invalide ou manquante
    */
   async createItem(
     userId: string,
     createItemDto: CreateItemDto,
   ): Promise<ItemWithPhotos> {
+    // Séparer aiAuto des autres données
     const { aiAuto, ...itemData } = createItemDto;
 
-    // Analyse IA si demandée
+    // ============================================
+    // ANALYSE IA OPTIONNELLE
+    // ============================================
+    /**
+     * Si aiAuto est activé, l'IA analyse le titre et la description
+     * pour suggérer automatiquement:
+     * - La catégorie
+     * - Les tags
+     * - Un résumé
+     * - Des conseils de réparation
+     */
     let aiAnalysis = null;
     if (aiAuto) {
       console.log('🔍 Début analyse IA pour:', itemData.title);
@@ -67,17 +144,26 @@ export class ItemsService {
       console.log('🤖 Résultat analyse IA:', aiAnalysis);
     }
 
-    // Utiliser l'analyse IA si disponible
+    // ============================================
+    // PRÉPARATION DES DONNÉES FINALES
+    // ============================================
+    /**
+     * Combiner les données fournies avec l'analyse IA.
+     * L'analyse IA a la priorité, sinon on utilise les données fournies.
+     */
     const finalItemData = {
       ...itemData,
-      ownerId: userId,
-      category: aiAnalysis?.category || itemData.category || 'OTHER', // Fallback par défaut
-      tags: aiAnalysis?.tags || itemData.tags || [],
-      aiSummary: aiAnalysis?.aiSummary,
-      aiRepairTip: aiAnalysis?.aiRepairTip,
+      ownerId: userId, // Associer l'item au propriétaire
+      category: aiAnalysis?.category || itemData.category || 'OTHER', // Catégorie IA > manuelle > OTHER
+      tags: aiAnalysis?.tags || itemData.tags || [], // Tags IA > manuels > []
+      aiSummary: aiAnalysis?.aiSummary, // Résumé généré par l'IA
+      aiRepairTip: aiAnalysis?.aiRepairTip, // Conseils de réparation de l'IA
     };
 
-    // Vérifier que la catégorie est définie et valide
+    // ============================================
+    // VALIDATION DE LA CATÉGORIE
+    // ============================================
+    // Vérifier que la catégorie est définie
     if (!finalItemData.category) {
       throw new BadRequestException(
         'Catégorie requise (spécifiez category ou utilisez aiAuto=true)',
@@ -100,6 +186,14 @@ export class ItemsService {
       );
     }
 
+    // ============================================
+    // CRÉATION DE L'ITEM DANS LA BASE DE DONNÉES
+    // ============================================
+    /**
+     * Créer l'item avec toutes les relations nécessaires:
+     * - photos: liste des photos (vide au début)
+     * - owner: informations du propriétaire
+     */
     const item = await this.prisma.item.create({
       data: finalItemData,
       include: {
@@ -125,8 +219,23 @@ export class ItemsService {
     return item;
   }
 
+  // ============================================
+  // MÉTHODE: listItems (Lister les items)
+  // ============================================
+
   /**
-   * Liste les items avec filtres et pagination
+   * Liste les items avec filtres et pagination.
+   *
+   * FILTRES DISPONIBLES:
+   * - q: Recherche textuelle (titre, description, tags)
+   * - category: Filtrer par catégorie
+   * - condition: Filtrer par état (NEW, GOOD, FAIR, TO_REPAIR)
+   * - status: Filtrer par statut (AVAILABLE, PENDING, TRADED, ARCHIVED)
+   * - ownerId: Filtrer par propriétaire
+   * - sort: Tri (ex: -createdAt pour plus récent en premier)
+   *
+   * @param query - Paramètres de filtrage et pagination
+   * @returns Liste paginée d'items
    */
   async listItems(query: ListItemsQueryDto): Promise<PaginatedItems> {
     const {
@@ -233,8 +342,16 @@ export class ItemsService {
     }
   }
 
+  // ============================================
+  // MÉTHODE: getItemById (Récupérer un item)
+  // ============================================
+
   /**
-   * Récupère un item par ID
+   * Récupère un item par son ID avec toutes ses relations.
+   *
+   * @param id - ID de l'item
+   * @returns Item avec photos et propriétaire
+   * @throws NotFoundException si l'item n'existe pas
    */
   async getItemById(id: string): Promise<ItemWithPhotos> {
     const item = await this.prisma.item.findUnique({
@@ -266,14 +383,36 @@ export class ItemsService {
     return item;
   }
 
+  // ============================================
+  // MÉTHODE: updateItem (Mettre à jour un item)
+  // ============================================
+
   /**
-   * Met à jour un item (propriétaire uniquement)
+   * Met à jour un item existant.
+   *
+   * SÉCURITÉ:
+   * - Vérifie que l'item existe
+   * - Vérifie que l'utilisateur est le propriétaire
+   *
+   * FONCTIONNALITÉS:
+   * - Analyse IA optionnelle si aiAuto est activé et que les données ont changé
+   * - Mise à jour partielle (seuls les champs fournis sont mis à jour)
+   *
+   * @param id - ID de l'item à mettre à jour
+   * @param userId - ID de l'utilisateur (doit être le propriétaire)
+   * @param updateItemDto - Données à mettre à jour
+   * @returns Item mis à jour
+   * @throws NotFoundException si l'item n'existe pas
+   * @throws ForbiddenException si l'utilisateur n'est pas le propriétaire
    */
   async updateItem(
     id: string,
     userId: string,
     updateItemDto: UpdateItemDto,
   ): Promise<ItemWithPhotos> {
+    // ============================================
+    // VÉRIFICATION DES PERMISSIONS
+    // ============================================
     // Vérifier que l'item existe et que l'utilisateur est le propriétaire
     const existingItem = await this.prisma.item.findUnique({
       where: { id },
@@ -337,8 +476,25 @@ export class ItemsService {
     return updatedItem;
   }
 
+  // ============================================
+  // MÉTHODE: deleteItem (Supprimer un item)
+  // ============================================
+
   /**
-   * Supprime un item (propriétaire uniquement)
+   * Supprime un item de la base de données.
+   *
+   * SÉCURITÉ:
+   * - Vérifie que l'item existe
+   * - Vérifie que l'utilisateur est le propriétaire
+   *
+   * NOTE:
+   * - Les photos sont supprimées automatiquement en cascade (configuration Prisma)
+   * - Les échanges liés peuvent être affectés selon la configuration
+   *
+   * @param id - ID de l'item à supprimer
+   * @param userId - ID de l'utilisateur (doit être le propriétaire)
+   * @throws NotFoundException si l'item n'existe pas
+   * @throws ForbiddenException si l'utilisateur n'est pas le propriétaire
    */
   async deleteItem(id: string, userId: string): Promise<void> {
     // Vérifier que l'item existe et que l'utilisateur est le propriétaire
@@ -362,18 +518,44 @@ export class ItemsService {
     });
   }
 
+  // ============================================
+  // MÉTHODE: getUserItems (Items d'un utilisateur)
+  // ============================================
+
   /**
-   * Récupère les items d'un utilisateur
+   * Récupère les items d'un utilisateur spécifique.
+   *
+   * @param userId - ID de l'utilisateur
+   * @param query - Paramètres de filtrage et pagination (sans ownerId)
+   * @returns Liste paginée des items de l'utilisateur
    */
   async getUserItems(
     userId: string,
     query: Omit<ListItemsQueryDto, 'ownerId'>,
   ): Promise<PaginatedItems> {
+    // Utiliser listItems avec ownerId fixé à userId
     return this.listItems({ ...query, ownerId: userId });
   }
 
+  // ============================================
+  // MÉTHODE: updateItemStatus (Mettre à jour le statut)
+  // ============================================
+
   /**
-   * Met à jour le statut d'un item
+   * Met à jour uniquement le statut d'un item.
+   *
+   * STATUTS POSSIBLES:
+   * - AVAILABLE: Disponible pour échange
+   * - PENDING: En attente d'échange
+   * - TRADED: Échangé
+   * - ARCHIVED: Archivé
+   *
+   * @param id - ID de l'item
+   * @param userId - ID de l'utilisateur (doit être le propriétaire)
+   * @param status - Nouveau statut
+   * @returns Item mis à jour
+   * @throws NotFoundException si l'item n'existe pas
+   * @throws ForbiddenException si l'utilisateur n'est pas le propriétaire
    */
   async updateItemStatus(
     id: string,
@@ -421,8 +603,16 @@ export class ItemsService {
     return updatedItem;
   }
 
+  // ============================================
+  // MÉTHODE: searchByTags (Recherche par tags)
+  // ============================================
+
   /**
-   * Recherche d'items par tags
+   * Recherche des items disponibles qui contiennent au moins un des tags fournis.
+   *
+   * @param tags - Liste de tags à rechercher
+   * @param limit - Nombre maximum d'items à retourner (défaut: 20)
+   * @returns Liste d'items correspondants, triés par date de création (plus récent en premier)
    */
   async searchByTags(
     tags: string[],

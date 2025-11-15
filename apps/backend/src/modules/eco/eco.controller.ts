@@ -1,3 +1,25 @@
+/**
+ * FICHIER: eco.controller.ts
+ *
+ * DESCRIPTION:
+ * Ce contrôleur expose les endpoints HTTP pour la gestion des contenus éco-éducatifs.
+ * Les routes de création/modification nécessitent une authentification JWT et des privilèges admin.
+ *
+ * ROUTES:
+ * - GET /api/v1/eco - Lister les contenus (public)
+ * - GET /api/v1/eco/stats - Statistiques des contenus (public)
+ * - GET /api/v1/eco/tags - Tags populaires (public)
+ * - GET /api/v1/eco/:id - Récupérer un contenu par ID (public)
+ * - POST /api/v1/eco - Créer un contenu (admin)
+ * - PATCH /api/v1/eco/:id - Mettre à jour un contenu (admin)
+ * - DELETE /api/v1/eco/:id - Supprimer un contenu (admin)
+ * - POST /api/v1/eco/:id/enrich - Enrichir un contenu avec IA (admin)
+ *
+ * SÉCURITÉ:
+ * - Routes de création/modification nécessitent JwtAccessGuard + AdminGuard
+ */
+
+// Import des décorateurs NestJS
 import {
   Controller,
   Get,
@@ -12,6 +34,8 @@ import {
   HttpStatus,
   UseInterceptors,
 } from '@nestjs/common';
+
+// Import des décorateurs Swagger
 import {
   ApiTags,
   ApiOperation,
@@ -20,7 +44,11 @@ import {
   ApiQuery,
   ApiParam,
 } from '@nestjs/swagger';
+
+// Import du service
 import { EcoService } from './eco.service';
+
+// Import des DTOs
 import {
   CreateEcoContentDto,
   UpdateEcoContentDto,
@@ -29,14 +57,27 @@ import {
   PaginatedEcoContentResponse,
   EnrichEcoContentResponse,
 } from './dtos/eco-content.dto';
+
+// Import des guards et intercepteurs
 import { JwtAccessGuard } from '../../common/guards/jwt-access.guard';
 import { AdminGuard } from '../../common/guards/admin.guard';
 import { LoggingInterceptor } from '../../common/interceptors/logging.interceptor';
 
+/**
+ * CONTRÔLEUR: EcoController
+ *
+ * Contrôleur pour la gestion des contenus éco-éducatifs.
+ * Le préfixe 'eco' signifie que les routes commencent par /api/v1/eco
+ */
 @ApiTags('Eco Content')
 @Controller('eco')
-@UseInterceptors(LoggingInterceptor)
+@UseInterceptors(LoggingInterceptor) // Logger toutes les requêtes
 export class EcoController {
+  /**
+   * CONSTRUCTEUR
+   *
+   * Injection du service éco
+   */
   constructor(private readonly ecoService: EcoService) {}
 
   @Get()

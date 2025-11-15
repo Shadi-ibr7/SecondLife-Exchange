@@ -1,33 +1,103 @@
+/**
+ * FICHIER: ItemCard.tsx
+ *
+ * DESCRIPTION:
+ * Ce composant affiche une carte d'item (objet) dans une grille ou une liste.
+ * Il présente les informations essentielles de l'item : photo, titre, description,
+ * catégorie, condition, localisation, et tags.
+ *
+ * FONCTIONNALITÉS:
+ * - Affichage de la première photo de l'item
+ * - Lien vers la page de détail de l'item
+ * - Animation d'apparition avec délai progressif
+ * - Gestion des items mock (aperçu) avec toast informatif
+ * - Formatage du temps relatif (ex: "il y a 2 jours")
+ * - Affichage des badges de catégorie, condition et tags
+ */
+
 'use client';
 
+// Import de Next.js pour la navigation
 import Link from 'next/link';
+
+// Import de Framer Motion pour les animations
 import { motion } from 'framer-motion';
+
+// Import des composants UI
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+
+// Import des types
 import { Item } from '@/types';
+
+// Import des constantes pour les labels
 import { ITEM_CATEGORY_LABELS, ITEM_CONDITION_LABELS } from '@/lib/constants';
+
+// Import des icônes
 import { MapPin, Calendar } from 'lucide-react';
+
+// Import de date-fns pour le formatage des dates
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
+
+// Import de react-hot-toast pour les notifications
 import { toast } from 'react-hot-toast';
 
+/**
+ * INTERFACE: ItemCardProps
+ *
+ * Définit les propriétés acceptées par le composant.
+ */
 interface ItemCardProps {
-  item: Item;
-  index?: number;
+  item: Item; // L'item à afficher
+  index?: number; // Index pour l'animation progressive (défaut: 0)
 }
 
+/**
+ * COMPOSANT: ItemCard
+ *
+ * Affiche une carte d'item avec toutes ses informations essentielles.
+ *
+ * @param item - L'item à afficher
+ * @param index - Index pour l'animation progressive
+ */
 export function ItemCard({ item, index = 0 }: ItemCardProps) {
+  // ============================================
+  // FONCTION: formatRelativeTime
+  // ============================================
+
+  /**
+   * Formate une date en temps relatif en français (ex: "il y a 2 jours").
+   *
+   * @param date - Date à formater (string ISO)
+   * @returns Temps relatif formaté en français
+   */
   const formatRelativeTime = (date: string) => {
     return formatDistanceToNow(new Date(date), {
-      addSuffix: true,
-      locale: fr,
+      addSuffix: true, // Ajouter "il y a" ou "dans"
+      locale: fr, // Utiliser la locale française
     });
   };
 
+  // ============================================
+  // GESTION DES ITEMS MOCK (APERÇU)
+  // ============================================
+
+  /**
+   * Vérifie si l'item est un item mock (aperçu).
+   * Les items mock ont un ID qui commence par "mock-".
+   */
   const isMock = item.id.startsWith('mock-');
+
+  /**
+   * Gestionnaire de clic pour les items mock.
+   * Empêche la navigation et affiche un toast informatif.
+   *
+   * @param e - Événement de clic
+   */
   const handleMockClick: React.MouseEventHandler<HTMLAnchorElement> = (e) => {
     if (isMock) {
-      e.preventDefault();
+      e.preventDefault(); // Empêcher la navigation
       toast("Aperçu d'annonce. Publiez un objet pour voir la fiche détaillée.");
     }
   };

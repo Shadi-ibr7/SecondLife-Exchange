@@ -1,13 +1,57 @@
+/**
+ * FICHIER: gemini.service.ts (module eco)
+ *
+ * DESCRIPTION:
+ * Ce service gère l'intégration avec l'API Google Gemini spécifiquement
+ * pour l'enrichissement de contenus éco-éducatifs.
+ *
+ * DIFFÉRENCE AVEC ai/gemini.service.ts:
+ * - Ce service est dédié à l'enrichissement de contenus éco
+ * - Génère des résumés, tags et KPIs pour les articles/vidéos éco
+ * - Utilise un modèle différent (gemini-1.5-flash)
+ *
+ * FONCTIONNALITÉS:
+ * - Enrichissement automatique de contenus éco avec résumé, tags et KPIs
+ * - Extraction de texte depuis HTML
+ * - Validation et formatage des réponses IA
+ */
+
+// Import des classes NestJS
 import { Injectable, Logger } from '@nestjs/common';
+
+// Import des services
 import { ConfigService } from '@nestjs/config';
+
+// Import des DTOs
 import { EnrichEcoContentResponse } from './dtos/eco-content.dto';
 
+/**
+ * SERVICE: GeminiService (module eco)
+ *
+ * Service pour l'enrichissement de contenus éco avec Gemini.
+ */
 @Injectable()
 export class GeminiService {
+  /**
+   * Logger pour enregistrer les événements
+   */
   private readonly logger = new Logger(GeminiService.name);
+
+  /**
+   * Clé API Gemini
+   */
   private readonly apiKey: string;
+
+  /**
+   * URL de base de l'API Gemini
+   */
   private readonly baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
 
+  /**
+   * CONSTRUCTEUR
+   *
+   * Charge la clé API depuis la configuration.
+   */
   constructor(private configService: ConfigService) {
     this.apiKey = this.configService.get<string>('GEMINI_API_KEY');
     if (!this.apiKey) {
@@ -15,8 +59,24 @@ export class GeminiService {
     }
   }
 
+  // ============================================
+  // MÉTHODE: enrichEcoContent
+  // ============================================
+
   /**
-   * Enrichit un contenu éco avec Gemini
+   * Enrichit un contenu éco-éducatif avec Gemini.
+   *
+   * PROCESSUS:
+   * 1. Construit un prompt avec le titre, l'URL et le contenu HTML (si disponible)
+   * 2. Appelle l'API Gemini
+   * 3. Parse et valide la réponse JSON
+   * 4. Retourne le résumé, les tags et les KPIs
+   *
+   * @param title - Titre du contenu
+   * @param url - URL du contenu
+   * @param html - Contenu HTML (optionnel, extrait le texte si fourni)
+   * @returns Résultat de l'enrichissement (summary, tags, kpis)
+   * @throws Error si la clé API n'est pas configurée ou si l'enrichissement échoue
    */
   async enrichEcoContent({
     title,
@@ -42,8 +102,22 @@ export class GeminiService {
     }
   }
 
+  // ============================================
+  // MÉTHODE PRIVÉE: buildEnrichmentPrompt
+  // ============================================
+
   /**
-   * Construit le prompt pour l'enrichissement
+   * Construit le prompt pour l'enrichissement de contenu éco.
+   *
+   * Le prompt demande à l'IA de:
+   * - Générer un résumé concis (max 240 caractères) sur l'impact écologique
+   * - Générer jusqu'à 8 tags pertinents en français
+   * - Extraire des KPIs si des données chiffrées sont disponibles
+   *
+   * @param title - Titre du contenu
+   * @param url - URL du contenu
+   * @param html - Contenu HTML (optionnel)
+   * @returns Prompt texte pour l'API Gemini
    */
   private buildEnrichmentPrompt(
     title: string,
@@ -76,8 +150,24 @@ Règles:
 - Réponse JSON valide uniquement, pas de texte supplémentaire`;
   }
 
+  // ============================================
+  // MÉTHODE PRIVÉE: extractTextFromHtml
+  // ============================================
+
   /**
-   * Extrait le texte principal du HTML
+   * Extrait le texte principal depuis du HTML.
+   *
+   * FONCTIONNEMENT:
+   * - Supprime les balises <script> et <style>
+   * - Supprime toutes les balises HTML
+   * - Normalise les espaces multiples
+   *
+   * NOTE:
+   * Extraction basique. Pour une extraction plus avancée,
+   * utiliser une bibliothèque dédiée comme cheerio ou jsdom.
+   *
+   * @param html - Contenu HTML
+   * @returns Texte extrait
    */
   private extractTextFromHtml(html: string): string {
     // Extraction basique du texte (à améliorer avec une lib dédiée si nécessaire)
@@ -89,8 +179,21 @@ Règles:
       .trim();
   }
 
+  // ============================================
+  // MÉTHODE PRIVÉE: callGeminiAPI
+  // ============================================
+
   /**
-   * Appelle l'API Gemini
+   * Appelle l'API Google Gemini avec un prompt.
+   *
+   * CONFIGURATION:
+   * - Modèle: gemini-1.5-flash (rapide et économique)
+   * - Temperature: 0.3 (réponses déterministes)
+   * - Timeout: 10 secondes
+   *
+   * @param prompt - Prompt texte à envoyer à l'IA
+   * @returns Réponse JSON de l'API Gemini
+   * @throws Error si l'API retourne une erreur ou timeout
    */
   private async callGeminiAPI(prompt: string): Promise<any> {
     const url = `${this.baseUrl}/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`;
@@ -144,8 +247,24 @@ Règles:
     }
   }
 
+  // ============================================
+  // MÉTHODE PRIVÉE: parseGeminiResponse
+  // ============================================
+
   /**
-   * Parse la réponse de Gemini
+   * Parse et valide la réponse Gemini pour l'enrichissement.
+   *
+   * PROCESSUS:
+   * 1. Extrait le texte de la réponse
+   * 2. Nettoie la réponse (enlève markdown si présent)
+   * 3. Parse le JSON
+   * 4. Valide la structure (summary, tags requis)
+   * 5. Limite le résumé à 240 caractères
+   * 6. Limite les tags à 8
+   *
+   * @param response - Réponse JSON de l'API Gemini
+   * @returns Réponse validée et formatée
+   * @throws Error si la réponse est invalide
    */
   private parseGeminiResponse(response: any): EnrichEcoContentResponse {
     try {

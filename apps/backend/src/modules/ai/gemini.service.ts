@@ -1,66 +1,164 @@
+/**
+ * FICHIER: gemini.service.ts
+ * 
+ * DESCRIPTION:
+ * Ce service gère l'intégration avec l'API Google Gemini pour l'analyse IA.
+ * Il permet d'analyser des items et de générer des suggestions d'objets.
+ * 
+ * FONCTIONNALITÉS:
+ * - Analyse automatique d'items (catégorisation, tags, résumé, conseils de réparation)
+ * - Génération de suggestions d'objets basées sur des thèmes
+ * - Validation des réponses IA avec Zod
+ * - Gestion des erreurs et timeouts
+ * 
+ * CONFIGURATION:
+ * - Utilise la clé API Gemini depuis les variables d'environnement
+ * - Modèle par défaut: gemini-2.5-flash (rapide et économique)
+ * - Timeout configurable (défaut: 10 secondes)
+ */
+
+// Import des classes NestJS
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+
+// Import des services
 import { ConfigService } from '@nestjs/config';
+
+// Import des types Prisma
 import { ItemCategory } from '@prisma/client';
+
+// Import de Zod pour la validation
 import { z } from 'zod';
+
+// Import des utilitaires
 import { HashUtil } from '../../common/utils/hash.util';
 
+/**
+ * INTERFACE: GeminiAnalysisResult
+ * 
+ * Résultat de l'analyse IA d'un item.
+ * Contient la catégorie suggérée, les tags, un résumé et des conseils de réparation.
+ */
 export interface GeminiAnalysisResult {
-  category: ItemCategory;
-  tags: string[];
-  aiSummary: string;
-  aiRepairTip: string;
+  category: ItemCategory; // Catégorie suggérée par l'IA
+  tags: string[];         // Tags pertinents (3-4 tags)
+  aiSummary: string;      // Résumé concis (max 240 caractères)
+  aiRepairTip: string;    // Conseil de réparation (max 240 caractères)
 }
 
+/**
+ * INTERFACE: AnalyzeItemRequest
+ * 
+ * Requête pour analyser un item avec l'IA.
+ */
 export interface AnalyzeItemRequest {
-  title: string;
-  description: string;
-  locale?: string;
+  title: string;        // Titre de l'item
+  description: string; // Description de l'item
+  locale?: string;      // Langue (défaut: 'fr')
 }
 
-// Schémas Zod pour la validation des suggestions
+// ============================================
+// SCHÉMAS ZOD POUR LA VALIDATION
+// ============================================
+
+/**
+ * Schéma Zod pour valider une suggestion d'objet générée par l'IA.
+ * Utilisé pour valider les réponses de l'API Gemini.
+ */
 const SuggestedItemDraftSchema = z.object({
-  name: z.string().min(1).max(120),
-  category: z.string().min(1).max(50),
-  country: z.string().min(1).max(50),
-  era: z.string().max(50).nullable(),
-  materials: z.string().max(200).nullable(),
-  ecoReason: z.string().min(1).max(240),
-  repairDifficulty: z.enum(['faible', 'moyenne', 'elevee']),
-  popularity: z.number().int().min(1).max(5),
-  tags: z.array(z.string().max(30)).max(8),
-  photoRef: z.string().max(200).nullable(),
+  name: z.string().min(1).max(120),                    // Nom de l'objet
+  category: z.string().min(1).max(50),                // Catégorie
+  country: z.string().min(1).max(50),                  // Pays d'origine
+  era: z.string().max(50).nullable(),                  // Époque (optionnel)
+  materials: z.string().max(200).nullable(),           // Matériaux (optionnel)
+  ecoReason: z.string().min(1).max(240),              // Raison écologique
+  repairDifficulty: z.enum(['faible', 'moyenne', 'elevee']), // Difficulté de réparation
+  popularity: z.number().int().min(1).max(5),         // Popularité (1-5)
+  tags: z.array(z.string().max(30)).max(8),           // Tags (max 8)
+  photoRef: z.string().max(200).nullable(),          // Référence photo (optionnel)
 });
 
+/**
+ * Schéma Zod pour valider la réponse complète de suggestions.
+ */
 const SuggestedItemsResponseSchema = z.object({
-  items: z.array(SuggestedItemDraftSchema).max(20),
+  items: z.array(SuggestedItemDraftSchema).max(20), // Maximum 20 suggestions
 });
 
+/**
+ * TYPE: SuggestedItemDraft
+ * 
+ * Type TypeScript inféré depuis le schéma Zod.
+ */
 export type SuggestedItemDraft = z.infer<typeof SuggestedItemDraftSchema>;
+
+/**
+ * TYPE: SuggestedItemsResponse
+ * 
+ * Type pour la réponse complète de suggestions.
+ */
 export type SuggestedItemsResponse = z.infer<
   typeof SuggestedItemsResponseSchema
 >;
 
+/**
+ * INTERFACE: SuggestedItemWithMetadata
+ * 
+ * Étend SuggestedItemDraft avec les métadonnées IA.
+ * Utilisé pour stocker les suggestions avec leurs métadonnées.
+ */
 export interface SuggestedItemWithMetadata extends SuggestedItemDraft {
-  aiModel?: string;
-  aiPromptHash?: string;
-  aiRaw?: any;
+  aiModel?: string;        // Modèle IA utilisé
+  aiPromptHash?: string;   // Hash du prompt (pour déduplication)
+  aiRaw?: any;             // Réponse brute de l'IA (pour débogage)
 }
 
+/**
+ * INTERFACE: GenerateSuggestionsRequest
+ * 
+ * Requête pour générer des suggestions d'objets basées sur un thème.
+ */
 export interface GenerateSuggestionsRequest {
-  themeTitle: string;
-  locale: string[];
-  trends?: any;
+  themeTitle: string;  // Titre du thème
+  locale: string[];    // Locales cibles (ex: ['FR', 'MA', 'JP'])
+  trends?: any;        // Tendances (optionnel)
 }
 
+/**
+ * SERVICE: GeminiService
+ * 
+ * Service pour interagir avec l'API Google Gemini.
+ */
 @Injectable()
 export class GeminiService {
+  /**
+   * Logger pour enregistrer les événements
+   */
   private readonly logger = new Logger(GeminiService.name);
+
+  /**
+   * Configuration IA
+   * 
+   * Contient la clé API, le modèle, le timeout, etc.
+   */
   private readonly aiConfig;
 
+  /**
+   * CONSTRUCTEUR
+   * 
+   * Charge la configuration IA et configure les fallbacks.
+   */
   constructor(private readonly configService: ConfigService) {
+    // Récupérer la configuration depuis ConfigService
     this.aiConfig = this.configService.get('ai');
 
-    // Fallback vers les variables d'environnement directes
+    // ============================================
+    // FALLBACK VERS LES VARIABLES D'ENVIRONNEMENT
+    // ============================================
+    /**
+     * Si la configuration n'est pas chargée via ConfigService,
+     * utiliser directement les variables d'environnement.
+     * Utile pour le développement ou si la config n'est pas correctement chargée.
+     */
     if (!this.aiConfig?.geminiApiKey) {
       this.aiConfig = {
         geminiApiKey: process.env.AI_GEMINI_API_KEY,
@@ -71,15 +169,29 @@ export class GeminiService {
       };
     }
 
+    // Logger la configuration (sans exposer la clé API)
     console.log('🔧 Configuration IA chargée:', {
-      hasApiKey: !!this.aiConfig?.geminiApiKey,
+      hasApiKey: !!this.aiConfig?.geminiApiKey, // true/false seulement
       model: this.aiConfig?.geminiModel,
       timeout: this.aiConfig?.geminiTimeout,
     });
   }
 
+  // ============================================
+  // MÉTHODE: analyzeItem (Analyser un item)
+  // ============================================
+  
   /**
-   * Analyse un item avec Gemini pour auto-catégorisation et suggestions
+   * Analyse un item avec Gemini pour auto-catégorisation et suggestions.
+   * 
+   * PROCESSUS:
+   * 1. Construit un prompt avec le titre et la description
+   * 2. Appelle l'API Gemini
+   * 3. Parse et valide la réponse JSON
+   * 4. Retourne le résultat structuré
+   * 
+   * @param request - Requête d'analyse (title, description, locale)
+   * @returns Résultat de l'analyse (category, tags, summary, repairTip) ou null si erreur
    */
   async analyzeItem(
     request: AnalyzeItemRequest,
@@ -105,8 +217,21 @@ export class GeminiService {
     }
   }
 
+  // ============================================
+  // MÉTHODE PRIVÉE: buildAnalysisPrompt
+  // ============================================
+  
   /**
-   * Construit le prompt pour l'analyse Gemini
+   * Construit le prompt pour l'analyse Gemini d'un item.
+   * 
+   * Le prompt demande à l'IA de:
+   * - Catégoriser l'objet
+   * - Générer des tags pertinents
+   * - Créer un résumé concis
+   * - Proposer des conseils de réparation
+   * 
+   * @param request - Requête d'analyse
+   * @returns Prompt texte pour l'API Gemini
    */
   private buildAnalysisPrompt(request: AnalyzeItemRequest): string {
     const { title, description, locale = 'fr' } = request;
@@ -135,8 +260,26 @@ Règles:
 Réponds uniquement le JSON, sans texte supplémentaire.`;
   }
 
+  // ============================================
+  // MÉTHODE PRIVÉE: callGeminiAPI
+  // ============================================
+  
   /**
-   * Appelle l'API Gemini
+   * Appelle l'API Google Gemini avec un prompt.
+   * 
+   * FONCTIONNEMENT:
+   * - Construit l'URL de l'API avec la clé API
+   * - Envoie une requête POST avec le prompt
+   * - Gère le timeout (annule la requête si trop longue)
+   * - Parse la réponse JSON
+   * 
+   * CONFIGURATION:
+   * - temperature: 0.3 (réponses plus déterministes)
+   * - maxOutputTokens: 500 (limite la longueur de la réponse)
+   * 
+   * @param prompt - Prompt texte à envoyer à l'IA
+   * @returns Réponse texte de l'IA, ou null si erreur
+   * @throws Error si l'API retourne une erreur ou timeout
    */
   private async callGeminiAPI(prompt: string): Promise<string | null> {
     const url = `${this.aiConfig.geminiBaseUrl}/models/${this.aiConfig.geminiModel}:generateContent?key=${this.aiConfig.geminiApiKey}`;
@@ -204,8 +347,24 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
     }
   }
 
+  // ============================================
+  // MÉTHODE PRIVÉE: parseGeminiResponse
+  // ============================================
+  
   /**
-   * Parse et valide la réponse Gemini
+   * Parse et valide la réponse Gemini pour l'analyse d'un item.
+   * 
+   * PROCESSUS:
+   * 1. Nettoie la réponse (enlève markdown si présent)
+   * 2. Parse le JSON
+   * 3. Valide la structure (category, tags, aiSummary, aiRepairTip)
+   * 4. Valide la catégorie (doit être une valeur valide de ItemCategory)
+   * 5. Valide les tags (doit être un tableau non vide)
+   * 6. Tronque les textes si trop longs (max 240 caractères)
+   * 
+   * @param response - Réponse texte de l'API Gemini
+   * @returns Résultat structuré de l'analyse
+   * @throws BadRequestException si la réponse est invalide
    */
   private parseGeminiResponse(response: string): GeminiAnalysisResult {
     try {
@@ -259,8 +418,25 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
     }
   }
 
+  // ============================================
+  // MÉTHODE: generateSuggestions
+  // ============================================
+  
   /**
-   * Génère des suggestions d'objets pour un thème hebdomadaire
+   * Génère des suggestions d'objets pour un thème hebdomadaire.
+   * 
+   * PROCESSUS:
+   * 1. Construit un prompt avec le thème et les locales
+   * 2. Appelle l'API Gemini
+   * 3. Parse et valide la réponse avec Zod
+   * 4. Ajoute les métadonnées IA (modèle, hash du prompt, réponse brute)
+   * 
+   * DIVERSITÉ:
+   * - Le prompt demande une diversité géographique (max 2 par pays)
+   * - Le prompt demande une diversité temporelle (max 2 par époque)
+   * 
+   * @param request - Requête de génération (themeTitle, locale, trends?)
+   * @returns Liste de suggestions avec métadonnées IA
    */
   async generateSuggestions(
     request: GenerateSuggestionsRequest,
@@ -309,8 +485,21 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
     }
   }
 
+  // ============================================
+  // MÉTHODE PRIVÉE: buildSuggestionsPrompt
+  // ============================================
+  
   /**
-   * Construit le prompt pour la génération de suggestions
+   * Construit le prompt pour la génération de suggestions d'objets.
+   * 
+   * Le prompt demande à l'IA de:
+   * - Proposer 20 objets maximum
+   * - Respecter la diversité (max 2 par pays et par époque)
+   * - Préférer vintage, artisanat, objets réparables
+   * - Focus sur les pays spécifiés dans locale
+   * 
+   * @param request - Requête de génération
+   * @returns Prompt texte pour l'API Gemini
    */
   private buildSuggestionsPrompt(request: GenerateSuggestionsRequest): string {
     const { themeTitle, locale } = request;
@@ -345,8 +534,21 @@ Sortie: { "items": [ ... ] }
 Réponds uniquement le JSON, sans texte supplémentaire.`;
   }
 
+  // ============================================
+  // MÉTHODE PRIVÉE: parseSuggestionsResponse
+  // ============================================
+  
   /**
-   * Parse et valide la réponse de suggestions
+   * Parse et valide la réponse Gemini pour les suggestions.
+   * 
+   * PROCESSUS:
+   * 1. Nettoie la réponse (enlève markdown si présent)
+   * 2. Parse le JSON
+   * 3. Valide avec le schéma Zod SuggestedItemsResponseSchema
+   * 
+   * @param response - Réponse texte de l'API Gemini
+   * @returns Réponse validée avec Zod
+   * @throws BadRequestException si la réponse est invalide
    */
   private parseSuggestionsResponse(response: string): SuggestedItemsResponse {
     try {
@@ -368,8 +570,18 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
     }
   }
 
+  // ============================================
+  // MÉTHODE: testConnection
+  // ============================================
+  
   /**
-   * Teste la connexion à l'API Gemini
+   * Teste la connexion à l'API Gemini.
+   * 
+   * UTILISATION:
+   * - Vérifier que la clé API est valide
+   * - Vérifier que l'API est accessible
+   * 
+   * @returns true si la connexion réussit, false sinon
    */
   async testConnection(): Promise<boolean> {
     try {

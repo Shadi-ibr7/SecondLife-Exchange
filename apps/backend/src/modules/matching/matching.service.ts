@@ -1,5 +1,33 @@
+/**
+ * FICHIER: matching.service.ts
+ *
+ * DESCRIPTION:
+ * Ce service gère le système de recommandations d'items personnalisées.
+ * Il utilise un algorithme de scoring basé sur les préférences utilisateur,
+ * l'historique d'échanges, et la popularité des items.
+ *
+ * FONCTIONNALITÉS:
+ * - Génération de recommandations personnalisées pour un utilisateur
+ * - Calcul de scores basés sur plusieurs critères (catégorie, état, popularité, etc.)
+ * - Application de filtres de diversité (évite les recommandations trop similaires)
+ * - Gestion des préférences utilisateur (catégories préférées/détestées, conditions, etc.)
+ * - Exclusion des items déjà possédés ou déjà échangés
+ *
+ * ALGORITHME DE SCORING:
+ * - Score de catégorie: +10 si catégorie préférée, -5 si détestée
+ * - Score d'état: +5 si condition préférée
+ * - Score de popularité: basé sur popularityScore de l'item
+ * - Score d'historique: -10 si déjà échangé avec cet utilisateur
+ * - Diversité: pénalise les items trop similaires
+ */
+
+// Import des exceptions NestJS
 import { Injectable, NotFoundException } from '@nestjs/common';
+
+// Import du service Prisma
 import { PrismaService } from '../../common/prisma/prisma.service';
+
+// Import des DTOs
 import {
   RecommendationsQueryInput,
   Recommendation,
@@ -7,12 +35,39 @@ import {
 } from './dtos/recommendations.dto';
 import { SavePreferencesInput } from './dtos/preferences.dto';
 
+/**
+ * SERVICE: MatchingService
+ *
+ * Service pour le système de recommandations personnalisées.
+ */
 @Injectable()
 export class MatchingService {
+  /**
+   * CONSTRUCTEUR
+   *
+   * Injection du service Prisma
+   */
   constructor(private prisma: PrismaService) {}
 
+  // ============================================
+  // MÉTHODE: getRecommendations
+  // ============================================
+
   /**
-   * Récupère les recommandations d'items pour un utilisateur
+   * Récupère les recommandations d'items personnalisées pour un utilisateur.
+   *
+   * PROCESSUS:
+   * 1. Récupère les préférences de l'utilisateur
+   * 2. Récupère les items de l'utilisateur (pour exclusion)
+   * 3. Récupère l'historique d'échanges (pour exclusion)
+   * 4. Récupère les candidats items avec filtres de préférences
+   * 5. Calcule les scores pour chaque candidat
+   * 6. Applique les filtres de diversité
+   * 7. Retourne les meilleures recommandations
+   *
+   * @param userId - ID de l'utilisateur
+   * @param query - Paramètres de requête (limit, etc.)
+   * @returns Recommandations avec scores et raisons
    */
   async getRecommendations(
     userId: string,

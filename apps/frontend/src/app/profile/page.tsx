@@ -1,11 +1,44 @@
+/**
+ * FICHIER: page.tsx (Page de profil)
+ *
+ * DESCRIPTION:
+ * Ce fichier définit la page de profil de l'utilisateur.
+ * Elle permet de consulter et modifier les informations personnelles.
+ *
+ * FONCTIONNALITÉS:
+ * - Affichage des informations du profil
+ * - Mode édition pour modifier le profil
+ * - Upload d'avatar
+ * - Statistiques (items, échanges)
+ * - Actions rapides (publier, explorer)
+ * - Zone de danger (suppression de compte)
+ * - Déconnexion
+ *
+ * SÉCURITÉ:
+ * - Route protégée (nécessite authentification)
+ * - Validation des données avec Zod
+ * - Confirmation avant suppression de compte
+ */
+
 'use client';
 
+// Import de React
 import { useState, useEffect } from 'react';
+
+// Import de Next.js
 import { useRouter } from 'next/navigation';
+
+// Import de Framer Motion pour les animations
 import { motion } from 'framer-motion';
+
+// Import de React Hook Form
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+
+// Import de Zod pour la validation
 import { z } from 'zod';
+
+// Import des composants UI
 import {
   Card,
   CardContent,
@@ -27,9 +60,17 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+
+// Import des types
 import { User, UpdateProfileDto } from '@/types';
+
+// Import du store d'authentification
 import { useAuthStore } from '@/store/auth';
+
+// Import de react-hot-toast
 import { toast } from 'react-hot-toast';
+
+// Import des icônes
 import {
   User as UserIcon,
   Mail,
@@ -38,35 +79,79 @@ import {
   LogOut,
   Trash2,
 } from 'lucide-react';
+
+// Import des composants
 import { AvatarUpload } from '@/components/profile/AvatarUpload';
 import ProtectedRoute from '../(auth)/protected';
 
+/**
+ * SCHÉMA DE VALIDATION: profileSchema
+ *
+ * Définit les règles de validation pour le formulaire de profil.
+ */
 const profileSchema = z.object({
   displayName: z
     .string()
     .min(3, "Le nom d'affichage doit contenir au moins 3 caractères"),
-  bio: z.string().optional(),
-  location: z.string().optional(),
-  avatarUrl: z.string().url('URL invalide').optional().or(z.literal('')),
+  bio: z.string().optional(), // Biographie optionnelle
+  location: z.string().optional(), // Localisation optionnelle
+  avatarUrl: z.string().url('URL invalide').optional().or(z.literal('')), // URL d'avatar optionnelle
 });
 
+/**
+ * TYPE: ProfileForm
+ *
+ * Type TypeScript dérivé du schéma Zod.
+ */
 type ProfileForm = z.infer<typeof profileSchema>;
 
+/**
+ * COMPOSANT: ProfilePageContent
+ *
+ * Contenu principal de la page de profil.
+ * Enveloppé dans ProtectedRoute pour sécuriser l'accès.
+ */
 function ProfilePageContent() {
+  // ============================================
+  // RÉCUPÉRATION DES HOOKS ET STORES
+  // ============================================
+
+  /**
+   * Récupération des fonctions et de l'état depuis le store d'authentification.
+   */
   const { user, updateProfile, logout, deleteAccount, isLoading } =
     useAuthStore();
+
+  /**
+   * Hook Next.js pour la navigation programmatique.
+   */
   const router = useRouter();
+
+  // ============================================
+  // GESTION DE L'ÉTAT LOCAL
+  // ============================================
+
+  /**
+   * État pour contrôler le mode édition (true = édition, false = consultation).
+   */
   const [isEditing, setIsEditing] = useState(false);
 
+  // ============================================
+  // CONFIGURATION DU FORMULAIRE
+  // ============================================
+
+  /**
+   * Configuration de React Hook Form avec validation Zod.
+   */
   const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-    setValue,
-    watch,
+    register, // Fonction pour enregistrer les champs
+    handleSubmit, // Fonction pour gérer la soumission
+    formState: { errors }, // Erreurs de validation
+    reset, // Fonction pour réinitialiser le formulaire
+    setValue, // Fonction pour définir les valeurs programmatiquement
+    watch, // Fonction pour observer les valeurs
   } = useForm<ProfileForm>({
-    resolver: zodResolver(profileSchema),
+    resolver: zodResolver(profileSchema), // Utiliser Zod pour la validation
     defaultValues: {
       displayName: user?.displayName || '',
       bio: user?.bio || '',
@@ -75,8 +160,19 @@ function ProfilePageContent() {
     },
   });
 
+  /**
+   * Observer la valeur de avatarUrl pour la passer à AvatarUpload.
+   */
   const avatarUrl = watch('avatarUrl');
 
+  // ============================================
+  // EFFET: Synchronisation avec l'utilisateur
+  // ============================================
+
+  /**
+   * Synchronise le formulaire avec les données de l'utilisateur
+   * quand l'utilisateur change.
+   */
   useEffect(() => {
     if (user) {
       reset({
@@ -88,31 +184,57 @@ function ProfilePageContent() {
     }
   }, [user, reset]);
 
+  // ============================================
+  // FONCTION: onSubmit
+  // ============================================
+
+  /**
+   * Fonction appelée lors de la soumission du formulaire.
+   *
+   * @param data - Données du formulaire validées
+   */
   const onSubmit = async (data: ProfileForm) => {
     try {
       await updateProfile(data);
       toast.success('Profil mis à jour avec succès !');
-      setIsEditing(false);
+      setIsEditing(false); // Désactiver le mode édition
     } catch (error) {
       toast.error('Erreur lors de la mise à jour du profil');
     }
   };
 
+  // ============================================
+  // FONCTION: handleLogout
+  // ============================================
+
+  /**
+   * Gère la déconnexion de l'utilisateur.
+   */
   const handleLogout = async () => {
     try {
       await logout();
       toast.success('Déconnexion réussie');
-      router.push('/');
+      router.push('/'); // Rediriger vers la page d'accueil
     } catch (error) {
       toast.error('Erreur lors de la déconnexion');
     }
   };
 
+  // ============================================
+  // FONCTION: handleDeleteAccount
+  // ============================================
+
+  /**
+   * Gère la suppression du compte.
+   *
+   * ATTENTION: Cette action est irréversible!
+   * Une confirmation est demandée via AlertDialog avant exécution.
+   */
   const handleDeleteAccount = async () => {
     try {
       await deleteAccount();
       toast.success('Compte supprimé avec succès');
-      router.push('/');
+      router.push('/'); // Rediriger vers la page d'accueil
     } catch (error) {
       toast.error('Erreur lors de la suppression du compte');
     }

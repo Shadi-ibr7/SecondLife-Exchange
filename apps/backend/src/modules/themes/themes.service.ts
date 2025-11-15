@@ -1,13 +1,48 @@
+/**
+ * FICHIER: themes.service.ts
+ *
+ * DESCRIPTION:
+ * Ce service gère toute la logique métier pour les thèmes hebdomadaires.
+ * Les thèmes sont générés par l'IA et proposent des idées d'objets à échanger
+ * basées sur des concepts écologiques et culturels.
+ *
+ * FONCTIONNALITÉS:
+ * - Création de thèmes hebdomadaires
+ * - Mise à jour et activation de thèmes
+ * - Récupération du thème actif avec ses suggestions
+ * - Liste paginée des thèmes avec filtres de date
+ * - Calendrier des thèmes par semaine
+ * - Gestion automatique: un seul thème actif à la fois
+ *
+ * RÈGLES MÉTIER:
+ * - Un seul thème peut être actif à la fois
+ * - L'activation d'un thème désactive automatiquement les autres
+ * - Les slugs doivent être uniques
+ */
+
+// Import des exceptions NestJS
 import {
   Injectable,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+
+// Import du service Prisma
 import { PrismaService } from '../../common/prisma/prisma.service';
+
+// Import des DTOs
 import { CreateThemeDto } from './dtos/create-theme.dto';
 import { UpdateThemeDto } from './dtos/update-theme.dto';
+
+// Import des types Prisma
 import { WeeklyTheme, Prisma } from '@prisma/client';
 
+/**
+ * INTERFACE: ThemeWithSuggestions
+ *
+ * Étend WeeklyTheme pour inclure les suggestions d'objets associées.
+ * Utilisée pour typer les réponses des méthodes qui retournent un thème avec ses suggestions.
+ */
 export interface ThemeWithSuggestions extends WeeklyTheme {
   suggestions: Array<{
     id: string;
@@ -20,14 +55,39 @@ export interface ThemeWithSuggestions extends WeeklyTheme {
   }>;
 }
 
+/**
+ * SERVICE: ThemesService
+ *
+ * Service principal pour la gestion des thèmes hebdomadaires.
+ */
 @Injectable()
 export class ThemesService {
+  /**
+   * CONSTRUCTEUR
+   *
+   * Injection du service Prisma
+   */
   constructor(private readonly prisma: PrismaService) {}
 
+  // ============================================
+  // MÉTHODE: createTheme (Créer un thème)
+  // ============================================
+
   /**
-   * Crée un nouveau thème hebdomadaire
+   * Crée un nouveau thème hebdomadaire.
+   *
+   * VALIDATION:
+   * - Vérifie que le slug est unique
+   * - Si le thème est activé, désactive automatiquement les autres
+   *
+   * @param createThemeDto - Données du thème à créer
+   * @returns Thème créé
+   * @throws BadRequestException si le slug existe déjà
    */
   async createTheme(createThemeDto: CreateThemeDto): Promise<WeeklyTheme> {
+    // ============================================
+    // VÉRIFICATION DE L'UNICITÉ DU SLUG
+    // ============================================
     // Vérifier que le slug est unique
     const existingTheme = await this.prisma.weeklyTheme.findUnique({
       where: { slug: createThemeDto.slug },
@@ -37,7 +97,11 @@ export class ThemesService {
       throw new BadRequestException('Un thème avec ce slug existe déjà');
     }
 
+    // ============================================
+    // GESTION DE L'ACTIVATION
+    // ============================================
     // Si on active ce thème, désactiver les autres
+    // Règle métier: un seul thème actif à la fois
     if (createThemeDto.isActive) {
       await this.prisma.weeklyTheme.updateMany({
         where: { isActive: true },
@@ -50,13 +114,29 @@ export class ThemesService {
     });
   }
 
+  // ============================================
+  // MÉTHODE: updateTheme (Mettre à jour un thème)
+  // ============================================
+
   /**
-   * Met à jour un thème
+   * Met à jour un thème existant.
+   *
+   * VALIDATION:
+   * - Vérifie que le thème existe
+   * - Vérifie l'unicité du slug si modifié
+   * - Si le thème est activé, désactive automatiquement les autres
+   *
+   * @param id - ID du thème à mettre à jour
+   * @param updateThemeDto - Données à mettre à jour
+   * @returns Thème mis à jour
+   * @throws NotFoundException si le thème n'existe pas
+   * @throws BadRequestException si le slug existe déjà
    */
   async updateTheme(
     id: string,
     updateThemeDto: UpdateThemeDto,
   ): Promise<WeeklyTheme> {
+    // Vérifier que le thème existe
     const existingTheme = await this.prisma.weeklyTheme.findUnique({
       where: { id },
     });
@@ -65,6 +145,9 @@ export class ThemesService {
       throw new NotFoundException('Thème non trouvé');
     }
 
+    // ============================================
+    // VÉRIFICATION DE L'UNICITÉ DU SLUG
+    // ============================================
     // Vérifier l'unicité du slug si modifié
     if (updateThemeDto.slug && updateThemeDto.slug !== existingTheme.slug) {
       const slugExists = await this.prisma.weeklyTheme.findUnique({
@@ -76,6 +159,9 @@ export class ThemesService {
       }
     }
 
+    // ============================================
+    // GESTION DE L'ACTIVATION
+    // ============================================
     // Si on active ce thème, désactiver les autres
     if (updateThemeDto.isActive) {
       await this.prisma.weeklyTheme.updateMany({
@@ -90,8 +176,14 @@ export class ThemesService {
     });
   }
 
+  // ============================================
+  // MÉTHODE: getActiveTheme (Récupérer le thème actif)
+  // ============================================
+
   /**
-   * Récupère le thème actif
+   * Récupère le thème actuellement actif avec toutes ses suggestions.
+   *
+   * @returns Thème actif avec suggestions, ou null si aucun thème n'est actif
    */
   async getActiveTheme(): Promise<ThemeWithSuggestions | null> {
     return this.prisma.weeklyTheme.findFirst({
@@ -113,8 +205,16 @@ export class ThemesService {
     });
   }
 
+  // ============================================
+  // MÉTHODE: getThemeById (Récupérer un thème)
+  // ============================================
+
   /**
-   * Récupère un thème par ID
+   * Récupère un thème par son ID avec toutes ses suggestions.
+   *
+   * @param id - ID du thème
+   * @returns Thème avec suggestions
+   * @throws NotFoundException si le thème n'existe pas
    */
   async getThemeById(id: string): Promise<ThemeWithSuggestions> {
     const theme = await this.prisma.weeklyTheme.findUnique({
@@ -142,8 +242,22 @@ export class ThemesService {
     return theme;
   }
 
+  // ============================================
+  // MÉTHODE: listThemes (Lister les thèmes)
+  // ============================================
+
   /**
-   * Liste les thèmes avec pagination
+   * Liste les thèmes avec pagination et filtres de date.
+   *
+   * FILTRES:
+   * - from: Date de début (ISO string)
+   * - to: Date de fin (ISO string)
+   *
+   * @param page - Numéro de page (défaut: 1)
+   * @param limit - Nombre d'éléments par page (défaut: 20)
+   * @param from - Date de début pour filtrer (optionnel)
+   * @param to - Date de fin pour filtrer (optionnel)
+   * @returns Liste paginée de thèmes
    */
   async listThemes(
     page: number = 1,
@@ -190,8 +304,20 @@ export class ThemesService {
     };
   }
 
+  // ============================================
+  // MÉTHODE: activateTheme (Activer un thème)
+  // ============================================
+
   /**
-   * Active un thème (désactive les autres)
+   * Active un thème spécifique et désactive automatiquement tous les autres.
+   *
+   * RÈGLE MÉTIER:
+   * - Un seul thème peut être actif à la fois
+   * - L'activation d'un thème désactive automatiquement les autres
+   *
+   * @param id - ID du thème à activer
+   * @returns Thème activé
+   * @throws NotFoundException si le thème n'existe pas
    */
   async activateTheme(id: string): Promise<WeeklyTheme> {
     const theme = await this.prisma.weeklyTheme.findUnique({
@@ -215,8 +341,18 @@ export class ThemesService {
     });
   }
 
+  // ============================================
+  // MÉTHODE: deleteTheme (Supprimer un thème)
+  // ============================================
+
   /**
-   * Supprime un thème
+   * Supprime un thème de la base de données.
+   *
+   * NOTE:
+   * - Les suggestions associées peuvent être affectées selon la configuration Prisma
+   *
+   * @param id - ID du thème à supprimer
+   * @throws NotFoundException si le thème n'existe pas
    */
   async deleteTheme(id: string): Promise<void> {
     const theme = await this.prisma.weeklyTheme.findUnique({
@@ -232,8 +368,19 @@ export class ThemesService {
     });
   }
 
+  // ============================================
+  // MÉTHODE: findOrCreateActiveThemeForDate
+  // ============================================
+
   /**
-   * Trouve ou crée le thème actif pour une date donnée
+   * Trouve ou crée le thème actif pour une date donnée.
+   *
+   * UTILISATION:
+   * - Appelée par le scheduler pour s'assurer qu'un thème existe pour chaque semaine
+   * - Si aucun thème n'existe pour la semaine, crée un thème par défaut
+   *
+   * @param date - Date pour laquelle trouver/créer le thème
+   * @returns Thème actif pour cette date
    */
   async findOrCreateActiveThemeForDate(date: Date): Promise<WeeklyTheme> {
     // Trouver le lundi de la semaine
@@ -280,8 +427,19 @@ export class ThemesService {
     return theme;
   }
 
+  // ============================================
+  // MÉTHODE: getCalendar (Calendrier des thèmes)
+  // ============================================
+
   /**
-   * Récupère le calendrier des thèmes par semaine
+   * Récupère le calendrier des thèmes organisé par semaine.
+   *
+   * RETOURNE:
+   * - Une grille de semaines avec le thème associé à chaque semaine
+   * - Les semaines passées (3 semaines) et futures (9 semaines par défaut)
+   *
+   * @param weeks - Nombre de semaines à inclure (défaut: 12)
+   * @returns Calendrier avec les thèmes par semaine
    */
   async getCalendar(weeks: number = 12) {
     const now = new Date();

@@ -200,6 +200,7 @@ export interface Exchange {
   responderId: string;
   requestedItemTitle: string;
   offeredItemTitle: string;
+  message?: string;
   status: ExchangeStatus;
   createdAt: string;
   completedAt?: string;
@@ -216,6 +217,7 @@ export interface ChatMessage {
   content: string;
   createdAt?: string;
   sender?: User;
+  images?: string[]; // URLs des images
 }
 
 // Types pour les thèmes (mise à jour)

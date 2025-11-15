@@ -1,6 +1,32 @@
+/**
+ * FICHIER: navbar.tsx
+ *
+ * DESCRIPTION:
+ * Ce composant affiche la barre de navigation principale de l'application.
+ * Il gère la navigation, l'authentification, les notifications, et le menu mobile.
+ *
+ * FONCTIONNALITÉS:
+ * - Navigation principale avec liens vers les différentes pages
+ * - Menu mobile (Sheet) pour les petits écrans
+ * - Menu desktop avec navigation horizontale
+ * - Bouton de recherche avec overlay
+ * - Badge de notifications non lues
+ * - Menu utilisateur avec dropdown (profil, déconnexion)
+ * - Toggle de thème (dark/light)
+ * - Gestion de l'état d'authentification
+ * - Détection de la page active pour le style
+ *
+ * RESPONSIVE:
+ * - Desktop: Navigation horizontale complète
+ * - Mobile: Menu hamburger avec Sheet
+ */
+
 'use client';
 
+// Import des icônes
 import { Bell, Menu, Recycle, Search, X } from 'lucide-react';
+
+// Import des composants UI
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -13,12 +39,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { SearchOverlay } from '@/components/common/SearchOverlay';
-import { useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useAuthStore } from '@/store/auth';
-import { useNotificationsStore } from '@/store/notifications';
-import { toast } from 'react-hot-toast';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -27,13 +47,66 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 
+// Import de React
+import { useState } from 'react';
+
+// Import de Next.js
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+// Import des stores
+import { useAuthStore } from '@/store/auth';
+import { useNotificationsStore } from '@/store/notifications';
+
+// Import de react-hot-toast
+import { toast } from 'react-hot-toast';
+
+/**
+ * COMPOSANT: Navbar
+ *
+ * Barre de navigation principale de l'application.
+ */
 export function Navbar() {
+  // ============================================
+  // GESTION DE L'ÉTAT LOCAL
+  // ============================================
+
+  /**
+   * État pour contrôler l'ouverture/fermeture du menu mobile.
+   */
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  /**
+   * État pour contrôler l'ouverture/fermeture de l'overlay de recherche.
+   */
   const [searchOpen, setSearchOpen] = useState(false);
+
+  // ============================================
+  // RÉCUPÉRATION DES HOOKS ET STORES
+  // ============================================
+
+  /**
+   * Hook Next.js pour récupérer le chemin actuel.
+   */
   const pathname = usePathname();
+
+  /**
+   * Récupération de l'utilisateur et des fonctions d'authentification.
+   */
   const { user, isAuthenticated, logout } = useAuthStore();
+
+  /**
+   * Récupération du compteur de notifications non lues.
+   */
   const { unreadCount } = useNotificationsStore();
 
+  // ============================================
+  // CONFIGURATION DES LIENS DE NAVIGATION
+  // ============================================
+
+  /**
+   * Liste des liens de navigation principaux.
+   */
   const navLinks = [
     { name: 'Accueil', href: '/' },
     { name: 'Explorer', href: '/explore' },
@@ -44,10 +117,22 @@ export function Navbar() {
     { name: 'Communauté', href: '/community' },
   ];
 
+  // ============================================
+  // FONCTION: isActive
+  // ============================================
+
+  /**
+   * Détermine si un lien de navigation est actif (page courante).
+   *
+   * @param href - URL du lien
+   * @returns true si le lien est actif, false sinon
+   */
   const isActive = (href: string) => {
+    // Pour la page d'accueil, vérifier l'égalité exacte
     if (href === '/') {
       return pathname === '/';
     }
+    // Pour les autres pages, vérifier si le pathname commence par href
     return pathname.startsWith(href);
   };
 

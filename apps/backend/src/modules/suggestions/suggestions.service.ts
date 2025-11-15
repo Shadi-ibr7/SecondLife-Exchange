@@ -1,32 +1,97 @@
+/**
+ * FICHIER: suggestions.service.ts
+ *
+ * DESCRIPTION:
+ * Ce service gère la génération et la gestion des suggestions d'objets.
+ * Les suggestions sont générées par l'IA basées sur les thèmes hebdomadaires.
+ *
+ * FONCTIONNALITÉS:
+ * - Génération de suggestions via l'IA Gemini
+ * - Application de règles de diversité (géographique, temporelle)
+ * - Déduplication des suggestions (évite les doublons)
+ * - Sauvegarde des suggestions dans la base de données
+ * - Récupération des suggestions d'un thème avec pagination
+ * - Statistiques des suggestions
+ *
+ * RÈGLES DE DIVERSITÉ:
+ * - Maximum 2 suggestions par pays
+ * - Maximum 2 suggestions par époque
+ * - Déduplication basée sur le hash canonique (nom + pays + époque + catégorie)
+ */
+
+// Import des classes NestJS
 import { Injectable, Logger } from '@nestjs/common';
+
+// Import des services
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { GeminiService, SuggestedItemWithMetadata } from '../ai/gemini.service';
 import { HashUtil } from '../../common/utils/hash.util';
 import { ConfigService } from '@nestjs/config';
 
+/**
+ * INTERFACE: SuggestionStats
+ *
+ * Statistiques de la génération de suggestions.
+ * Utilisée pour suivre le nombre de suggestions créées, ignorées, etc.
+ */
 export interface SuggestionStats {
-  created: number;
-  ignored: number;
-  errors: number;
-  duplicates: number;
-  diversityFiltered: number;
+  created: number; // Nombre de suggestions créées
+  ignored: number; // Nombre de suggestions ignorées (doublons, etc.)
+  errors: number; // Nombre d'erreurs lors de la sauvegarde
+  duplicates: number; // Nombre de doublons détectés
+  diversityFiltered: number; // Nombre filtrées par les règles de diversité
 }
 
+/**
+ * SERVICE: SuggestionsService
+ *
+ * Service pour la gestion des suggestions d'objets.
+ */
 @Injectable()
 export class SuggestionsService {
+  /**
+   * Logger pour enregistrer les événements
+   */
   private readonly logger = new Logger(SuggestionsService.name);
+
+  /**
+   * Configuration du scheduler
+   *
+   * Contient les limites de diversité et autres paramètres.
+   */
   private readonly scheduleConfig;
 
+  /**
+   * CONSTRUCTEUR
+   *
+   * Injection des dépendances.
+   */
   constructor(
     private readonly prisma: PrismaService,
     private readonly geminiService: GeminiService,
     private readonly configService: ConfigService,
   ) {
+    // Charger la configuration du scheduler
     this.scheduleConfig = this.configService.get('schedule');
   }
 
+  // ============================================
+  // MÉTHODE: generateAndSaveSuggestions
+  // ============================================
+
   /**
-   * Génère et sauvegarde des suggestions pour un thème
+   * Génère et sauvegarde des suggestions pour un thème.
+   *
+   * PROCESSUS:
+   * 1. Génère les suggestions via l'IA Gemini
+   * 2. Applique les règles de diversité et déduplication
+   * 3. Sauvegarde les suggestions filtrées dans la base de données
+   * 4. Retourne les statistiques de génération
+   *
+   * @param themeId - ID du thème
+   * @param themeTitle - Titre du thème
+   * @param locale - Locales cibles (défaut: ['FR', 'MA', 'JP', 'US', 'BR'])
+   * @returns Statistiques de génération (created, ignored, errors, etc.)
    */
   async generateAndSaveSuggestions(
     themeId: string,

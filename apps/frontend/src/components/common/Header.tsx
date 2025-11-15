@@ -1,10 +1,37 @@
+/**
+ * FICHIER: Header.tsx
+ *
+ * DESCRIPTION:
+ * Ce composant affiche l'en-tête de l'application avec la navigation.
+ * Il utilise un design responsive avec navigation desktop et mobile séparées.
+ *
+ * FONCTIONNALITÉS:
+ * - En-tête sticky (reste en haut lors du scroll)
+ * - Animation d'apparition avec Framer Motion
+ * - Backdrop blur pour un effet de transparence
+ * - Navigation desktop et mobile séparées
+ * - Design responsive
+ *
+ * NOTE:
+ * Ce composant est une alternative à Navbar.tsx.
+ * Il utilise NavDesktop et NavMobile pour séparer les logiques.
+ */
+
 'use client';
 
+// Import de Framer Motion pour les animations
 import { motion } from 'framer-motion';
+
+// Import des composants de navigation
 import { Container } from './Container';
 import { NavDesktop } from './NavDesktop';
 import { NavMobile } from './NavMobile';
 
+/**
+ * COMPOSANT: Header
+ *
+ * En-tête principal de l'application avec navigation.
+ */
 export function Header() {
   return (
     <motion.header

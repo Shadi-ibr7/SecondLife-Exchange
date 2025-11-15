@@ -1,3 +1,18 @@
+/**
+ * FICHIER: threads.controller.ts
+ *
+ * DESCRIPTION:
+ * Ce contrôleur expose les endpoints HTTP pour la gestion des threads (sujets de discussion).
+ * Les routes de création/suppression nécessitent une authentification JWT.
+ *
+ * ROUTES:
+ * - GET /api/v1/threads - Lister les threads (public)
+ * - GET /api/v1/threads/:id - Récupérer un thread par ID (public)
+ * - POST /api/v1/threads - Créer un thread (authentifié)
+ * - DELETE /api/v1/threads/:id - Supprimer un thread (auteur ou admin)
+ */
+
+// Import des décorateurs NestJS
 import {
   Controller,
   Get,
@@ -12,6 +27,8 @@ import {
   UseInterceptors,
   Request,
 } from '@nestjs/common';
+
+// Import des décorateurs Swagger
 import {
   ApiTags,
   ApiOperation,
@@ -20,21 +37,38 @@ import {
   ApiQuery,
   ApiParam,
 } from '@nestjs/swagger';
+
+// Import du service
 import { ThreadsService } from './threads.service';
+
+// Import des DTOs
 import {
   CreateThreadDto,
   ListThreadsDto,
   ThreadResponse,
   PaginatedThreadsResponse,
 } from './dtos/threads.dto';
+
+// Import des guards et intercepteurs
 import { JwtAccessGuard } from '../../common/guards/jwt-access.guard';
 import { AdminGuard } from '../../common/guards/admin.guard';
 import { LoggingInterceptor } from '../../common/interceptors/logging.interceptor';
 
+/**
+ * CONTRÔLEUR: ThreadsController
+ *
+ * Contrôleur pour la gestion des threads de discussion.
+ * Le préfixe 'threads' signifie que les routes commencent par /api/v1/threads
+ */
 @ApiTags('Community - Threads')
 @Controller('threads')
-@UseInterceptors(LoggingInterceptor)
+@UseInterceptors(LoggingInterceptor) // Logger toutes les requêtes
 export class ThreadsController {
+  /**
+   * CONSTRUCTEUR
+   *
+   * Injection du service de threads
+   */
   constructor(private readonly threadsService: ThreadsService) {}
 
   @Get()
@@ -165,4 +199,3 @@ export class ThreadsController {
     return this.threadsService.deleteThread(id, req.user.id, req.user.roles);
   }
 }
-

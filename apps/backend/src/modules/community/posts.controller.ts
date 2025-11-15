@@ -1,3 +1,19 @@
+/**
+ * FICHIER: posts.controller.ts
+ *
+ * DESCRIPTION:
+ * Ce contrôleur expose les endpoints HTTP pour la gestion des posts (messages) dans les threads.
+ * Toutes les routes de création/modification nécessitent une authentification JWT.
+ *
+ * ROUTES:
+ * - GET /api/v1/threads/:threadId/posts - Lister les posts d'un thread (public)
+ * - GET /api/v1/threads/:threadId/posts/:id - Récupérer un post par ID (public)
+ * - POST /api/v1/threads/:threadId/posts - Créer un post (authentifié)
+ * - PATCH /api/v1/threads/:threadId/posts/:id - Modifier un post (auteur ou admin)
+ * - DELETE /api/v1/threads/:threadId/posts/:id - Supprimer un post (auteur ou admin)
+ */
+
+// Import des décorateurs NestJS
 import {
   Controller,
   Get,
@@ -13,6 +29,8 @@ import {
   UseInterceptors,
   Request,
 } from '@nestjs/common';
+
+// Import des décorateurs Swagger
 import {
   ApiTags,
   ApiOperation,
@@ -21,7 +39,11 @@ import {
   ApiQuery,
   ApiParam,
 } from '@nestjs/swagger';
+
+// Import du service
 import { PostsService } from './posts.service';
+
+// Import des DTOs
 import {
   CreatePostDto,
   UpdatePostDto,
@@ -29,13 +51,26 @@ import {
   PostResponse,
   PaginatedPostsResponse,
 } from './dtos/posts.dto';
+
+// Import des guards et intercepteurs
 import { JwtAccessGuard } from '../../common/guards/jwt-access.guard';
 import { LoggingInterceptor } from '../../common/interceptors/logging.interceptor';
 
+/**
+ * CONTRÔLEUR: PostsController
+ *
+ * Contrôleur pour la gestion des posts dans les threads.
+ * Monté sur 'threads/:threadId/posts' car les posts sont toujours liés à un thread.
+ */
 @ApiTags('Community - Posts')
 @Controller('threads/:threadId/posts')
-@UseInterceptors(LoggingInterceptor)
+@UseInterceptors(LoggingInterceptor) // Logger toutes les requêtes
 export class PostsController {
+  /**
+   * CONSTRUCTEUR
+   *
+   * Injection du service de posts
+   */
   constructor(private readonly postsService: PostsService) {}
 
   @Get()
@@ -227,4 +262,3 @@ export class PostsController {
     return this.postsService.deletePost(id, req.user.id, req.user.roles);
   }
 }
-

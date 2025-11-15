@@ -1,10 +1,34 @@
+/**
+ * FICHIER: posts.service.ts
+ *
+ * DESCRIPTION:
+ * Ce service gère la logique métier pour les posts (messages) dans les threads.
+ * Les posts permettent aux utilisateurs de participer aux discussions.
+ *
+ * FONCTIONNALITÉS:
+ * - Création de posts dans un thread
+ * - Création de réponses à un post (posts imbriqués)
+ * - Liste paginée des posts d'un thread
+ * - Mise à jour de posts (auteur ou admin uniquement)
+ * - Suppression de posts (auteur ou admin uniquement)
+ *
+ * RÉPONSES:
+ * - Un post peut répondre à un autre post via repliesTo
+ * - Les réponses sont comptées et affichées
+ */
+
+// Import des exceptions NestJS
 import {
   Injectable,
   NotFoundException,
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
+
+// Import du service Prisma
 import { PrismaService } from '../../common/prisma/prisma.service';
+
+// Import des DTOs
 import {
   CreatePostInput,
   UpdatePostInput,
@@ -13,12 +37,34 @@ import {
   PaginatedPostsResponse,
 } from './dtos/posts.dto';
 
+/**
+ * SERVICE: PostsService
+ *
+ * Service pour la gestion des posts dans les threads.
+ */
 @Injectable()
 export class PostsService {
+  /**
+   * CONSTRUCTEUR
+   *
+   * Injection du service Prisma
+   */
   constructor(private prisma: PrismaService) {}
 
+  // ============================================
+  // MÉTHODE: listPosts (Lister les posts)
+  // ============================================
+
   /**
-   * Liste les posts d'un thread avec pagination
+   * Liste les posts d'un thread avec pagination.
+   *
+   * Les posts sont triés par date de création (plus ancien en premier)
+   * pour une lecture chronologique de la discussion.
+   *
+   * @param threadId - ID du thread
+   * @param query - Paramètres de pagination
+   * @returns Liste paginée de posts avec auteur et nombre de réponses
+   * @throws NotFoundException si le thread n'existe pas
    */
   async listPosts(
     threadId: string,
@@ -69,8 +115,16 @@ export class PostsService {
     };
   }
 
+  // ============================================
+  // MÉTHODE: getPostById (Récupérer un post)
+  // ============================================
+
   /**
-   * Récupère un post par ID
+   * Récupère un post par son ID avec toutes ses informations.
+   *
+   * @param id - ID du post
+   * @returns Post avec auteur et nombre de réponses
+   * @throws NotFoundException si le post n'existe pas
    */
   async getPostById(id: string): Promise<PostResponse> {
     const post = await this.prisma.post.findUnique({
@@ -98,8 +152,27 @@ export class PostsService {
     return this.mapToResponse(post);
   }
 
+  // ============================================
+  // MÉTHODE: createPost (Créer un post)
+  // ============================================
+
   /**
-   * Crée un nouveau post
+   * Crée un nouveau post dans un thread.
+   *
+   * VALIDATION:
+   * - Vérifie que le thread existe
+   * - Si repliesTo est fourni, vérifie que le post parent existe et appartient au même thread
+   *
+   * PROCESSUS:
+   * 1. Crée le post
+   * 2. Met à jour la date de modification du thread (updatedAt)
+   *
+   * @param threadId - ID du thread
+   * @param authorId - ID de l'auteur du post
+   * @param input - Données du post (content, repliesTo?)
+   * @returns Post créé avec auteur et nombre de réponses
+   * @throws NotFoundException si le thread ou le post parent n'existe pas
+   * @throws BadRequestException si le post parent n'appartient pas au thread
    */
   async createPost(
     threadId: string,
@@ -165,8 +238,24 @@ export class PostsService {
     return this.mapToResponse(post);
   }
 
+  // ============================================
+  // MÉTHODE: updatePost (Mettre à jour un post)
+  // ============================================
+
   /**
-   * Met à jour un post (seulement l'auteur ou admin)
+   * Met à jour un post existant.
+   *
+   * SÉCURITÉ:
+   * - Seul l'auteur du post ou un admin peut le modifier
+   * - La date d'édition (editedAt) est automatiquement mise à jour
+   *
+   * @param id - ID du post à mettre à jour
+   * @param userId - ID de l'utilisateur qui demande la modification
+   * @param userRole - Rôle de l'utilisateur (USER ou ADMIN)
+   * @param input - Nouvelles données du post (content)
+   * @returns Post mis à jour
+   * @throws NotFoundException si le post n'existe pas
+   * @throws ForbiddenException si l'utilisateur n'a pas les permissions
    */
   async updatePost(
     id: string,
@@ -212,8 +301,26 @@ export class PostsService {
     return this.mapToResponse(updatedPost);
   }
 
+  // ============================================
+  // MÉTHODE: deletePost (Supprimer un post)
+  // ============================================
+
   /**
-   * Supprime un post (seulement l'auteur ou admin)
+   * Supprime un post.
+   *
+   * SÉCURITÉ:
+   * - Seul l'auteur du post ou un admin peut le supprimer
+   * - Les réponses au post sont supprimées en cascade (configuration Prisma)
+   *
+   * PROCESSUS:
+   * 1. Supprime le post
+   * 2. Met à jour la date de modification du thread (updatedAt)
+   *
+   * @param id - ID du post à supprimer
+   * @param userId - ID de l'utilisateur qui demande la suppression
+   * @param userRole - Rôle de l'utilisateur (USER ou ADMIN)
+   * @throws NotFoundException si le post n'existe pas
+   * @throws ForbiddenException si l'utilisateur n'a pas les permissions
    */
   async deletePost(
     id: string,
@@ -245,8 +352,18 @@ export class PostsService {
     });
   }
 
+  // ============================================
+  // MÉTHODE PRIVÉE: mapToResponse
+  // ============================================
+
   /**
-   * Mappe un post Prisma vers la réponse API
+   * Mappe un post Prisma vers la réponse API.
+   *
+   * Transforme les données de la base de données en format de réponse
+   * avec les informations nécessaires pour le frontend.
+   *
+   * @param post - Post depuis Prisma
+   * @returns Post formaté pour la réponse API
    */
   private mapToResponse(post: any): PostResponse {
     return {
@@ -263,4 +380,3 @@ export class PostsService {
     };
   }
 }
-

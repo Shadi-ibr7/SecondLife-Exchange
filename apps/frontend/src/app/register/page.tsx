@@ -1,13 +1,49 @@
+/**
+ * FICHIER: page.tsx (Page d'inscription)
+ *
+ * DESCRIPTION:
+ * Ce fichier définit la page d'inscription de l'application.
+ * Elle permet aux utilisateurs de créer un nouveau compte.
+ *
+ * FONCTIONNALITÉS:
+ * - Formulaire d'inscription avec validation Zod
+ * - Champs: email, nom d'affichage, mot de passe, confirmation
+ * - Validation de la correspondance des mots de passe
+ * - Affichage/masquage du mot de passe
+ * - Gestion des erreurs avec toast
+ * - Redirection vers le profil après inscription
+ * - Lien vers la page de connexion
+ *
+ * SÉCURITÉ:
+ * - Validation côté client avec Zod
+ * - Validation côté serveur via l'API
+ * - Mot de passe minimum 10 caractères
+ * - Vérification de la correspondance des mots de passe
+ */
+
 'use client';
 
+// Import de React
 import { useState } from 'react';
+
+// Import de Next.js
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+
+// Import de Framer Motion pour les animations
 import { motion } from 'framer-motion';
+
+// Import de React Hook Form pour la gestion du formulaire
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+
+// Import de Zod pour la validation
 import { z } from 'zod';
+
+// Import de react-hot-toast pour les notifications
 import { toast } from 'react-hot-toast';
+
+// Import des composants UI
 import {
   Card,
   CardContent,
@@ -17,9 +53,19 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+
+// Import du store d'authentification
 import { useAuthStore } from '@/store/auth';
+
+// Import des icônes
 import { Eye, EyeOff, Mail, Lock, User, UserCheck } from 'lucide-react';
 
+/**
+ * SCHÉMA DE VALIDATION: registerSchema
+ *
+ * Définit les règles de validation pour le formulaire d'inscription.
+ * Inclut une validation personnalisée pour vérifier que les mots de passe correspondent.
+ */
 const registerSchema = z
   .object({
     email: z.string().email('Email invalide'),
@@ -33,31 +79,92 @@ const registerSchema = z
   })
   .refine((data) => data.password === data.passwordConfirm, {
     message: 'Les mots de passe ne correspondent pas',
-    path: ['passwordConfirm'],
+    path: ['passwordConfirm'], // L'erreur sera attachée au champ passwordConfirm
   });
 
+/**
+ * TYPE: RegisterForm
+ *
+ * Type TypeScript dérivé du schéma Zod.
+ */
 type RegisterForm = z.infer<typeof registerSchema>;
 
+/**
+ * COMPOSANT: RegisterPage
+ *
+ * Page d'inscription de l'application.
+ */
 export default function RegisterPage() {
+  // ============================================
+  // GESTION DE L'ÉTAT LOCAL
+  // ============================================
+
+  /**
+   * État pour afficher/masquer le mot de passe.
+   */
   const [showPassword, setShowPassword] = useState(false);
+
+  // ============================================
+  // RÉCUPÉRATION DES HOOKS ET STORES
+  // ============================================
+
+  /**
+   * Récupération de la fonction register (renommée registerUser pour éviter conflit)
+   * et de l'état isLoading depuis le store.
+   */
   const { register: registerUser, isLoading } = useAuthStore();
+
+  /**
+   * Hook Next.js pour la navigation programmatique.
+   */
   const router = useRouter();
 
+  // ============================================
+  // CONFIGURATION DU FORMULAIRE
+  // ============================================
+
+  /**
+   * Configuration de React Hook Form avec validation Zod.
+   */
   const {
-    register,
-    handleSubmit,
-    formState: { errors },
+    register, // Fonction pour enregistrer les champs
+    handleSubmit, // Fonction pour gérer la soumission
+    formState: { errors }, // Erreurs de validation
   } = useForm<RegisterForm>({
-    resolver: zodResolver(registerSchema),
+    resolver: zodResolver(registerSchema), // Utiliser Zod pour la validation
   });
 
+  // ============================================
+  // FONCTION: onSubmit
+  // ============================================
+
+  /**
+   * Fonction appelée lors de la soumission du formulaire.
+   *
+   * PROCESSUS:
+   * 1. Retire passwordConfirm des données (non envoyé au serveur)
+   * 2. Appelle la fonction registerUser du store
+   * 3. Affiche un toast de succès
+   * 4. Redirige vers la page de profil
+   * 5. Affiche un toast d'erreur en cas d'échec
+   *
+   * @param data - Données du formulaire validées
+   */
   const onSubmit = async (data: RegisterForm) => {
     try {
+      // Retirer passwordConfirm (non nécessaire pour l'API)
       const { passwordConfirm, ...registerData } = data;
+
+      // Appeler la fonction registerUser du store
       await registerUser(registerData);
+
+      // Afficher un toast de succès
       toast.success('Compte créé avec succès !');
+
+      // Rediriger vers la page de profil
       router.push('/profile');
     } catch (error) {
+      // Afficher un toast d'erreur en cas d'échec
       toast.error('Erreur lors de la création du compte');
     }
   };

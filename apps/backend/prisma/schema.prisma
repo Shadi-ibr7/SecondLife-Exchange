@@ -24,6 +24,7 @@ model User {
   threads            Thread[]
   posts              Post[]
   notificationTokens NotificationToken[]
+  chatMessages       ChatMessage[]  @relation("MessageSender")
 
   @@index([email])
   @@map("users")
@@ -80,12 +81,29 @@ model Exchange {
   message            String?
   requester          User           @relation("ExchangeRequester", fields: [requesterId], references: [id])
   responder          User           @relation("ExchangeResponder", fields: [responderId], references: [id])
+  messages           ChatMessage[]
 
   @@index([requesterId])
   @@index([responderId])
   @@index([status])
   @@index([createdAt])
   @@map("exchanges")
+}
+
+model ChatMessage {
+  id         String   @id @default(cuid())
+  exchangeId String
+  senderId   String
+  content    String
+  images     String[] // URLs des images
+  createdAt  DateTime @default(now())
+  exchange   Exchange @relation(fields: [exchangeId], references: [id], onDelete: Cascade)
+  sender     User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([exchangeId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("chat_messages")
 }
 
 model Item {

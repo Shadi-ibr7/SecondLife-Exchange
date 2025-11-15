@@ -1,22 +1,88 @@
+/**
+ * FICHIER: page.tsx (Page d'exploration)
+ *
+ * DESCRIPTION:
+ * Ce fichier définit la page d'exploration des items (objets).
+ * Elle permet de rechercher, filtrer et parcourir tous les items disponibles.
+ *
+ * FONCTIONNALITÉS:
+ * - Liste paginée d'items avec filtres
+ * - Filtres par catégorie, condition, statut, recherche textuelle
+ * - Pagination avec navigation
+ * - Gestion des erreurs avec messages informatifs
+ * - Mode développement avec items mock
+ * - Suspense pour la gestion du SSR avec useQueryParams
+ *
+ * FILTRES:
+ * - Recherche textuelle (q)
+ * - Catégorie (category)
+ * - Condition (condition)
+ * - Statut (status)
+ * - Propriétaire (ownerId)
+ * - Tri (sort)
+ *
+ * NOTE:
+ * En mode développement, affiche des items mock si le backend n'est pas disponible.
+ */
+
 'use client';
 
+// Import de React
 import { useEffect, Suspense } from 'react';
+
+// Import de React Query
 import { useQuery } from '@tanstack/react-query';
+
+// Import de Framer Motion pour les animations
 import { motion } from 'framer-motion';
+
+// Import des composants UI
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+
+// Import des composants d'items
 import { ItemFilters } from '@/components/items/ItemFilters';
 import { ItemGrid } from '@/components/items/ItemGrid';
+
+// Import de la galerie Unsplash (optionnel)
 import UnsplashGallery from '@/components/gallery/UnsplashGallery';
+
+// Import de l'API
 import { itemsApi } from '@/lib/items.api';
+
+// Import des hooks personnalisés
 import { useQueryParams } from '@/hooks/useQueryParams';
 import { usePagination } from '@/hooks/usePagination';
+
+// Import des icônes
 import { Search, Plus } from 'lucide-react';
+
+// Import de Next.js
 import Link from 'next/link';
+
+// Import des types
 import { Item } from '@/types';
 
+/**
+ * COMPOSANT: ExplorePageContent
+ *
+ * Contenu principal de la page d'exploration.
+ * Enveloppé dans Suspense pour gérer useQueryParams avec SSR.
+ */
 function ExplorePageContent() {
+  // ============================================
+  // RÉCUPÉRATION DES HOOKS
+  // ============================================
+
+  /**
+   * Hook pour gérer les paramètres de requête (filtres, pagination).
+   */
   const { params, updateParams, resetParams } = useQueryParams();
+
+  /**
+   * Hook pour gérer la pagination.
+   * Le total sera mis à jour par la requête.
+   */
   const {
     currentPage,
     totalPages,
@@ -30,12 +96,25 @@ function ExplorePageContent() {
     initialPage: params.page || 1,
   });
 
+  // ============================================
+  // REQUÊTE REACT QUERY
+  // ============================================
+
+  /**
+   * Requête React Query pour récupérer la liste des items.
+   *
+   * CONFIGURATION:
+   * - queryKey: ['items', params] - Clé unique incluant les paramètres
+   * - placeholderData: Garde les données précédentes pendant le chargement
+   * - retry: 2 tentatives en cas d'échec
+   * - retryDelay: 1 seconde entre les tentatives
+   */
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['items', params],
     queryFn: () => itemsApi.listItems(params),
-    placeholderData: (previousData) => previousData,
-    retry: 2,
-    retryDelay: 1000,
+    placeholderData: (previousData) => previousData, // Garder les données précédentes
+    retry: 2, // Réessayer 2 fois en cas d'échec
+    retryDelay: 1000, // Attendre 1 seconde entre les tentatives
   });
 
   // Mock d'annonces pour aperçu du design (affiché si aucune donnée réelle)

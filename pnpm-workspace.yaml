@@ -1,2 +1,25 @@
+/**
+ * FICHIER: pnpm-workspace.yaml
+ *
+ * DESCRIPTION:
+ * Ce fichier configure pnpm workspaces pour gérer plusieurs packages dans un seul dépôt.
+ * Un workspace permet de:
+ * - Partager des dépendances entre les packages
+ * - Gérer les versions de manière centralisée
+ * - Exécuter des scripts dans tous les packages
+ *
+ * STRUCTURE:
+ * - apps/* signifie que tous les dossiers dans apps/ sont des packages séparés
+ *   Exemple: apps/backend et apps/frontend sont deux packages indépendants
+ *
+ * AVANTAGES:
+ * - Évite la duplication de code
+ * - Facilite le développement de plusieurs applications liées
+ * - Permet de partager des types TypeScript entre frontend et backend
+ */
+
+// Liste des emplacements où pnpm doit chercher les packages
 packages:
+  // 'apps/*' signifie: tous les dossiers directement dans apps/
+  // Chaque dossier doit contenir un package.json pour être reconnu comme un package
   - 'apps/*'

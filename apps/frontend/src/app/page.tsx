@@ -1,13 +1,43 @@
+/**
+ * FICHIER: page.tsx (Page d'accueil)
+ *
+ * DESCRIPTION:
+ * Ce fichier définit la page d'accueil de l'application.
+ * Elle présente la plateforme, le thème hebdomadaire, les suggestions IA,
+ * et du contenu éco-éducatif.
+ *
+ * SECTIONS:
+ * - Hero: Section principale avec titre et CTA
+ * - Thème hebdomadaire: Affichage du thème actif
+ * - Suggestions IA: Recommandations personnalisées
+ * - Découverte écologique: Contenu éco-éducatif
+ *
+ * NOTE:
+ * Actuellement, les données sont en dur pour la démonstration.
+ * Dans une version complète, elles seraient récupérées depuis l'API.
+ */
+
 'use client';
 
+// Import des composants UI
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ItemCard } from '@/components/ui/item-card';
 import { ThemeCard } from '@/components/ui/theme-card';
 import { Footer } from '@/components/layout/footer';
+
+// Import des icônes
 import { Sparkles, ArrowRight, TrendingUp, Leaf } from 'lucide-react';
+
+// Import de Next.js pour la navigation
 import Link from 'next/link';
 
+/**
+ * COMPOSANT: HomePage
+ *
+ * Page d'accueil de l'application.
+ * Affiche le hero, le thème hebdomadaire, les suggestions IA et le contenu éco.
+ */
 export default function HomePage() {
   // Temporairement désactivé pour tester l'affichage
   // const {

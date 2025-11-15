@@ -1,7 +1,36 @@
+/**
+ * FICHIER: RecommendationCard.tsx
+ *
+ * DESCRIPTION:
+ * Ce composant affiche une carte de recommandation d'item personnalisée.
+ * Il présente l'item avec son score de correspondance, les raisons de la recommandation,
+ * et les informations essentielles (catégorie, condition, propriétaire).
+ *
+ * FONCTIONNALITÉS:
+ * - Affichage du score de correspondance avec code couleur
+ * - Tooltip détaillé avec les raisons du score
+ * - Informations de l'item (titre, description, catégorie, condition)
+ * - Tags et score de popularité
+ * - Informations du propriétaire
+ * - Lien vers la page de détail de l'item
+ * - Animation au survol
+ *
+ * SCORE:
+ * - 80-100: Excellent match (vert)
+ * - 60-79: Bon match (jaune)
+ * - 40-59: Match correct (orange)
+ * - 0-39: Match faible (rouge)
+ */
+
 'use client';
 
+// Import de Framer Motion pour les animations
 import { motion } from 'framer-motion';
+
+// Import de Next.js pour la navigation
 import Link from 'next/link';
+
+// Import des composants UI
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,20 +41,51 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+
+// Import des types
 import { Recommendation } from '@/types';
+
+// Import des constantes
 import { ITEM_CATEGORY_LABELS, ITEM_CONDITION_LABELS } from '@/lib/constants';
+
+// Import de date-fns pour le formatage des dates
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
+
+// Import des icônes
 import { Star, MapPin, Calendar, ArrowRight } from 'lucide-react';
 
+/**
+ * INTERFACE: RecommendationCardProps
+ *
+ * Définit les propriétés acceptées par le composant.
+ */
 interface RecommendationCardProps {
-  recommendation: Recommendation;
+  recommendation: Recommendation; // La recommandation à afficher (item + score + raisons)
 }
 
+/**
+ * COMPOSANT: RecommendationCard
+ *
+ * Affiche une carte de recommandation d'item personnalisée.
+ *
+ * @param recommendation - La recommandation à afficher
+ */
 export function RecommendationCard({
   recommendation,
 }: RecommendationCardProps) {
+  // ============================================
+  // EXTRACTION DES DONNÉES
+  // ============================================
+
+  /**
+   * Extraction de l'item, du score et des raisons depuis la recommandation.
+   */
   const { item, score, reasons } = recommendation;
+
+  /**
+   * Récupération des labels pour la catégorie et la condition.
+   */
   const categoryLabel =
     ITEM_CATEGORY_LABELS[item.category as keyof typeof ITEM_CATEGORY_LABELS] ||
     item.category;
@@ -34,13 +94,29 @@ export function RecommendationCard({
       item.condition as keyof typeof ITEM_CONDITION_LABELS
     ] || item.condition;
 
+  // ============================================
+  // FONCTIONS UTILITAIRES
+  // ============================================
+
+  /**
+   * Retourne la couleur CSS selon le score de correspondance.
+   *
+   * @param score - Score de correspondance (0-100)
+   * @returns Classe CSS pour la couleur
+   */
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'bg-green-500';
-    if (score >= 60) return 'bg-yellow-500';
-    if (score >= 40) return 'bg-orange-500';
-    return 'bg-red-500';
+    if (score >= 80) return 'bg-green-500'; // Excellent: vert
+    if (score >= 60) return 'bg-yellow-500'; // Bon: jaune
+    if (score >= 40) return 'bg-orange-500'; // Correct: orange
+    return 'bg-red-500'; // Faible: rouge
   };
 
+  /**
+   * Retourne le texte descriptif selon le score de correspondance.
+   *
+   * @param score - Score de correspondance (0-100)
+   * @returns Texte descriptif
+   */
   const getScoreText = (score: number) => {
     if (score >= 80) return 'Excellent match';
     if (score >= 60) return 'Bon match';
