@@ -1,5 +1,27 @@
 'use client';
 
+/**
+ * FICHIER: app/item/[id]/page.tsx
+ *
+ * DESCRIPTION:
+ * Page de détail d'un objet. Elle présente les photos, caractéristiques,
+ * propriétaire, localisation, et permet de proposer un échange ou de gérer
+ * ses propres items (édition, archivage, suppression).
+ *
+ * FONCTIONNALITÉS:
+ * - Chargement dynamique de l'item (itemsApi.getItem)
+ * - Gestion d'un mode "mock" pour prévisualiser le design sans backend
+ * - Bannière de recommandation (MatchBanner) si l'algorithme a scoré l'item
+ * - Modal de proposition d'échange (ProposeExchangeModal)
+ * - Actions spécifiques au propriétaire (ItemOwnerActions)
+ * - Badge d'état, catégorie, condition, tags, infos de disponibilité
+ *
+ * UX:
+ * - Bouton retour / navigation vers la liste
+ * - Animations Framer Motion
+ * - Formatage des dates relatif (formatDistanceToNow)
+ */
+
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';

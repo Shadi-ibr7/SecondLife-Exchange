@@ -1,5 +1,24 @@
 'use client';
 
+/**
+ * FICHIER: app/matching/page.tsx
+ *
+ * DESCRIPTION:
+ * Page "Matching" regroupant les recommandations personnalisées et la gestion
+ * des préférences utilisateur. Elle interagit avec matchingApi pour récupérer
+ * les préférences, recommandations et sauvegarder les choix.
+ *
+ * FONCTIONNALITÉS:
+ * - Onglets (Tabs) pour alterner entre recommandations et préférences
+ * - Récupération/sauvegarde des préférences (PreferencesForm)
+ * - Affichage d'une grille de recommandations (RecommendationsGrid)
+ * - Bouton pour rafraîchir les recommandations
+ * - Toasts de feedback et invalidation du cache après mise à jour
+ *
+ * PRÉREQUIS:
+ * - Utilisateur authentifié (sinon certaines requêtes sont désactivées)
+ */
+
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';

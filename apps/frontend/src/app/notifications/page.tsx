@@ -1,5 +1,25 @@
 'use client';
 
+/**
+ * FICHIER: app/notifications/page.tsx
+ *
+ * DESCRIPTION:
+ * Page de gestion des notifications push. Elle guide l'utilisateur dans
+ * l'activation des notifications, l'enregistrement du token et le test
+ * d'envoi via notificationsApi.
+ *
+ * FONCTIONNALITÉS:
+ * - Vérification du support navigateur + statut de permission
+ * - Demande de permission et enregistrement du token (notificationService)
+ * - Test d'envoi de notification (notificationsApi.sendTestNotification)
+ * - Affichage d'un historique de tests (succès/erreur)
+ *
+ * UX:
+ * - Cartes explicatives avec icônes
+ * - Boutons CTA (Activer, Tester, Désactiver)
+ * - ProtectedRoute pour restreindre aux utilisateurs connectés
+ */
+
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Container } from '@/components/common/Container';

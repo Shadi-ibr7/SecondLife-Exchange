@@ -1,5 +1,26 @@
 'use client';
 
+/**
+ * FICHIER: app/exchanges/page.tsx
+ *
+ * DESCRIPTION:
+ * Tableau de bord "Mes échanges". Cette page permet de suivre et filtrer
+ * l'ensemble des échanges initiés ou reçus par l'utilisateur.
+ *
+ * FONCTIONNALITÉS:
+ * - Chargement paginé des échanges via exchangesApi.listMyExchanges
+ * - Filtres (statut + tri) synchronisés avec l'URL (useQueryParams)
+ * - Statistiques rapides (en cours, terminés, total affiché)
+ * - Composant ExchangeList pour le rendu détaillé
+ * - Pagination contrôlée par boutons Précédent/Suivant
+ *
+ * UX:
+ * - Section hero présentant l'espace d'échanges
+ * - Cartes statistiques animées (Framer Motion)
+ * - Carte de filtres avec bouton Réinitialiser
+ * - ProtectedRoute pour restreindre l'accès aux utilisateurs connectés
+ */
+
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {

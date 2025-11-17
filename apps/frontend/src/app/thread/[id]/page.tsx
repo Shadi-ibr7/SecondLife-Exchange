@@ -1,5 +1,26 @@
 'use client';
 
+/**
+ * FICHIER: app/thread/[id]/page.tsx
+ *
+ * DESCRIPTION:
+ * Page de détail d'un thread de la communauté. Elle affiche les informations
+ * principales du thread (titre, scope, auteur) ainsi que la liste paginée des
+ * posts avec possibilité de créer/éditer/supprimer ses messages.
+ *
+ * FONCTIONNALITÉS:
+ * - Récupération du thread et des posts via communityApi
+ * - Pagination simple des posts (page/limit)
+ * - Création de posts (CreatePostDto) et édition/suppression conditionnée
+ * - Formulaire inline pour répondre, avec validation basique
+ * - Rafraîchissement du cache (invalidations React Query)
+ *
+ * UX:
+ * - Bouton retour
+ * - Animations Framer Motion
+ * - Badge indiquant le scope, avatar auteur, timestamps formatés
+ */
+
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';

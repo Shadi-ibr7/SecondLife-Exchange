@@ -1,5 +1,24 @@
 'use client';
 
+/**
+ * FICHIER: app/discover/[id]/page.tsx
+ *
+ * DESCRIPTION:
+ * Page de détail d'un contenu éco-éducatif. Accessible publiquement,
+ * elle affiche toutes les métadonnées d'un contenu (summary, KPIs, tags, source).
+ *
+ * FONCTIONNALITÉS:
+ * - Récupération du contenu via l'ID dans l'URL (ecoApi.getEcoContent)
+ * - Gestion des états de chargement / erreur avec messages dédiés
+ * - Bouton retour (router.back) pour revenir à la page précédente
+ * - Lien vers la source externe du contenu
+ * - Affichage des KPI sous forme de liste clé/valeur
+ *
+ * UX:
+ * - Mise en page simple avec Card + badges (type, langue, date de publication)
+ * - Utilisation de date-fns pour formater la date en français
+ */
+
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';

@@ -1,5 +1,30 @@
 'use client';
 
+/**
+ * FICHIER: app/discover/admin/page.tsx
+ *
+ * DESCRIPTION:
+ * Interface d'administration dédiée au contenu éco-éducatif.
+ * Réservée aux utilisateurs ADMIN, elle permet de créer, modifier, supprimer
+ * et enrichir les contenus visibles sur la page publique Discover.
+ *
+ * FONCTIONNALITÉS:
+ * - Accès sécurisé (vérifie authentification + rôle admin)
+ * - Liste paginée des contenus (EcoContentGrid) avec bouton d'enrichissement IA
+ * - Filtres identiques à la page publique (EcoContentFilters)
+ * - Création/édition via formulaires modaux (EcoContentForm)
+ * - Suppression avec confirmation et toast de retour utilisateur
+ *
+ * DONNÉES:
+ * - React Query pour contenus, stats et tags (désactivé tant que non admin)
+ * - Invalidation du cache après chaque mutation (create/update/delete/enrich)
+ * - State local pour gérer les formulaires et l'ID en cours d'enrichissement
+ *
+ * UX:
+ * - Messages dédiés si non connecté ou non admin
+ * - Animations Framer Motion pour fluidifier l'expérience
+ */
+
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';

@@ -1,5 +1,28 @@
 'use client';
 
+/**
+ * FICHIER: app/discover/page.tsx
+ *
+ * DESCRIPTION:
+ * Page publique "Découvrir" dédiée au contenu éco-éducatif.
+ * Elle permet de filtrer les ressources (articles, vidéos, tutos) issues
+ * du module Eco (backend) et d'afficher des statistiques/tags populaires.
+ *
+ * FONCTIONNALITÉS:
+ * - Filtres dynamiques (type de contenu, tags, période, langues…)
+ * - Liste paginée des contenus avec EcoContentGrid
+ * - Statistiques et tags populaires affichés dans la colonne de gauche
+ * - Rafraîchissement manuel + enrichissement (désactivé côté public)
+ *
+ * DONNÉES:
+ * - React Query pour récupérer contenus, stats et tags (ecoApi)
+ * - State local pour mémoriser les filtres (page, limit, etc.)
+ *
+ * UX:
+ * - Animations Framer Motion (entrée des panneaux)
+ * - Layout responsive (filtres colonne gauche, contenu colonne droite)
+ */
+
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';

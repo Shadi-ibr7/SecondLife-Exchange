@@ -1,5 +1,25 @@
 'use client';
 
+/**
+ * FICHIER: app/themes/page.tsx
+ *
+ * DESCRIPTION:
+ * Page "Thèmes" affichant le thème actif de la semaine et le calendrier
+ * des thèmes passés/futurs. Elle consomme l'API themesApi pour récupérer
+ * le thème actuel et un calendrier sur plusieurs semaines.
+ *
+ * FONCTIONNALITÉS:
+ * - Mise en avant du thème actif (Card + CTA vers /discover)
+ * - Calendrier interactif (CalendarGrid) permettant de sélectionner une semaine
+ * - Affichage des détails du thème sélectionné (description, impact, suggestions)
+ * - Gestion d'un mode mock lorsque les données proviennent de fixtures
+ *
+ * UX:
+ * - Animations Framer Motion sur les sections
+ * - Boutons CTA pour proposer un objet ou découvrir des contenus liés
+ * - Messages d'erreur si le backend n'est pas accessible
+ */
+
 import { motion } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

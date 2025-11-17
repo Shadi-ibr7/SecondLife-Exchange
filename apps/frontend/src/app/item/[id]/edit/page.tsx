@@ -1,5 +1,24 @@
 'use client';
 
+/**
+ * FICHIER: app/item/[id]/edit/page.tsx
+ *
+ * DESCRIPTION:
+ * Page d'édition d'un objet. Réservée au propriétaire de l'item, elle
+ * réutilise ItemForm pour permettre la mise à jour du titre, description,
+ * tags, catégorie, etc.
+ *
+ * FONCTIONNALITÉS:
+ * - Vérifie l'authentification et la propriété (sinon redirection + toast)
+ * - Charge l'item existant via itemsApi.getItem
+ * - Soumission via ItemForm qui appelle itemsApi.updateItem
+ * - Affiche un bouton pour revenir à la fiche publique
+ *
+ * UX:
+ * - Pré-remplit le formulaire avec les données actuelles
+ * - Feedback via toast (succès / erreurs)
+ */
+
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';

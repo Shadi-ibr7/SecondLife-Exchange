@@ -1,5 +1,29 @@
 'use client';
 
+/**
+ * FICHIER: app/community/page.tsx
+ *
+ * DESCRIPTION:
+ * Page principale de la communauté. Elle affiche la liste des discussions
+ * (threads) et permet de filtrer/rechercher selon différents scopes.
+ *
+ * FONCTIONNALITÉS:
+ * - Filtrer par scope (GENERAL, THEME, CATEGORY, ITEM)
+ * - Recherche textuelle dans les titres/contenus
+ * - Rafraîchissement manuel de la liste
+ * - Pagination client simple (affiche 5 pages max)
+ * - Bouton pour initier la création d'un thread (à implémenter)
+ *
+ * DONNÉES:
+ * - useQuery (React Query) pour récupérer les threads via communityApi
+ * - State local pour gérer les filtres, la recherche et la pagination
+ *
+ * UX:
+ * - Animations d'apparition via Framer Motion
+ * - Badges affichant les filtres actifs
+ * - Boutons Précédent/Suivant pour la pagination
+ */
+
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';

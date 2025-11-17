@@ -1,5 +1,31 @@
 'use client';
 
+/**
+ * FICHIER: app/exchange/[id]/page.tsx
+ *
+ * DESCRIPTION:
+ * Page ultra complète d'un échange. Elle regroupe le suivi du statut,
+ * la comparaison des deux objets échangés, les actions possibles selon
+ * le rôle de l'utilisateur, ainsi qu'un chat temps réel via socket.io.
+ *
+ * FONCTIONNALITÉS:
+ * - Chargement de l'échange + items associés via exchangesApi/itemsApi
+ * - Historique et timeline des statuts (StatusBadge + StatusActions)
+ * - Chat temps réel (MessageBubble + socketService)
+ * - Upload d'images / visualisation (Image preview)
+ * - Dialogues de confirmation pour les actions sensibles (accept/refuse/etc.)
+ *
+ * FLUX DE DONNÉES:
+ * - React Query récupère l'échange et invalide au besoin
+ * - socketService gère les événements de messages/typing
+ * - State local pour les formulaires, images temporaires, modales
+ *
+ * UX:
+ * - Animations Framer Motion
+ * - Mise en page responsive (cartes pour chaque item, section chat en bas)
+ * - Bouton retour vers la liste des échanges
+ */
+
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';

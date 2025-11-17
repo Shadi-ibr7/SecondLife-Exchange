@@ -1,5 +1,20 @@
 'use client';
 
+/**
+ * FICHIER: app/item/new/page.tsx
+ *
+ * DESCRIPTION:
+ * Page de création d'un nouvel objet. Accessible uniquement aux utilisateurs
+ * connectés. Elle affiche ItemForm en mode "create" et redirige vers
+ * la fiche de l'objet après succès.
+ *
+ * FONCTIONNALITÉS:
+ * - Redirection automatique vers /login si l'utilisateur n'est pas authentifié
+ * - Soumission via itemsApi.createItem
+ * - Toasts de succès/erreur
+ * - Loader plein écran durant la vérification d'authentification
+ */
+
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ItemForm } from '@/components/items/ItemForm';
