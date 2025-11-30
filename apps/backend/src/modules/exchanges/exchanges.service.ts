@@ -1,23 +1,28 @@
 /**
- * FICHIER: exchanges.service.ts
+ * FICHIER: modules/exchanges/exchanges.service.ts
  *
- * DESCRIPTION:
- * Ce service gère toute la logique métier pour les échanges d'objets.
- * Il permet de créer des propositions d'échange, gérer leur statut,
- * et communiquer via des messages en temps réel.
+ * OBJECTIF:
+ * Centraliser la logique métier des échanges d'objets entre utilisateurs.
+ * Chaque échange implique un demandeur (`requester`) et un répondant (`responder`)
+ * qui peuvent discuter via un chat dédié et faire évoluer le statut de la proposition.
  *
- * FONCTIONNALITÉS:
- * - Création de propositions d'échange entre deux utilisateurs
- * - Mise à jour du statut d'un échange (PENDING, ACCEPTED, DECLINED, COMPLETED, CANCELLED)
- * - Récupération des échanges d'un utilisateur avec pagination
- * - Récupération d'un échange spécifique avec ses messages
- * - Création de messages dans un échange (pour le chat)
- * - Notifications automatiques lors des changements de statut
+ * RESPONSABILITÉS MAJEURES:
+ * 1. Créer une proposition d'échange (avec validations métiers + notification)
+ * 2. Mettre à jour le statut (accepter, refuser, compléter, annuler)
+ * 3. Lister les échanges d'un utilisateur avec pagination
+ * 4. Consulter un échange spécifique (avec les messages et participants)
+ * 5. Publier des messages de chat (en s'assurant que l'auteur est bien participant)
  *
- * SÉCURITÉ:
- * - Vérification que seuls les participants peuvent voir/modifier un échange
- * - Empêche la création d'échange avec soi-même
- * - Empêche la modification d'échanges terminés
+ * CONTRAINTES ET SÉCURITÉ:
+ * - On interdit la création d'un échange avec soi-même
+ * - Seuls les participants (requester/responder) peuvent lire ou modifier un échange
+ * - On empêche la modification d'un échange déjà terminé (COMPLETED/CANCELLED)
+ * - Chaque changement de statut déclenche une notification (service Notifications)
+ *
+ * RÉFÉRENCES D'ARCHITECTURE:
+ * - Contrôleur associé: `exchanges.controller.ts`
+ * - Websocket/Temps réel: `exchanges.gateway.ts` (pour la diffusion live)
+ * - DTOs: `modules/exchanges/dtos/*`
  */
 
 // Import des exceptions NestJS
@@ -51,6 +56,14 @@ export class ExchangesService {
    * - prisma: pour accéder à la base de données
    * - notifications: pour envoyer des notifications aux utilisateurs
    */
+  /**
+   * CONSTRUCTEUR
+   *
+   * - `PrismaService prisma`
+   *    ↳ Accès DB (tables: exchange, chatMessage, user).
+   * - `NotificationsService notifications`
+   *    ↳ Envoie des push/in-app lors des changements de statut via `sendExchangeStatusNotification`.
+   */
   constructor(
     private prisma: PrismaService,
     private readonly notifications: NotificationsService,
@@ -76,6 +89,20 @@ export class ExchangesService {
    * @throws BadRequestException si on essaie d'échanger avec soi-même
    */
   async createExchange(requesterId: string, input: CreateExchangeInput) {
+    /**
+     * MÉTHODE: createExchange
+     *
+     * Permet à un utilisateur (`requesterId`) de proposer un échange à un autre
+     * utilisateur (`responderId`). Aucun item n'est créé ici : on se contente
+     * d'enregistrer la proposition textuelle (titres des objets, message d'intro).
+     *
+     * FLUX:
+     * 1. Vérifier que le répondant existe
+     * 2. Empêcher l'auto-échange (requester === responder)
+     * 3. Créer l'échange avec statut initial `PENDING`
+     * 4. Notifier le répondant pour qu'il puisse répondre rapidement
+     */
+
     // Extraire les données de l'échange
     const { responderId, requestedItemTitle, offeredItemTitle, message } =
       input;
@@ -99,6 +126,10 @@ export class ExchangesService {
       );
     }
 
+    /**
+     * Création de l'échange + jointures indispensables pour le frontend.
+     * (Le frontend peut afficher immédiatement les infos requester/responder)
+     */
     const exchange = await this.prisma.exchange.create({
       data: {
         requesterId,
@@ -136,7 +167,7 @@ export class ExchangesService {
         responderId,
       );
     } catch (e) {
-      // ne pas bloquer la création en cas d'échec d'envoi
+      // Stratégie: on loggue côté NotificationsService; ici on n'empêche pas la création
     }
 
     return exchange;
@@ -149,7 +180,11 @@ export class ExchangesService {
   ) {
     const { status } = input;
 
-    // Récupérer l'échange
+    /**
+     * On récupère l'échange + ses participants pour deux raisons:
+     * - vérifier l'autorisation
+     * - renvoyer des données complètes au frontend après mise à jour
+     */
     const exchange = await this.prisma.exchange.findUnique({
       where: { id: exchangeId },
       include: {
@@ -205,6 +240,12 @@ export class ExchangesService {
     });
   }
 
+  /**
+   * MÉTHODE: getMyExchanges
+   *
+   * Retourne la liste paginée des échanges où l'utilisateur est soit requester soit responder.
+   * Optionnellement, on peut filtrer par statut (utile pour séparer les échanges actifs vs terminés).
+   */
   async getMyExchanges(
     userId: string,
     pagination: PaginationInput,
@@ -223,7 +264,7 @@ export class ExchangesService {
       where.status = status;
     }
 
-    // Gérer le tri
+    // Gestion du tri façon `listItems`
     let orderBy: any = { createdAt: 'desc' };
     if (sort) {
       if (sort.startsWith('-')) {
@@ -273,6 +314,10 @@ export class ExchangesService {
     };
   }
 
+  /**
+   * Récupère un échange précis (incl. messages) et vérifie que l'utilisateur actuel
+   * est bien l'un des participants.
+   */
   async getExchangeById(exchangeId: string, userId: string) {
     const exchange = await this.prisma.exchange.findUnique({
       where: { id: exchangeId },

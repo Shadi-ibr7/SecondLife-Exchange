@@ -1,3 +1,22 @@
+/**
+ * FICHIER: components/ui/badge.tsx
+ *
+ * DESCRIPTION:
+ * Petite pastille (tag) utilisée pour visualiser des statuts, catégories,
+ * filtres actifs, etc. Basée sur class-variance-authority pour gérer
+ * différentes variantes (default, secondary, destructive, outline).
+ *
+ * UTILISATION:
+ * ```tsx
+ * <Badge>Disponible</Badge>
+ * <Badge variant="outline" className="uppercase">Tag</Badge>
+ * ```
+ *
+ * TECHNIQUE:
+ * - `badgeVariants` centralise les classes Tailwind par variante.
+ * - Composant simple (div) afin d'autoriser spans, textes variés.
+ */
+
 import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
@@ -26,6 +45,13 @@ export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof badgeVariants> {}
 
+/**
+ * COMPOSANT: Badge
+ *
+ * Rend simplement un `<div>` stylé. On lui passe `variant="secondary"`
+ * ou `variant="outline"` selon le contexte, et on peut ajouter d’autres
+ * classes via `className` (ex. `uppercase`, `tracking-wide`, etc.).
+ */
 function Badge({ className, variant, ...props }: BadgeProps) {
   return (
     <div className={cn(badgeVariants({ variant }), className)} {...props} />

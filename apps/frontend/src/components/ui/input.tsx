@@ -1,11 +1,42 @@
+/**
+ * FICHIER: components/ui/input.tsx
+ *
+ * DESCRIPTION:
+ * Champ de saisie de base avec styles Tailwind uniformisés (borders, focus ring,
+ * états disabled, intégration avec inputs type="file", etc.). Sert de fondation
+ * pour tous les formulaires de l'application.
+ *
+ * UTILISATION:
+ * ```tsx
+ * <Input placeholder="Titre" />
+ * <Input type="email" className="mt-2" />
+ * ```
+ *
+ * TECHNIQUE:
+ * - `forwardRef` pour compatibilité avec React Hook Form et autres libs.
+ * - `cn` fusionne les classes personnalisées.
+ */
+
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 export interface InputProps
   extends React.InputHTMLAttributes<HTMLInputElement> {}
 
+/**
+ * COMPOSANT: Input
+ *
+ * `React.forwardRef` permet de passer la ref au `<input>` natif (utile
+ * pour `react-hook-form` ou pour focus programmatique).
+ */
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, ...props }, ref) => {
+    /**
+     * L’input reçoit :
+     * - `type` (text, email, password…)
+     * - classes par défaut (hauteur, padding, focus ring)
+     * - possibilité d’ajouter des classes via `className`
+     */
     return (
       <input
         type={type}

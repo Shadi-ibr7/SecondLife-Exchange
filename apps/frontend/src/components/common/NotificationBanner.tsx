@@ -1,3 +1,23 @@
+/**
+ * FICHIER: components/common/NotificationBanner.tsx
+ *
+ * DESCRIPTION:
+ * Bannière incitant l'utilisateur à activer les notifications push. S'affiche
+ * tant que les permissions ne sont pas accordées. Permet aussi d'envoyer
+ * une notification de test. Utilisée sur la page d’accueil/notifications.
+ *
+ * FONCTIONNEMENT:
+ * - Vérifie support navigateur + statut (default/denied/granted).
+ * - Bouton “Activer” déclenche `notificationService.requestPermission()` puis enregistre le token.
+ * - Bouton “Test” (si déjà granted) appelle `notificationService.sendTestNotification()`.
+ * - Bouton “Fermer” masque la bannière (callback optionnel).
+ *
+ * UX:
+ * - Animations d’entrée/sortie via Framer Motion.
+ * - Card stylée avec icônes (Bell, CheckCircle, AlertCircle, etc.).
+ * - Messages d’erreur/succès avec react-hot-toast.
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -23,22 +43,31 @@ export function NotificationBanner({
     useState<NotificationPermission>('default');
 
   useEffect(() => {
-    // Vérifier si les notifications sont supportées et si la permission n'est pas accordée
+    /**
+     * Au montage :
+     * - Vérifier si la Web Notification API est supportée
+     * - Si oui et que la permission n’est pas encore accordée → afficher la bannière
+     * - Stocker le statut courant (default / granted / denied)
+     */
     if (notificationService.isSupported() && !notificationService.isGranted()) {
       setIsVisible(true);
     }
-
     setPermissionStatus(notificationService.getPermissionStatus());
   }, []);
 
+  /**
+   * Handler pour activer les notifications :
+   * 1. Demander la permission navigateur
+   * 2. Si accordée, récupérer un token (FCM/webpush)
+   * 3. Enregistrer le token côté backend
+   * 4. Fermer la bannière
+   */
   const handleEnableNotifications = async () => {
     setIsLoading(true);
-
     try {
       const granted = await notificationService.requestPermission();
 
       if (granted) {
-        // Obtenir et enregistrer le token
         const token = await notificationService.getToken();
 
         if (token) {
@@ -64,6 +93,9 @@ export function NotificationBanner({
     onDismiss?.();
   };
 
+  /**
+   * Handler pour envoyer une notification de test (uniquement si permission granted).
+   */
   const handleTestNotification = async () => {
     setIsLoading(true);
 

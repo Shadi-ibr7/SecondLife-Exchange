@@ -1,5 +1,28 @@
 'use client';
 
+/**
+ * FICHIER: app/(auth)/protected.tsx
+ *
+ * DESCRIPTION:
+ * Wrapper côté client qui protège une page/section en vérifiant que
+ * l'utilisateur est authentifié. Si ce n'est pas le cas, redirige vers /login
+ * en conservant la page de destination dans ?next=...
+ *
+ * FONCTIONNEMENT:
+ * - Suspense permet d'utiliser useSearchParams (composant client asynchrone).
+ * - useEffect observe l'état d'authentification pour déclencher la redirection.
+ * - Affiche un loader tant que le store d'auth n'a pas fini de charger.
+ * - Retourne null tant que l'utilisateur n'est pas autorisé (évite un flash).
+ *
+ * UTILISATION:
+ * ```tsx
+ * <ProtectedRoute>
+ *   <PagePrivee />
+ * </ProtectedRoute>
+ * ```
+ * Tout enfant de ProtectedRoute ne sera rendu qu'après validation de l'accès.
+ */
+
 import { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';

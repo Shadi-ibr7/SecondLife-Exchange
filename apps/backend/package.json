@@ -21,6 +21,8 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:reset": "prisma migrate reset",
     "prisma:seed": "ts-node prisma/seed.ts",
+    "admin:create": "ts-node scripts/create-admin.ts",
+    "admin:test": "ts-node scripts/test-admin-login.ts",
     "schemas:build": "ts-node ./scripts/zod-to-jsonschema.ts",
     "postman:build": "ts-node ./scripts/build-postman-collection.ts",
     "test:integration": "node scripts/test-items-integration.js",

@@ -571,6 +571,134 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
   }
 
   // ============================================
+  // MÉTHODE: generateTheme
+  // ============================================
+  
+  /**
+   * Génère un thème hebdomadaire avec l'IA.
+   * 
+   * PROCESSUS:
+   * 1. Construit un prompt pour générer un thème créatif et écologique
+   * 2. Appelle l'API Gemini
+   * 3. Parse et valide la réponse
+   * 4. Retourne le thème avec titre, slug, impactText et terme de recherche pour photo
+   * 
+   * @param date - Date de la semaine pour le thème
+   * @returns Thème généré avec titre, slug, impactText et photoSearchQuery
+   */
+  async generateTheme(date: Date): Promise<{
+    title: string;
+    slug: string;
+    impactText: string;
+    photoSearchQuery: string;
+  } | null> {
+    if (!this.aiConfig.geminiApiKey) {
+      this.logger.error('❌ Clé API Gemini non configurée ! Vérifiez AI_GEMINI_API_KEY dans .env');
+      return null;
+    }
+
+    this.logger.log(`🔑 Clé API Gemini: ${this.aiConfig.geminiApiKey ? '✅ Configurée' : '❌ Manquante'}`);
+
+    try {
+      const prompt = this.buildThemePrompt(date);
+      
+      this.logger.log(`🎨 Génération de thème pour la semaine du ${date.toLocaleDateString('fr-FR')}`);
+
+      const response = await this.callGeminiAPI(prompt);
+
+      if (!response) {
+        this.logger.warn('⚠️  Réponse Gemini vide, génération de thème ignorée');
+        return null;
+      }
+
+      const parsed = this.parseThemeResponse(response);
+
+      this.logger.log(`✅ Thème généré: "${parsed.title}"`);
+      return parsed;
+    } catch (error: any) {
+      this.logger.error(`❌ Erreur lors de la génération de thème: ${error.message}`);
+      this.logger.error(`Stack: ${error.stack}`);
+      return null;
+    }
+  }
+
+  // ============================================
+  // MÉTHODE PRIVÉE: buildThemePrompt
+  // ============================================
+  
+  /**
+   * Construit le prompt pour la génération de thème hebdomadaire.
+   */
+  private buildThemePrompt(date: Date): string {
+    const weekStart = new Date(date);
+    weekStart.setDate(date.getDate() - date.getDay() + 1);
+    const weekFormatted = weekStart.toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+
+    return `Rôle: Tu es un créateur de thèmes hebdomadaires pour une plateforme d'échange d'objets écoresponsables.
+Tâche: Créer un thème inspirant pour la semaine du ${weekFormatted}.
+
+Le thème doit:
+- Être créatif et engageant
+- Mettre en avant l'échange, la réparation, la réutilisation
+- Être écologique et durable
+- Inspirer les utilisateurs à échanger des objets vintage, artisanaux, réparables
+- Être adapté à un public international (France, Maroc, Japon, USA, Brésil)
+
+Réponds UNIQUEMENT en JSON valide (pas de texte hors JSON):
+{
+  "title": string,              // Titre du thème (ex: "Objets artisanaux du monde")
+  "slug": string,              // Slug URL-friendly (ex: "objets-artisanaux-monde")
+  "impactText": string,        // Texte d'impact (2-3 phrases expliquant pourquoi ce thème)
+  "photoSearchQuery": string    // Terme de recherche pour trouver une photo sur Unsplash (ex: "handmade crafts sustainable")
+}
+
+Sortie: Réponds uniquement le JSON, sans texte supplémentaire.`;
+  }
+
+  // ============================================
+  // MÉTHODE PRIVÉE: parseThemeResponse
+  // ============================================
+  
+  /**
+   * Parse et valide la réponse Gemini pour un thème.
+   */
+  private parseThemeResponse(response: string): {
+    title: string;
+    slug: string;
+    impactText: string;
+    photoSearchQuery: string;
+  } {
+    try {
+      const cleanResponse = response
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim();
+
+      const parsed = JSON.parse(cleanResponse);
+
+      // Validation basique
+      if (!parsed.title || !parsed.slug || !parsed.impactText || !parsed.photoSearchQuery) {
+        throw new Error('Champs manquants dans la réponse');
+      }
+
+      // Nettoyer et valider les longueurs
+      return {
+        title: parsed.title.trim().substring(0, 200),
+        slug: parsed.slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').substring(0, 100),
+        impactText: parsed.impactText.trim().substring(0, 500),
+        photoSearchQuery: parsed.photoSearchQuery.trim().substring(0, 100),
+      };
+    } catch (error) {
+      this.logger.error(`Erreur parsing réponse thème: ${error.message}`);
+      throw new BadRequestException('Réponse IA invalide pour le thème');
+    }
+  }
+
+  // ============================================
   // MÉTHODE: testConnection
   // ============================================
   

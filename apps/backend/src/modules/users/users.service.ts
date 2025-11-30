@@ -1,18 +1,25 @@
 /**
- * FICHIER: users.service.ts
+ * FICHIER: modules/users/users.service.ts
  *
- * DESCRIPTION:
- * Ce service gère la logique métier pour les utilisateurs.
- * Il permet de récupérer, mettre à jour et supprimer les informations d'un utilisateur.
+ * OBJECTIF:
+ * Fournir toutes les opérations métier liées aux utilisateurs authentifiés côté backend.
+ * Il sert d’interface entre les contrôleurs REST (ex: `/users/me`) et la base de données Prisma.
  *
- * FONCTIONNALITÉS:
- * - Récupérer les informations de l'utilisateur connecté (avec son profil)
- * - Mettre à jour le profil utilisateur (displayName, avatarUrl, bio, location, préférences)
- * - Supprimer le compte utilisateur (avec suppression en cascade)
+ * RESPONSABILITÉS:
+ * 1. `getMe`    → récupérer les informations complètes d’un utilisateur (profil inclus)
+ * 2. `updateMe` → mettre à jour les informations personnelles + profil dans une transaction
+ * 3. `deleteMe` → effectuer une suppression en cascade (tokens, profil, utilisateur)
  *
- * SÉCURITÉ:
- * - Toutes les opérations sont limitées à l'utilisateur connecté (userId)
- * - Suppression en cascade pour éviter les données orphelines
+ * SÉCURITÉ ET CONTRAINTES:
+ * - Toutes les méthodes prennent un `userId` provenant du token JWT → impossible d’accéder
+ *   ou de modifier un autre utilisateur.
+ * - Les transactions Prisma (`$transaction`) garantissent que les données restent cohérentes
+ *   même en cas d’erreur en cours de route.
+ * - La suppression supprime également les refresh tokens pour empêcher toute reconnexion future.
+ *
+ * STYLE:
+ * Commentaires détaillés (façon `MessageBubble.tsx`) pour expliquer la logique, les raisons
+ * des choix techniques, et les implications côté base de données.
  */
 
 // Import des exceptions NestJS
@@ -36,7 +43,10 @@ export class UsersService {
    *
    * Injection du service Prisma
    */
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) {
+    // PrismaService centralise les accès DB (user, userProfile, refreshToken, etc.)
+    // Pas d'autres dépendances ici ⇒ service facilement testable
+  }
 
   // ============================================
   // MÉTHODE: getMe (Récupérer mes informations)
@@ -54,7 +64,7 @@ export class UsersService {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
-        profile: true, // Inclure le profil utilisateur (bio, location, préférences)
+        profile: true, // On inclut le profil pour éviter de faire deux requêtes côté contrôleur
       },
     });
 
@@ -69,7 +79,7 @@ export class UsersService {
       email: user.email,
       displayName: user.displayName,
       avatarUrl: user.avatarUrl,
-      roles: [user.roles], // Convertir en tableau pour la compatibilité
+      roles: [user.roles], // Converti en tableau pour être cohérent avec la couche frontend
       createdAt: user.createdAt,
       profile: user.profile, // Profil avec bio, location, préférences
     };
@@ -95,7 +105,7 @@ export class UsersService {
     // Extraire les données à mettre à jour
     const { displayName, avatarUrl, bio, location, preferencesJson } = input;
 
-    // Utiliser une transaction pour garantir la cohérence
+    // Transaction = garantit que user + userProfile restent synchronisés (tout passe ou rien)
     return this.prisma.$transaction(async (tx) => {
       // ============================================
       // MISE À JOUR DE L'UTILISATEUR
@@ -189,6 +199,7 @@ export class UsersService {
    */
   async deleteMe(userId: string) {
     // Suppression en cascade : RefreshToken + UserProfile + User
+    // Transaction obligatoire pour éviter de laisser des données orphelines en cas d'erreur
     await this.prisma.$transaction(async (tx) => {
       // ============================================
       // ÉTAPE 1: Supprimer les refresh tokens

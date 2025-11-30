@@ -1,23 +1,32 @@
 /**
- * FICHIER: items.service.ts
+ * FICHIER: modules/items/items.service.ts
  *
- * DESCRIPTION:
- * Ce service gère toute la logique métier pour les objets (items) à échanger.
- * Il permet de créer, lister, récupérer, mettre à jour et supprimer des items.
+ * OBJECTIF:
+ * Service NestJS responsable de **toute** la logique métier autour des objets échangés
+ * par les utilisateurs (création, lecture, mise à jour, suppression, statut, recherche).
+ * Il agit comme couche intermédiaire entre:
+ * - les contrôleurs REST (`ItemsController`)
+ * - la base de données (via `PrismaService`)
+ * - l'IA Gemini (`GeminiService`) pour l'analyse automatisée
  *
- * FONCTIONNALITÉS:
- * - Création d'items avec analyse IA optionnelle (catégorisation automatique)
- * - Liste paginée avec filtres (catégorie, état, statut, recherche textuelle)
- * - Récupération d'un item par ID
- * - Mise à jour d'un item (propriétaire uniquement)
- * - Suppression d'un item (propriétaire uniquement)
- * - Mise à jour du statut d'un item
- * - Recherche par tags
+ * PRINCIPAUX CAS D'USAGE COUVERTS:
+ * 1. Création d'un item avec option d'analyse IA (catégories, tags, résumés, tips)
+ * 2. Listing paginé avec filtres (catégorie, état, statut, texte libre, propriétaire)
+ * 3. Lecture détaillée d'un item avec propriétaire + photos
+ * 4. Mise à jour d'un item / de son statut (contrôle strict du propriétaire)
+ * 5. Suppression d'un item (cascade sur les photos via Prisma)
+ * 6. Recherche par tags (utilisé pour les recommandations rapides)
  *
- * SÉCURITÉ:
- * - Vérification que seul le propriétaire peut modifier/supprimer ses items
- * - Validation des catégories et états
- * - Gestion des erreurs Prisma
+ * GARANTIES MÉTIER & SÉCURITÉ:
+ * - Toutes les opérations d'écriture vérifient que l'utilisateur est propriétaire
+ * - Les catégories et états sont validés côté serveur (anti données invalides)
+ * - Les erreurs Prisma critiques (ex: P1010) sont remontées proprement
+ * - Les champs IA sont générés de manière optionnelle pour réduire les frictions UX
+ *
+ * NOTE:
+ * Ce fichier suit une structure pédagogique similaire au composant `MessageBubble.tsx`,
+ * détaillant chaque section avec des commentaires multi-niveaux pour faciliter la prise en main
+ * par un étudiant ou un nouveau contributeur backend.
  */
 
 // Import des exceptions NestJS
@@ -120,7 +129,11 @@ export class ItemsService {
     userId: string,
     createItemDto: CreateItemDto,
   ): Promise<ItemWithPhotos> {
-    // Séparer aiAuto des autres données
+    /**
+     * On sépare explicitement la bascule `aiAuto` du reste des données,
+     * car elle n'est pas un champ stocké en base : elle ne sert qu'à savoir
+     * si l'on doit déclencher l'analyse IA côté serveur.
+     */
     const { aiAuto, ...itemData } = createItemDto;
 
     // ============================================
@@ -255,8 +268,9 @@ export class ItemsService {
     const skip = (pageNum - 1) * limitNum;
 
     // Construire les filtres
+    // (cette structure est passée telle quelle à Prisma, ce qui limite le boilerplate)
     const where: Prisma.ItemWhereInput = {
-      status: status || ItemStatus.AVAILABLE, // Par défaut, seulement les items disponibles
+      status: status || ItemStatus.AVAILABLE, // Filtre par défaut : uniquement les items disponibles
     };
 
     if (category) {
@@ -281,6 +295,10 @@ export class ItemsService {
     }
 
     // Construire l'ordre de tri
+    /**
+     * Construction dynamique du tri.
+     * Convention: un `-` en prefix signifie tri descendant (`-createdAt` → plus récents d'abord).
+     */
     const orderBy: Prisma.ItemOrderByWithRelationInput = {};
     if (sort.startsWith('-')) {
       orderBy[sort.substring(1)] = 'desc';
@@ -315,7 +333,7 @@ export class ItemsService {
             },
           },
         }),
-        this.prisma.item.count({ where }),
+        this.prisma.item.count({ where }), // deuxième requête pour la pagination (total global)
       ]);
 
       return {
@@ -413,7 +431,7 @@ export class ItemsService {
     // ============================================
     // VÉRIFICATION DES PERMISSIONS
     // ============================================
-    // Vérifier que l'item existe et que l'utilisateur est le propriétaire
+    // Vérifier que l'item existe
     const existingItem = await this.prisma.item.findUnique({
       where: { id },
     });
@@ -534,6 +552,7 @@ export class ItemsService {
     query: Omit<ListItemsQueryDto, 'ownerId'>,
   ): Promise<PaginatedItems> {
     // Utiliser listItems avec ownerId fixé à userId
+    // (DRY: on réutilise l'implémentation existante plutôt qu'écrire une requête dédiée)
     return this.listItems({ ...query, ownerId: userId });
   }
 

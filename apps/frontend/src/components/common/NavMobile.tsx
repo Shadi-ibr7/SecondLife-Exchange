@@ -1,3 +1,21 @@
+/**
+ * FICHIER: components/common/NavMobile.tsx
+ *
+ * DESCRIPTION:
+ * Version mobile de la navigation. Affiche un logo + un menu burger ouvrant
+ * un Sheet latéral avec les liens, CTA, toggles (thème, notifications, PWA)
+ * et les actions utilisateur (profil, déconnexion).
+ *
+ * FONCTIONNEMENT:
+ * - `Sheet` de Radix pour gérer l’ouverture/fermeture.
+ * - Liens protégés redirigent vers /login si non connecté.
+ * - Actions (logout) ferment automatiquement le menu.
+ *
+ * UX:
+ * - Cache la navbar desktop (`md:hidden`).
+ * - Ajoute séparateurs + groupements pour plus de lisibilité.
+ */
+
 'use client';
 
 import { useState } from 'react';

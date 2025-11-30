@@ -99,6 +99,10 @@ export class ItemsController {
     @Request() req: any,
     @Body() createItemDto: CreateItemDto,
   ): Promise<ItemWithPhotos> {
+    /**
+     * `req.user` est injecté par JwtAccessGuard; il contient les claims du token (id, roles...).
+     * On transmet l'ID du propriétaire pour que le service associe correctement l'item.
+     */
     return this.itemsService.createItem(req.user.id, createItemDto);
   }
 
@@ -163,6 +167,10 @@ export class ItemsController {
     description: 'Tri (ex: -createdAt)',
   })
   async listItems(@Query() query: ListItemsQueryDto): Promise<PaginatedItems> {
+    /**
+     * Le service renvoie un objet PaginatedItems => { items, total, page, limit, totalPages }.
+     * Les contrôleurs restent fins pour se concentrer sur le transport HTTP et Swagger.
+     */
     return this.itemsService.listItems(query);
   }
 
@@ -249,6 +257,10 @@ export class ItemsController {
     @Body('folder') folder: string,
     @Body('maxBytes') maxBytes?: number,
   ): Promise<SignedUploadParams> {
+    /**
+     * Permet au frontend d'uploader directement sur Cloudinary sans transiter par le backend.
+     * On pourrait ici vérifier que `folder` respecte certains patterns (ex: items/<userId>).
+     */
     return this.uploadsService.getSignedUploadParams(folder, maxBytes);
   }
 

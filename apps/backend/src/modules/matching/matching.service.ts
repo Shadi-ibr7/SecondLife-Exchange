@@ -38,14 +38,16 @@ import { SavePreferencesInput } from './dtos/preferences.dto';
 /**
  * SERVICE: MatchingService
  *
- * Service pour le système de recommandations personnalisées.
+ * Service dédié au moteur de recommandations personnalisées.
+ * Il orchestre les lectures Prisma (preferences, items, historiques) puis calcule
+ * un score pour chaque item avant de renvoyer une liste diversifiée.
  */
 @Injectable()
 export class MatchingService {
   /**
    * CONSTRUCTEUR
    *
-   * Injection du service Prisma
+   * Prisma est la seule dépendance: tout le scoring se fait en mémoire dans ce service.
    */
   constructor(private prisma: PrismaService) {}
 
@@ -139,7 +141,7 @@ export class MatchingService {
         },
       },
       orderBy: { popularityScore: 'desc' },
-      take: limit * 3, // Récupérer plus pour appliquer les filtres de diversité
+      take: limit * 3, // On prend plus d'items que nécessaire pour pouvoir filtrer ensuite (diversité)
     });
 
     // Calculer les scores et appliquer les filtres de diversité

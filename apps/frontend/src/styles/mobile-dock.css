@@ -1,0 +1,43 @@
+/**
+ * FICHIER: mobile-dock.css
+ *
+ * DESCRIPTION:
+ * Styles CSS pour le dock mobile.
+ * Variables CSS et effet de verre dépoli (glass morphism).
+ */
+
+:root {
+  --mobile-dock-bg: rgba(250, 252, 250, 0.95);
+  --mobile-dock-border: rgba(27, 56, 40, 0.15);
+}
+
+.dark {
+  --mobile-dock-bg: rgba(12, 18, 14, 0.9);
+  --mobile-dock-border: rgba(250, 248, 243, 0.12);
+}
+
+/* Effet de gloss léger */
+.mobile-dock-glass {
+  position: relative;
+  overflow: hidden;
+}
+
+.mobile-dock-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.03), transparent 45%);
+  pointer-events: none;
+  border-radius: 1rem; /* rounded-2xl par défaut, hérite du parent */
+}
+
+.dark .mobile-dock-glass::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 45%);
+}
+
+@media (min-width: 640px) {
+  .mobile-dock-glass::before {
+    border-radius: 1.5rem; /* rounded-3xl sur sm et plus */
+  }
+}
+

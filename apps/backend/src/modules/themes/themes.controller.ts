@@ -180,6 +180,26 @@ export class ThemesController {
     return this.themesService.getCalendar(weeksNum);
   }
 
+  @Get('calendar/month')
+  @ApiOperation({
+    summary: 'Récupérer les 4 semaines du mois',
+    description: 'Retourne les 4 semaines du mois actuel avec leurs thèmes',
+  })
+  @ApiQuery({
+    name: 'month',
+    required: false,
+    type: String,
+    description: 'Mois au format YYYY-MM (défaut: mois actuel)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Calendrier mensuel avec 4 semaines',
+  })
+  async getMonthCalendar(@Query('month') month?: string) {
+    const monthDate = month ? new Date(month + '-01') : new Date();
+    return this.themesService.getMonthCalendar(monthDate);
+  }
+
   // ============================================
   // ROUTE: GET /api/v1/themes/:id
   // ============================================

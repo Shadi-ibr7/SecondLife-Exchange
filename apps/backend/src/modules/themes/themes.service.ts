@@ -37,6 +37,10 @@ import { UpdateThemeDto } from './dtos/update-theme.dto';
 // Import des types Prisma
 import { WeeklyTheme, Prisma } from '@prisma/client';
 
+// Import des services IA et Unsplash
+import { GeminiService } from '../ai/gemini.service';
+import { UnsplashService } from '../unsplash/unsplash.service';
+
 /**
  * INTERFACE: ThemeWithSuggestions
  *
@@ -65,9 +69,13 @@ export class ThemesService {
   /**
    * CONSTRUCTEUR
    *
-   * Injection du service Prisma
+   * Injection des services
    */
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly geminiService: GeminiService,
+    private readonly unsplashService: UnsplashService,
+  ) {}
 
   // ============================================
   // MÉTHODE: createTheme (Créer un thème)
@@ -374,10 +382,11 @@ export class ThemesService {
 
   /**
    * Trouve ou crée le thème actif pour une date donnée.
+   * Si aucun thème n'existe, génère automatiquement un thème avec l'IA et une photo Unsplash.
    *
    * UTILISATION:
    * - Appelée par le scheduler pour s'assurer qu'un thème existe pour chaque semaine
-   * - Si aucun thème n'existe pour la semaine, crée un thème par défaut
+   * - Si aucun thème n'existe pour la semaine, génère un thème avec l'IA
    *
    * @param date - Date pour laquelle trouver/créer le thème
    * @returns Thème actif pour cette date
@@ -398,23 +407,162 @@ export class ThemesService {
       },
     });
 
-    // Si aucun thème trouvé, créer un thème par défaut
+    // Si aucun thème trouvé, générer un thème avec l'IA
     if (!theme) {
-      const defaultTitle = `Thème de la semaine du ${monday.toLocaleDateString('fr-FR')}`;
-      const defaultSlug = `theme-${monday.toISOString().split('T')[0]}`;
+      theme = await this.generateThemeWithAI(monday);
+    }
 
-      theme = await this.prisma.weeklyTheme.create({
+    return theme;
+  }
+
+  /**
+   * Génère les 4 thèmes du mois en une fois.
+   * Calcule les 4 lundis du mois et génère un thème pour chacun.
+   *
+   * @param month - Date du mois (n'importe quel jour du mois)
+   * @returns Liste des thèmes générés
+   */
+  async generateMonthlyThemes(month: Date = new Date()): Promise<WeeklyTheme[]> {
+    const themes: WeeklyTheme[] = [];
+    
+    // Trouver le premier lundi du mois
+    const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
+    let firstMonday = new Date(firstDay);
+    
+    // Trouver le premier lundi
+    const dayOfWeek = firstMonday.getDay();
+    const daysToAdd = dayOfWeek === 0 ? 1 : (8 - dayOfWeek) % 7 || 7;
+    firstMonday.setDate(firstDay.getDate() + (daysToAdd === 7 ? 0 : daysToAdd));
+    
+    // Générer les 4 thèmes (4 semaines)
+    for (let week = 0; week < 4; week++) {
+      const weekStart = new Date(firstMonday);
+      weekStart.setDate(firstMonday.getDate() + (week * 7));
+      
+      // Vérifier si un thème existe déjà pour cette semaine
+      const existingTheme = await this.prisma.weeklyTheme.findFirst({
+        where: {
+          startOfWeek: {
+            gte: weekStart,
+            lt: new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000),
+          },
+        },
+      });
+      
+      if (existingTheme) {
+        console.log(`⚠️  Thème déjà existant pour la semaine du ${weekStart.toLocaleDateString('fr-FR')}`);
+        themes.push(existingTheme);
+      } else {
+        const theme = await this.generateThemeWithAI(weekStart);
+        themes.push(theme);
+      }
+    }
+    
+    return themes;
+  }
+
+  /**
+   * Génère automatiquement un thème avec l'IA et récupère une photo depuis Unsplash.
+   *
+   * @param startOfWeek - Date de début de la semaine (lundi)
+   * @returns Thème généré
+   */
+  async generateThemeWithAI(startOfWeek: Date): Promise<WeeklyTheme> {
+    console.log('🎨 Début génération thème avec IA pour:', startOfWeek.toISOString());
+    
+    // Générer le thème avec l'IA
+    const aiTheme = await this.geminiService.generateTheme(startOfWeek);
+    
+    if (!aiTheme) {
+      console.warn('⚠️  L\'IA n\'a pas pu générer le thème, utilisation du fallback');
+    } else {
+      console.log('✅ Thème généré par l\'IA:', aiTheme.title);
+    }
+
+    if (!aiTheme) {
+      // Fallback si l'IA échoue
+      const defaultTitle = `Thème de la semaine du ${startOfWeek.toLocaleDateString('fr-FR')}`;
+      const defaultSlug = `theme-${startOfWeek.toISOString().split('T')[0]}`;
+
+      const theme = await this.prisma.weeklyTheme.create({
         data: {
           title: defaultTitle,
           slug: defaultSlug,
-          startOfWeek: monday,
+          startOfWeek,
           impactText:
             "Thème généré automatiquement pour encourager l'échange d'objets écoresponsables.",
           isActive: true,
         },
       });
 
-      // Désactiver les autres thèmes
+      await this.prisma.weeklyTheme.updateMany({
+        where: {
+          isActive: true,
+          id: { not: theme.id },
+        },
+        data: { isActive: false },
+      });
+
+      return theme;
+    }
+
+    // Rechercher une photo sur Unsplash
+    let photoUrl: string | null = null;
+    let photoUnsplashId: string | null = null;
+
+    if (aiTheme?.photoSearchQuery) {
+      console.log('📸 Recherche photo Unsplash pour:', aiTheme.photoSearchQuery);
+      const unsplashPhoto = await this.unsplashService.searchPhoto(aiTheme.photoSearchQuery);
+      if (unsplashPhoto) {
+        photoUrl = unsplashPhoto.urls.regular;
+        photoUnsplashId = unsplashPhoto.id;
+        console.log('✅ Photo Unsplash trouvée:', photoUrl);
+        
+        // Déclencher le téléchargement pour l'attribution (requis par Unsplash)
+        // On récupère d'abord les détails complets de la photo pour obtenir download_location
+        try {
+          const photoDetails = await this.unsplashService.getPhotoById(unsplashPhoto.id);
+          if (photoDetails?.links?.download_location) {
+            await this.unsplashService.triggerDownload(photoDetails.links.download_location);
+          }
+        } catch (error) {
+          console.warn('⚠️  Impossible de déclencher le téléchargement Unsplash:', error);
+          // Ignorer les erreurs de téléchargement, ce n'est pas critique
+        }
+      } else {
+        console.warn('⚠️  Aucune photo Unsplash trouvée pour:', aiTheme.photoSearchQuery);
+      }
+    }
+
+    // Vérifier si c'est la semaine actuelle
+    const now = new Date();
+    const currentWeekStart = new Date(now);
+    currentWeekStart.setDate(now.getDate() - now.getDay() + 1);
+    currentWeekStart.setHours(0, 0, 0, 0);
+
+    const themeWeekStart = new Date(startOfWeek);
+    themeWeekStart.setHours(0, 0, 0, 0);
+
+    const isCurrentWeek =
+      themeWeekStart.getTime() === currentWeekStart.getTime() ||
+      (themeWeekStart <= now && new Date(themeWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000) > now);
+
+    // Créer le thème avec les données générées par l'IA
+    // Activer uniquement si c'est la semaine actuelle
+    const theme = await this.prisma.weeklyTheme.create({
+      data: {
+        title: aiTheme.title,
+        slug: aiTheme.slug,
+        startOfWeek,
+        impactText: aiTheme.impactText,
+        photoUrl,
+        photoUnsplashId,
+        isActive: isCurrentWeek,
+      },
+    });
+
+    // Si c'est la semaine actuelle, désactiver les autres thèmes
+    if (isCurrentWeek) {
       await this.prisma.weeklyTheme.updateMany({
         where: {
           isActive: true,
@@ -441,6 +589,88 @@ export class ThemesService {
    * @param weeks - Nombre de semaines à inclure (défaut: 12)
    * @returns Calendrier avec les thèmes par semaine
    */
+  /**
+   * Récupère les 4 semaines du mois actuel avec leurs thèmes.
+   *
+   * @param month - Date du mois (n'importe quel jour du mois, défaut: mois actuel)
+   * @returns Calendrier avec les 4 semaines du mois
+   */
+  async getMonthCalendar(month: Date = new Date()) {
+    const year = month.getFullYear();
+    const monthIndex = month.getMonth();
+
+    // Trouver le premier lundi du mois
+    const firstDay = new Date(year, monthIndex, 1);
+    let firstMonday = new Date(firstDay);
+    const dayOfWeek = firstMonday.getDay();
+    const daysToAdd = dayOfWeek === 0 ? 1 : (8 - dayOfWeek) % 7 || 7;
+    firstMonday.setDate(firstDay.getDate() + (daysToAdd === 7 ? 0 : daysToAdd));
+
+    // Calculer les dates de début et fin pour récupérer les thèmes
+    const monthStart = new Date(year, monthIndex, 1);
+    const monthEnd = new Date(year, monthIndex + 1, 0);
+
+    // Récupérer tous les thèmes du mois
+    const themes = await this.prisma.weeklyTheme.findMany({
+      where: {
+        startOfWeek: {
+          gte: monthStart,
+          lte: monthEnd,
+        },
+      },
+      orderBy: { startOfWeek: 'asc' },
+    });
+
+    const calendar = [];
+    const now = new Date();
+
+    // Générer les 4 semaines du mois
+    for (let week = 0; week < 4; week++) {
+      const weekStart = new Date(firstMonday);
+      weekStart.setDate(firstMonday.getDate() + (week * 7));
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+
+      // Trouver le thème pour cette semaine
+      const theme = themes.find((t) => {
+        const themeStart = new Date(t.startOfWeek);
+        const themeEnd = new Date(themeStart);
+        themeEnd.setDate(themeEnd.getDate() + 6);
+        return themeStart <= weekEnd && themeEnd >= weekStart;
+      });
+
+      calendar.push({
+        weekStart: weekStart.toISOString(),
+        weekEnd: weekEnd.toISOString(),
+        title: theme?.title || 'Thème à venir',
+        isActive: !!theme && theme.isActive,
+        themeId: theme?.id || null,
+        theme: theme
+          ? {
+              id: theme.id,
+              title: theme.title,
+              startOfWeek: theme.startOfWeek.toISOString(),
+              slug: theme.slug,
+              photoUrl: theme.photoUrl,
+              impactText: theme.impactText,
+            }
+          : null,
+      });
+    }
+
+    return {
+      weeks: calendar,
+      month: monthIndex + 1,
+      year,
+      currentWeek: calendar.findIndex(
+        (w) =>
+          w.theme &&
+          new Date(w.weekStart) <= now &&
+          new Date(w.weekEnd) >= now,
+      ),
+    };
+  }
+
   async getCalendar(weeks: number = 12) {
     const now = new Date();
     const startDate = new Date(now);

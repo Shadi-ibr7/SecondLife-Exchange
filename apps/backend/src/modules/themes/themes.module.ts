@@ -22,6 +22,8 @@ import { ThemesController } from './themes.controller';
 
 // Import des modules dépendants
 import { PrismaModule } from '../../common/prisma/prisma.module';
+import { AiModule } from '../ai/ai.module';
+import { UnsplashModule } from '../unsplash/unsplash.module';
 
 /**
  * MODULE: ThemesModule
@@ -30,7 +32,7 @@ import { PrismaModule } from '../../common/prisma/prisma.module';
  */
 @Module({
   // Modules importés nécessaires
-  imports: [PrismaModule], // Accès à la base de données
+  imports: [PrismaModule, AiModule, UnsplashModule], // Accès à la base de données, IA et Unsplash
 
   // Contrôleur qui expose les routes HTTP
   controllers: [ThemesController],

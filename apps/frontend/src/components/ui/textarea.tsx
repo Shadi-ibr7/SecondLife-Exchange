@@ -1,3 +1,20 @@
+/**
+ * FICHIER: components/ui/textarea.tsx
+ *
+ * DESCRIPTION:
+ * Zone de texte multi-ligne avec styles cohérents (taille minimale, bordures,
+ * focus rings, états disabled). Utilisée pour les descriptions, messages, etc.
+ *
+ * UTILISATION:
+ * ```tsx
+ * <Textarea rows={4} placeholder="Décrivez votre objet..." />
+ * ```
+ *
+ * TECHNIQUE:
+ * - `forwardRef` pour compatibilité avec RHF/refs parents.
+ * - `cn` permet d'injecter des classes additionnelles sans perdre la base.
+ */
+
 import * as React from 'react';
 
 import { cn } from '@/lib/utils';
@@ -5,6 +22,12 @@ import { cn } from '@/lib/utils';
 export interface TextareaProps
   extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
 
+/**
+ * COMPOSANT: Textarea
+ *
+ * ForwardRef permet d’accéder au `<textarea>` natif. Même logique que Input
+ * (classes CSS centralisées + possibilité de surcharger via className).
+ */
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, ...props }, ref) => {
     return (

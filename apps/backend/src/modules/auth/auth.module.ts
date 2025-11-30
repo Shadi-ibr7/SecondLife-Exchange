@@ -28,6 +28,9 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAccessStrategy } from './strategies/jwt-access.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
+import { AuthAdminController } from './auth-admin.controller';
+import { AuthAdminService } from './auth-admin.service';
+import { AdminJwtStrategy } from './strategies/admin-jwt.strategy';
 
 /**
  * MODULE: AuthModule
@@ -62,7 +65,7 @@ import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
   // ============================================
   // CONTROLLERS: Routes HTTP exposées
   // ============================================
-  controllers: [AuthController],
+  controllers: [AuthController, AuthAdminController],
 
   // ============================================
   // PROVIDERS: Services et stratégies fournis
@@ -71,6 +74,8 @@ import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
     AuthService, // Service principal d'authentification
     JwtAccessStrategy, // Stratégie pour valider les access tokens
     JwtRefreshStrategy, // Stratégie pour valider les refresh tokens
+    AuthAdminService, // Service d'authentification admin
+    AdminJwtStrategy, // Stratégie JWT pour les admins
   ],
 
   // ============================================

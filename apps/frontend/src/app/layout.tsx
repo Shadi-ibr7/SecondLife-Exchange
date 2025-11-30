@@ -27,11 +27,14 @@ import { Inter } from 'next/font/google';
 
 // Import des styles globaux
 import './globals.css';
+import '@/styles/mobile-dock.css';
 
 // Import des composants
 import { Providers } from '@/components/providers';
 import { Toaster } from 'react-hot-toast';
 import { Navbar } from '@/components/layout/navbar';
+import { MobileDockNav } from '@/components/mobile/MobileDockNav';
+import { AdminLayoutWrapper } from './admin-layout-wrapper';
 
 /**
  * Configuration de la police Inter
@@ -130,11 +133,10 @@ export default function RootLayout({
       <body className={inter.className}>
         {/* Providers: Enveloppe avec React Query, thème, auth */}
         <Providers>
-          {/* Navbar: Barre de navigation */}
-          <Navbar />
-
+          <AdminLayoutWrapper>
           {/* Contenu principal (pages) */}
-          {children}
+            <main className="pb-20 md:pb-0">{children}</main>
+          </AdminLayoutWrapper>
 
           {/* Toaster: Affichage des notifications toast */}
           <Toaster

@@ -1,3 +1,23 @@
+/**
+ * FICHIER: components/common/NavDesktop.tsx
+ *
+ * DESCRIPTION:
+ * Barre de navigation principale (version desktop). Affiche le logo,
+ * les liens de navigation, la recherche, les actions (PWA, notifications, thème)
+ * et un menu utilisateur avec avatar + logout.
+ *
+ * FLUX:
+ * - S’appuie sur `NAV_LINKS`, `CTA_LINK`, `USER_LINKS` (fichier nav-links.ts)
+ * - Utilise `useAuthStore` pour savoir si l’utilisateur est connecté
+ * - Liens protégés affichent un cadenas si l’utilisateur n’est pas auth
+ * - Avatar ouvre un DropdownMenu avec liens “Profile, Dashboard…” + Déconnexion
+ *
+ * UX:
+ * - Animations Framer Motion (logo, CTA, underline actif)
+ * - Layout responsive: caché sur mobile (`md:flex`)
+ * - Intègre SearchInput, InstallPWA, NotificationBell, ThemeToggle
+ */
+
 'use client';
 
 import Link from 'next/link';

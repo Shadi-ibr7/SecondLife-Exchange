@@ -63,57 +63,30 @@ export function CalendarGrid({
   const weekEnd = parseISO(selectedWeek.weekEnd);
   const today = new Date();
 
-  const suggestionItems = suggestions.length
-    ? suggestions
-    : selectedWeek.theme
-      ? [
-          {
-            id: `${selectedWeek.theme.id}-fallback`,
-            themeId: selectedWeek.theme.id,
-            name: selectedWeek.theme.title,
-            category: 'GENERAL',
-            country: '',
-            ecoReason:
-              "Les détails de l'impact seront bientôt disponibles pour ce thème.",
-            tags: [],
-            createdAt: selectedWeek.theme.startOfWeek,
-          },
-        ]
-      : [];
-
-  const dailyThemes = Array.from({ length: 7 }).map((_, index) => {
-    const date = addDays(weekStart, index);
-    const suggestion = suggestionItems[index % suggestionItems.length];
-    const title =
-      suggestion?.name ?? selectedWeek.theme?.title ?? 'Thème à définir';
-    const description =
-      suggestion?.ecoReason ??
-      selectedWeek.theme?.description ??
-      "Les suggestions seront générées prochainement par l'IA.";
-    const impact =
-      suggestion && 'popularity' in suggestion && suggestion.popularity
-        ? `Popularité ${suggestion.popularity}%`
-        : suggestion?.materials
-          ? `Matériaux: ${suggestion.materials}`
-          : 'Impact en cours de calcul';
-
-    const query =
-      suggestion?.name ??
-      selectedWeek.theme?.title ??
-      `${format(date, 'EEEE', { locale: fr })} sustainable`;
-
-    return {
-      id: suggestion?.id ?? `${selectedWeek.weekStart}-${index}`,
-      dayLabel: capitalizeFirstLetter(format(date, 'EEEE', { locale: fr })),
-      dateLabel: format(date, 'dd MMM', { locale: fr }),
-      title,
-      description,
-      impact,
-      query,
-      href: selectedWeek.theme ? `/themes/${selectedWeek.theme.slug}` : '#',
-      isActiveDay: selectedWeek.isActive && isSameDay(date, today),
-    };
-  });
+  // Un seul thème pour toute la semaine
+  const weekTheme = selectedWeek.theme
+    ? {
+        id: selectedWeek.theme.id,
+        title: selectedWeek.theme.title || 'Thème à venir',
+        description:
+          selectedWeek.theme.impactText ||
+          selectedWeek.theme.description ||
+          "Les suggestions seront générées prochainement par l'IA.",
+        photoUrl: selectedWeek.theme.photoUrl,
+        query: selectedWeek.theme.title || 'sustainable theme',
+        href: `/themes/${selectedWeek.theme.slug}`,
+        isActiveWeek: selectedWeek.isActive,
+      }
+    : {
+        id: `coming-soon-${selectedWeek.weekStart}`,
+        title: 'Thème à venir',
+        description:
+          'Ce thème sera généré automatiquement par l\'IA au début du mois.',
+        photoUrl: null,
+        query: 'sustainable future',
+        href: '#',
+        isActiveWeek: false,
+      };
 
   return (
     <div className="space-y-8">
@@ -160,23 +133,22 @@ export function CalendarGrid({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {dailyThemes.map((day, index) => (
-          <motion.div
-            key={day.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: index * 0.05 }}
-            whileHover={{ y: -4 }}
-            className="group"
-          >
-            <DailyThemeCard
-              data={day}
-              isCurrentWeekActive={selectedWeek.isActive}
-            />
-          </motion.div>
-        ))}
-      </div>
+      {/* Affichage du thème de la semaine */}
+      <motion.div
+        key={weekTheme.id}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+        whileHover={{ y: -4 }}
+        className="group"
+      >
+        <WeeklyThemeCard
+          data={weekTheme}
+          weekStart={weekStart}
+          weekEnd={weekEnd}
+          isCurrentWeekActive={selectedWeek.isActive}
+        />
+      </motion.div>
 
       <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
         <div className="flex items-center gap-2">
@@ -192,96 +164,101 @@ export function CalendarGrid({
   );
 }
 
-interface DailyThemeCardProps {
+interface WeeklyThemeCardProps {
   data: {
     id: string;
-    dayLabel: string;
-    dateLabel: string;
     title: string;
     description: string;
-    impact: string;
+    photoUrl: string | null;
     query: string;
     href: string;
-    isActiveDay: boolean;
+    isActiveWeek: boolean;
   };
+  weekStart: Date;
+  weekEnd: Date;
   isCurrentWeekActive: boolean;
 }
 
-function DailyThemeCard({ data, isCurrentWeekActive }: DailyThemeCardProps) {
-  const { data: images } = useUnsplashImages(`${data.title} sustainable`, 1, 1);
-  const image = images?.[0];
+function WeeklyThemeCard({
+  data,
+  weekStart,
+  weekEnd,
+  isCurrentWeekActive,
+}: WeeklyThemeCardProps) {
+  const { data: images } = useUnsplashImages(
+    data.photoUrl ? '' : `${data.query} sustainable`,
+    1,
+    1
+  );
+  const image = data.photoUrl
+    ? { urls: { small: data.photoUrl }, alt_description: data.title }
+    : images?.[0];
+
+  const today = new Date();
+  const isCurrentWeek =
+    weekStart <= today && weekEnd >= today && isCurrentWeekActive;
 
   return (
     <Card
       className={`overflow-hidden border-2 transition-all duration-300 ${
-        data.isActiveDay
+        isCurrentWeek
           ? 'border-primary shadow-lg shadow-primary/20'
           : 'border-border hover:border-primary/40'
       }`}
     >
-      <div className="relative h-40 w-full overflow-hidden">
+      <div className="relative h-64 w-full overflow-hidden md:h-80">
         {image ? (
           <Image
             src={image.urls.small}
             alt={image.alt_description || data.title}
             fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             className="object-cover transition-transform duration-300 group-hover:scale-105"
-            priority={data.isActiveDay}
+            priority={isCurrentWeek}
           />
         ) : (
-          <div className="h-full w-full bg-muted" />
+          <div className="h-full w-full bg-gradient-to-br from-muted to-muted/50" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
 
-        <div className="absolute left-3 top-3 flex items-center gap-2">
-          <Badge className="bg-white/10 text-white backdrop-blur">
-            {data.dayLabel}
+        <div className="absolute left-4 top-4 flex flex-col gap-2">
+          <Badge className="bg-white/10 text-white backdrop-blur w-fit">
+            {format(weekStart, 'dd MMM', { locale: fr })} -{' '}
+            {format(weekEnd, 'dd MMM yyyy', { locale: fr })}
           </Badge>
-          <span className="rounded-full bg-white/10 px-2 py-1 text-xs text-white/80 backdrop-blur">
-            {data.dateLabel}
-          </span>
-        </div>
-
-        {data.isActiveDay && (
-          <div className="absolute right-3 top-3">
-            <Badge className="bg-primary text-white shadow-sm">
+          {isCurrentWeek && (
+            <Badge className="bg-primary text-white shadow-sm w-fit">
               <Sparkles className="mr-1 h-3 w-3" />
-              Aujourd’hui
+              Semaine actuelle
             </Badge>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      <CardContent className="space-y-4 p-5">
+      <CardContent className="space-y-4 p-6">
         <div>
-          <h3 className="text-lg font-semibold leading-tight">{data.title}</h3>
-          <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+          <h3 className="text-2xl font-bold leading-tight mb-2">
+            {data.title}
+          </h3>
+          <p className="text-base text-muted-foreground leading-relaxed">
             {data.description}
           </p>
         </div>
 
-        <div className="flex items-center gap-2 rounded-xl border border-green-500/20 bg-green-500/10 px-3 py-2 text-xs text-green-400">
-          <Leaf className="h-4 w-4" />
-          <span className="line-clamp-1">{data.impact}</span>
-        </div>
-
-        <Button
-          asChild
-          className={data.isActiveDay ? 'w-full' : 'w-full'}
-          variant={isCurrentWeekActive ? 'default' : 'outline'}
-        >
-          <Link href={data.href}>
-            Explorer
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </Button>
+        {data.href !== '#' && (
+          <Button
+            asChild
+            className="w-full"
+            variant={isCurrentWeekActive ? 'default' : 'outline'}
+            size="lg"
+          >
+            <Link href={data.href}>
+              Explorer le thème
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
-}
-
-function capitalizeFirstLetter(value: string) {
-  if (!value) return value;
-  return value.charAt(0).toUpperCase() + value.slice(1);
 }

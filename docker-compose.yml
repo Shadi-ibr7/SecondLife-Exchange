@@ -1,117 +1,50 @@
-/**
- * FICHIER: docker-compose.yml
- *
- * DESCRIPTION:
- * Ce fichier configure Docker Compose pour lancer les services d'infrastructure
- * nécessaires au projet (base de données PostgreSQL et cache Redis).
- *
- * UTILISATION:
- * - Démarrer: docker compose up -d
- * - Arrêter: docker compose down
- * - Voir les logs: docker compose logs -f
- *
- * IMPORTANT:
- * - Les données sont persistées dans des volumes Docker
- * - Les ports sont exposés pour permettre la connexion depuis l'application
- * - Des healthchecks vérifient que les services sont opérationnels
- */
-
-// Version du format Docker Compose (3.8 est une version stable et récente)
 version: '3.8'
 
-// ============================================
-// DÉFINITION DES SERVICES (CONTAINERS)
-// ============================================
+# ============================================
+# SERVICES (CONTAINERS)
+# ============================================
 services:
-  // ============================================
-  // SERVICE: PostgreSQL (Base de données)
-  // ============================================
+  # PostgreSQL database used by the backend
   postgres:
-    // Image Docker à utiliser (PostgreSQL version 14)
     image: postgres:14
-
-    // Nom du container (pour faciliter l'identification)
     container_name: secondlife-postgres
-
-    // Variables d'environnement pour configurer PostgreSQL
     environment:
-      // Utilisateur de la base de données
-      // ${POSTGRES_USER:-postgres} signifie: utiliser la variable POSTGRES_USER
-      // si elle existe, sinon utiliser "postgres" par défaut
+      # ${VAR:-default} allows overriding through env vars
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-
-      // Mot de passe de l'utilisateur
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-
-      // Nom de la base de données à créer automatiquement
       POSTGRES_DB: ${POSTGRES_DB:-secondlife}
-
-      // Méthode d'authentification (trust = pas de vérification de mot de passe)
-      // ATTENTION: En production, utiliser une méthode plus sécurisée !
+      # TRUST is acceptable for local development only
       POSTGRES_HOST_AUTH_METHOD: trust
-
-    // Volumes: stockage persistant des données
-    // postgres_data est un volume nommé qui persiste même si le container est supprimé
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
-    // Ports: exposition des ports du container vers la machine hôte
-    // Format: 'port_hôte:port_container'
-    // 5432 est le port par défaut de PostgreSQL
     ports:
       - '5432:5432'
-
-    // Commande de démarrage avec options personnalisées
     command: postgres -c listen_addresses='*' -c max_connections=200
-    // listen_addresses='*': écoute sur toutes les interfaces réseau
-    // max_connections=200: permet jusqu'à 200 connexions simultanées
-
-    // Healthcheck: vérification automatique que le service fonctionne
     healthcheck:
-      // Commande à exécuter pour vérifier la santé
       test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres}']
-      // Intervalle entre les vérifications (10 secondes)
       interval: 10s
-      // Délai d'attente maximum pour une vérification (5 secondes)
       timeout: 5s
-      // Nombre de tentatives échouées avant de considérer le service comme down
       retries: 5
 
-  // ============================================
-  // SERVICE: Redis (Cache et sessions)
-  // ============================================
+  # Redis cache for sessions / queues
   redis:
-    // Image Docker Redis version 7 (alpine = version légère)
     image: redis:7-alpine
-
-    // Nom du container
     container_name: secondlife-redis
-
-    // Ports: 6379 est le port par défaut de Redis
     ports:
       - '6379:6379'
-
-    // Volume pour persister les données Redis (optionnel, pour le cache)
     volumes:
       - redis_data:/data
-
-    // Healthcheck: vérifie que Redis répond aux commandes
     healthcheck:
-      // Commande ping pour vérifier que Redis est opérationnel
       test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
 
-// ============================================
-// DÉFINITION DES VOLUMES
-// ============================================
-// Les volumes permettent de persister les données même si les containers sont supprimés
+# ============================================
+# VOLUMES
+# ============================================
 volumes:
-  // Volume pour les données PostgreSQL
   postgres_data:
-    driver: local  // Stockage local sur la machine hôte
-
-  // Volume pour les données Redis
+    driver: local
   redis_data:
     driver: local

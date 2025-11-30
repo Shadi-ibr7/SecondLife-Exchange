@@ -1,21 +1,27 @@
 /**
- * FICHIER: auth.controller.ts
+ * FICHIER: modules/auth/auth.controller.ts
  *
- * DESCRIPTION:
- * Ce contrôleur expose les endpoints HTTP pour l'authentification.
- * Il définit les routes pour l'inscription, la connexion, le rafraîchissement
- * des tokens, et la déconnexion.
+ * RÔLE:
+ * Ce contrôleur HTTP est la porte d'entrée REST pour toutes les opérations d'authentification.
+ * Il reçoit les requêtes (DTO déjà validés), applique les guards/intercepteurs nécessaires,
+ * puis délègue toute la logique métier au `AuthService`.
  *
- * ROUTES:
- * - POST /api/v1/auth/register - Inscription d'un nouvel utilisateur
- * - POST /api/v1/auth/login - Connexion d'un utilisateur existant
- * - POST /api/v1/auth/refresh - Rafraîchissement des tokens JWT
- * - POST /api/v1/auth/logout - Déconnexion (révocation du refresh token)
+ * ROUTAGE PRINCIPAL (préfixe `/api/v1/auth`):
+ * - `POST /register` : Inscription
+ * - `POST /login`    : Connexion
+ * - `POST /refresh`  : Rafraîchissement des tokens
+ * - `POST /logout`   : Déconnexion (révocation du refresh token)
  *
- * SÉCURITÉ:
- * - Rate limiting sur la route login (protection contre brute force)
- * - Validation automatique des données avec les DTOs
- * - Guards pour protéger les routes sensibles
+ * OUTILS & SÉCURITÉ:
+ * - `ThrottlerGuard` limite les tentatives de login (anti brute-force)
+ * - `JwtRefreshGuard` protège les routes nécessitant un refresh token valide
+ * - `LoggingInterceptor` journalise chaque requête pour l'audit
+ * - DTOs + ValidationPipe (config globale) assurent la conformité des payloads
+ *
+ * BONNES PRATIQUES APPLIQUÉES:
+ * - Toutes les réponses sont centralisées dans AuthService => code DRY
+ * - Découpage clair entre transport (controller) et logique métier (service)
+ * - Codes HTTP explicites (`@HttpCode`)
  */
 
 // Import des décorateurs NestJS pour créer un contrôleur
@@ -48,11 +54,9 @@ import { LoggingInterceptor } from '../../common/interceptors/logging.intercepto
 /**
  * CONTRÔLEUR: AuthController
  *
- * Ce contrôleur gère toutes les routes d'authentification.
- * Le préfixe 'auth' signifie que toutes les routes commencent par /api/v1/auth
- *
- * @UseInterceptors(LoggingInterceptor): Enregistre toutes les requêtes
- * pour le débogage et le monitoring
+ * - `@Controller('auth')` => toutes les routes seront disponibles sous `/api/v1/auth/*`
+ * - `@UseInterceptors(LoggingInterceptor)` => chaque requête/réponse est loggée
+ *   (pratique pour auditer les tentatives d'authentification ou investiguer un bug).
  */
 @Controller('auth')
 @UseInterceptors(LoggingInterceptor)
@@ -60,7 +64,8 @@ export class AuthController {
   /**
    * CONSTRUCTEUR
    *
-   * Injection du service d'authentification
+   * On injecte uniquement `AuthService` afin de garder ce contrôleur très fin.
+   * Cela facilite les tests e2e (on peut mocker AuthService si nécessaire).
    */
   constructor(private authService: AuthService) {}
 
@@ -84,7 +89,13 @@ export class AuthController {
   @Post('register')
   @HttpCode(HttpStatus.CREATED) // Code HTTP 201 (créé)
   async register(@Body() registerDto: AuthRegisterDto) {
-    // Déléguer la logique au service
+    /**
+     * Le contrôleur se contente de transmettre le DTO validé.
+     * AuthService renverra un `TokenResponse` contenant:
+     *  - accessToken (15 min)
+     *  - refreshToken (7 jours)
+     *  - user (payload minimal pour hydrater le frontend)
+     */
     return this.authService.register(registerDto);
   }
 
@@ -113,7 +124,12 @@ export class AuthController {
   @HttpCode(HttpStatus.OK) // Code HTTP 200 (succès)
   @UseGuards(ThrottlerGuard) // Protection contre les attaques par force brute
   async login(@Body() loginDto: AuthLoginDto) {
-    // Déléguer la logique au service
+    /**
+     * `ThrottlerGuard` s'appuie sur la configuration définie dans `app.module.ts`.
+     * Ici, nous limitons volontairement à 5 tentatives/minute pour réduire le brute-force.
+     * Toute la logique (vérification du mot de passe, génération des tokens) est déléguée
+     * à AuthService pour rester DRY.
+     */
     return this.authService.login(loginDto);
   }
 
@@ -141,7 +157,10 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtRefreshGuard) // Vérifie que le refresh token est valide
   async refresh(@Body('refreshToken') refreshToken: string) {
-    // Déléguer la logique au service
+    /**
+     * `JwtRefreshGuard` lit automatiquement le refresh token (cookie, header ou body selon implémentation)
+     * et vérifie sa signature. On passe ensuite le token brut au service pour déclencher la rotation.
+     */
     return this.authService.refresh(refreshToken);
   }
 
@@ -168,7 +187,10 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT) // Code HTTP 204 (pas de contenu)
   @UseGuards(JwtRefreshGuard) // Vérifie que le refresh token est valide
   async logout(@Body('refreshToken') refreshToken: string) {
-    // Déléguer la logique au service
+    /**
+     * Déconnexion = marquer le refresh token comme révoqué.
+     * On ne retourne aucun corps (204), ce qui permet au client de simplement nettoyer son storage.
+     */
     await this.authService.logout(refreshToken);
   }
 }

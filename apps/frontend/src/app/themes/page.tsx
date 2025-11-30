@@ -34,6 +34,7 @@ import { SuggestedItem } from '@/types';
 
 export default function ThemesPage() {
   const [selectedWeekIndex, setSelectedWeekIndex] = useState(0);
+  const [selectedWeekForDetails, setSelectedWeekForDetails] = useState<string | null>(null);
 
   const { data: activeTheme, isLoading: isActiveLoading } = useQuery({
     queryKey: ['theme-active'],
@@ -47,8 +48,8 @@ export default function ThemesPage() {
     isLoading: isCalendarLoading,
     error: calendarError,
   } = useQuery({
-    queryKey: ['themes-calendar'],
-    queryFn: () => themesApi.getCalendar(12),
+    queryKey: ['themes-month-calendar'],
+    queryFn: () => themesApi.getMonthCalendar(),
     retry: false,
   });
 
@@ -65,21 +66,8 @@ export default function ThemesPage() {
     }
   }, [calendarData]);
 
-  const selectedWeek =
-    calendarData?.weeks?.[selectedWeekIndex] ?? calendarData?.weeks?.[0];
-
-  const { data: suggestionsResponse, isLoading: isSuggestionsLoading } =
-    useQuery({
-      queryKey: ['theme-suggestions', selectedWeek?.themeId],
-      queryFn: () =>
-        selectedWeek?.themeId
-          ? themesApi.getThemeSuggestions(selectedWeek.themeId, { limit: 7 })
-          : Promise.resolve({ items: [] as SuggestedItem[] }),
-      enabled: Boolean(selectedWeek?.themeId),
-      retry: false,
-    });
-
-  const suggestions = suggestionsResponse?.items ?? [];
+  // Pour la grille mensuelle, on affiche les 4 semaines du mois
+  // Les suggestions seront chargées individuellement si nécessaire
 
   const { data: heroPhotos } = useUnsplashImages(
     activeTheme ? `${activeTheme.title} sustainable` : 'sustainable theme',
@@ -182,22 +170,25 @@ export default function ThemesPage() {
           transition={{ duration: 0.6, delay: 0.2 }}
         >
           {calendarData ? (
-            <CalendarGrid
-              weeks={calendarData.weeks}
-              selectedWeekIndex={selectedWeekIndex}
-              onPreviousWeek={() =>
-                setSelectedWeekIndex((prev) => Math.max(0, prev - 1))
-              }
-              onNextWeek={() =>
-                setSelectedWeekIndex((prev) =>
-                  calendarData
-                    ? Math.min(calendarData.weeks.length - 1, prev + 1)
-                    : prev
-                )
-              }
-              isLoading={isCalendarLoading || isSuggestionsLoading}
-              suggestions={suggestions}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {calendarData.weeks.map((week, index) => (
+                <motion.div
+                  key={week.weekStart}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: index * 0.1 }}
+                >
+                  <CalendarGrid
+                    weeks={[week]}
+                    selectedWeekIndex={0}
+                    onPreviousWeek={() => {}}
+                    onNextWeek={() => {}}
+                    isLoading={isCalendarLoading}
+                    suggestions={[]}
+                  />
+                </motion.div>
+              ))}
+            </div>
           ) : (
             <div className="rounded-xl border border-dashed border-muted-foreground/40 p-8 text-center text-muted-foreground">
               <AlertCircle className="mx-auto mb-4 h-12 w-12 opacity-60" />

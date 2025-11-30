@@ -1,3 +1,19 @@
+/**
+ * FICHIER: components/common/Container.tsx
+ *
+ * DESCRIPTION:
+ * Wrapper simple pour centrer le contenu et appliquer des marges/paddings
+ * cohérents (max-width, px). Utilisé pour toutes les sections principales
+ * (pages, bannières, etc.) afin d’éviter de répéter les classes Tailwind.
+ *
+ * UTILISATION:
+ * ```tsx
+ * <Container className="py-10">
+ *   <Section />
+ * </Container>
+ * ```
+ */
+
 import { cn } from '@/lib/utils';
 
 interface ContainerProps {

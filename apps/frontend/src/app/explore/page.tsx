@@ -1,28 +1,68 @@
 /**
- * FICHIER: page.tsx (Page d'exploration)
+ * FICHIER: app/explore/page.tsx
  *
  * DESCRIPTION:
  * Ce fichier définit la page d'exploration des items (objets).
- * Elle permet de rechercher, filtrer et parcourir tous les items disponibles.
+ * Elle permet de rechercher, filtrer et parcourir tous les items disponibles
+ * sur la plateforme. Cette page est accessible publiquement et offre une
+ * interface complète de découverte avec filtres avancés, pagination et recherche.
  *
- * FONCTIONNALITÉS:
- * - Liste paginée d'items avec filtres
+ * FONCTIONNALITÉS PRINCIPALES:
+ * - Liste paginée d'items avec filtres avancés
  * - Filtres par catégorie, condition, statut, recherche textuelle
- * - Pagination avec navigation
- * - Gestion des erreurs avec messages informatifs
- * - Mode développement avec items mock
+ * - Pagination avec navigation (précédent, suivant, numéros de page)
+ * - Gestion des erreurs avec messages informatifs et instructions
+ * - Mode développement avec items mock (si backend indisponible)
  * - Suspense pour la gestion du SSR avec useQueryParams
+ * - Synchronisation des filtres avec l'URL (query parameters)
+ * - Bouton pour publier un nouvel objet
+ * - Compteur d'objets trouvés
  *
- * FILTRES:
- * - Recherche textuelle (q)
- * - Catégorie (category)
- * - Condition (condition)
- * - Statut (status)
- * - Propriétaire (ownerId)
- * - Tri (sort)
+ * ARCHITECTURE:
+ * - Composant principal: ExplorePage (export default)
+ * - Composant interne: ExplorePageContent (enveloppé dans Suspense)
+ * - Séparation nécessaire car useQueryParams nécessite Suspense avec SSR
  *
- * NOTE:
- * En mode développement, affiche des items mock si le backend n'est pas disponible.
+ * FILTRES DISPONIBLES:
+ * - Recherche textuelle (q): Recherche dans titre et description
+ * - Catégorie (category): Filtre par catégorie d'item
+ * - Condition (condition): Filtre par état de l'item
+ * - Statut (status): Filtre par disponibilité (AVAILABLE, ARCHIVED, etc.)
+ * - Propriétaire (ownerId): Filtre par propriétaire (optionnel)
+ * - Tri (sort): Tri par date, popularité, etc.
+ * - Pagination (page, limit): Navigation entre les pages
+ *
+ * SYNCHRONISATION URL:
+ * - Les filtres sont synchronisés avec les paramètres de requête de l'URL
+ * - Exemple: /explore?category=BOOKS&page=2
+ * - Permet de partager des liens avec filtres appliqués
+ * - Permet de revenir en arrière avec les filtres conservés
+ *
+ * MODE DÉVELOPPEMENT:
+ * - Si le backend n'est pas disponible, affiche des items mock
+ * - Les items mock sont définis dans MOCK_ITEMS
+ * - Utile pour tester l'interface sans connexion au backend
+ * - Seulement en mode développement (process.env.NODE_ENV === 'development')
+ *
+ * GESTION D'ERREUR:
+ * - Détection des erreurs réseau (Network Error, timeout, ECONNREFUSED)
+ * - Affichage d'un message d'erreur clair et informatif
+ * - Instructions pour démarrer le backend (si erreur réseau)
+ * - Bouton "Réessayer" pour relancer la requête
+ * - Bouton "Retour à l'accueil" pour naviguer
+ *
+ * PAGINATION:
+ * - Gestion via usePagination hook
+ * - Navigation: Précédent, Suivant, numéros de page
+ * - Affichage de 5 pages maximum à la fois
+ * - Synchronisation avec les paramètres URL
+ *
+ * UTILISATION:
+ * - Route: /explore
+ * - Accessible publiquement (pas de protection d'authentification)
+ * - Lien depuis d'autres pages: <Link href="/explore">Explorer</Link>
+ *
+ * @module app/explore/page
  */
 
 'use client';
@@ -67,7 +107,25 @@ import { Item } from '@/types';
  * COMPOSANT: ExplorePageContent
  *
  * Contenu principal de la page d'exploration.
- * Enveloppé dans Suspense pour gérer useQueryParams avec SSR.
+ *
+ * ARCHITECTURE:
+ * - Composant interne (non exporté)
+ * - Enveloppé dans Suspense par ExplorePage
+ * - Nécessaire car useQueryParams nécessite Suspense avec SSR
+ *
+ * FONCTIONNEMENT:
+ * 1. Récupère les paramètres de requête depuis l'URL (useQueryParams)
+ * 2. Configure la pagination (usePagination)
+ * 3. Charge les items via React Query (itemsApi.listItems)
+ * 4. Gère les erreurs avec messages informatifs
+ * 5. Affiche les items dans une grille (ItemGrid)
+ * 6. Affiche les filtres (ItemFilters)
+ * 7. Gère la pagination avec navigation
+ *
+ * POURQUOI SUSPENSE:
+ * useQueryParams() nécessite un composant client avec Suspense
+ * pour fonctionner correctement avec le Server-Side Rendering (SSR) de Next.js.
+ * Sans Suspense, une erreur serait levée lors du SSR.
  */
 function ExplorePageContent() {
   // ============================================
@@ -75,13 +133,49 @@ function ExplorePageContent() {
   // ============================================
 
   /**
-   * Hook pour gérer les paramètres de requête (filtres, pagination).
+   * Hook pour gérer les paramètres de requête (filtres, pagination)
+   *
+   * FONCTIONS:
+   * - params: Objet contenant tous les paramètres de l'URL
+   *   - Exemple: { q: "livre", category: "BOOKS", page: 1, limit: 20 }
+   *   - Synchronisé avec l'URL (query parameters)
+   *
+   * - updateParams: Fonction pour mettre à jour les paramètres
+   *   - Prend un objet de nouveaux paramètres
+   *   - Met à jour l'URL sans rechargement
+   *   - Réinitialise la page à 1 si les filtres changent
+   *
+   * - resetParams: Fonction pour réinitialiser tous les paramètres
+   *   - Supprime tous les filtres
+   *   - Remet la page à 1
+   *   - Met à jour l'URL
+   *
+   * SYNCHRONISATION:
+   * - Les paramètres sont synchronisés avec l'URL
+   * - Permet de partager des liens avec filtres appliqués
+   * - Permet de revenir en arrière avec les filtres conservés
    */
   const { params, updateParams, resetParams } = useQueryParams();
 
   /**
-   * Hook pour gérer la pagination.
-   * Le total sera mis à jour par la requête.
+   * Hook pour gérer la pagination
+   *
+   * CONFIGURATION:
+   * - total: 0 initialement (sera mis à jour par la requête)
+   * - limit: Nombre d'items par page (depuis params ou 20 par défaut)
+   * - initialPage: Page initiale (depuis params ou 1 par défaut)
+   *
+   * VALEURS RETOURNÉES:
+   * - currentPage: Page actuelle (nombre)
+   * - totalPages: Nombre total de pages (calculé depuis total et limit)
+   * - hasNextPage: true si une page suivante existe
+   * - hasPreviousPage: true si une page précédente existe
+   * - goToNextPage: Fonction pour aller à la page suivante
+   * - goToPreviousPage: Fonction pour aller à la page précédente
+   *
+   * MISE À JOUR:
+   * - Le total sera mis à jour quand les données arrivent (data.total)
+   * - La pagination se recalcule automatiquement
    */
   const {
     currentPage,

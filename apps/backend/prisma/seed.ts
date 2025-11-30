@@ -6,6 +6,32 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting seed...');
 
+  // Créer l'utilisateur admin si les variables d'environnement sont définies
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  
+  if (adminEmail && adminPassword) {
+    const existingAdmin = await prisma.user.findUnique({
+      where: { email: adminEmail },
+    });
+
+    if (!existingAdmin) {
+      const admin = await prisma.user.create({
+        data: {
+          email: adminEmail,
+          passwordHash: await bcrypt.hash(adminPassword, 12),
+          displayName: 'Administrateur',
+          roles: UserRole.ADMIN,
+        },
+      });
+      console.log(`👑 Created admin user: ${admin.email}`);
+    } else {
+      console.log(`👑 Admin user already exists: ${adminEmail}`);
+    }
+  } else {
+    console.log('⚠️  ADMIN_EMAIL and ADMIN_PASSWORD not set, skipping admin creation');
+  }
+
   // Créer 2 utilisateurs de test
   const user1 = await prisma.user.create({
     data: {

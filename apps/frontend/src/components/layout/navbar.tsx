@@ -117,6 +117,18 @@ export function Navbar() {
     { name: 'Communauté', href: '/community' },
   ];
 
+  /**
+   * Liens dédiés à la barre mobile en bas.
+   * Ils sont exclus du menu hamburger pour éviter la duplication demandée.
+   */
+  const bottomNavHrefs = new Set([
+    '/',
+    '/explore',
+    '/item/new',
+    '/exchanges',
+    '/profile',
+  ]);
+
   // ============================================
   // FONCTION: isActive
   // ============================================
@@ -199,6 +211,25 @@ export function Navbar() {
               </Button>
             )}
 
+            {isAuthenticated && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative sm:hidden"
+                asChild
+                aria-label="Notifications"
+              >
+                <Link href="/notifications">
+                  <Bell className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    <Badge className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center bg-primary p-0 text-[10px]">
+                      {unreadCount}
+                    </Badge>
+                  )}
+                </Link>
+              </Button>
+            )}
+
             {!isAuthenticated ? (
               <>
                 <Button
@@ -220,6 +251,7 @@ export function Navbar() {
                 >
                   <Link href="/item/new">Publier</Link>
                 </Button>
+                <div className="hidden md:block">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Avatar className="h-9 w-9 cursor-pointer transition-all hover:ring-2 hover:ring-primary">
@@ -251,6 +283,7 @@ export function Navbar() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                </div>
               </div>
             )}
 
@@ -267,7 +300,9 @@ export function Navbar() {
                   Accédez aux différentes sections de SecondLife Exchange
                 </SheetDescription>
                 <div className="mt-8 flex flex-col gap-6">
-                  {navLinks.map((link) => (
+                  {navLinks
+                    .filter((link) => !bottomNavHrefs.has(link.href))
+                    .map((link) => (
                     <Link
                       key={link.href}
                       href={link.href}

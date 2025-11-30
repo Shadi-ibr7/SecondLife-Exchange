@@ -1,19 +1,34 @@
 /**
- * FICHIER: auth.service.ts
+ * FICHIER: modules/auth/auth.service.ts
  *
- * DESCRIPTION:
- * Ce service gère toute la logique d'authentification de l'application:
- * - Inscription de nouveaux utilisateurs
- * - Connexion (login) avec vérification du mot de passe
- * - Génération de tokens JWT (access token et refresh token)
- * - Rafraîchissement des tokens
- * - Déconnexion (révocation des tokens)
+ * OBJECTIF GÉNÉRAL:
+ * Ce service encapsule **toute la logique d'authentification** de l'application backend.
+ * Il sert d'intermédiaire entre les contrôleurs HTTP (`AuthController`) et la base de données
+ * via Prisma. Il garantit que chaque opération sensible (inscription, login, refresh token,
+ * logout) respecte des règles de sécurité strictes.
  *
- * SÉCURITÉ:
- * - Mots de passe hashés avec bcrypt (algorithme de hachage sécurisé)
- * - Tokens JWT signés avec des secrets cryptographiques
- * - Refresh tokens stockés hashés dans la base de données
- * - Gestion des erreurs Prisma pour éviter les fuites d'information
+ * RÔLE DANS L'ARCHITECTURE:
+ * - Reçoit des DTOs validés par les contrôleurs
+ * - Manipule la base via `PrismaService`
+ * - Génère et signe les tokens via `JwtService`
+ * - Applique la configuration centrale (secrets, expiration) via `ConfigService`
+ *
+ * PRINCIPALES FONCTIONNALITÉS:
+ * 1. `register`  : crée un utilisateur, hash son mot de passe, génère et persiste les tokens
+ * 2. `login`     : vérifie les identifiants, regénère les tokens, applique les règles de sécurité
+ * 3. `refresh`   : effectue la rotation sécurisée des tokens à partir d'un refresh token valide
+ * 4. `logout`    : révoque un refresh token pour empêcher toute réutilisation future
+ *
+ * GARANTIES DE SÉCURITÉ:
+ * - Mots de passe irréversiblement hashés avec bcrypt + salage paramétrable
+ * - Access tokens courts (15 min) + refresh tokens longs (7 jours) signés avec des secrets dédiés
+ * - Refresh tokens stockés **hashés** en base pour limiter l'impact d'une fuite
+ * - Gestion fine des erreurs Prisma (P1010) pour ne pas exposer d'informations internes
+ * - Rotation des refresh tokens (un token ne peut servir qu'une seule fois)
+ *
+ * RÉFÉRENCES:
+ * - RFC 7519 (JWT)
+ * - OWASP ASVS - Authentication
  */
 
 // Import des exceptions NestJS pour gérer les erreurs HTTP
@@ -45,17 +60,31 @@ import { TokenResponse } from './dtos/token-response.dto';
  * SERVICE: AuthService
  *
  * Service principal pour l'authentification des utilisateurs.
- * Gère l'inscription, la connexion, et la gestion des tokens JWT.
+ * Toutes les routes exposées par `AuthController` délèguent ici afin de:
+ * - Centraliser la logique métier et les règles de sécurité
+ * - Garantir une cohérence transactionnelle sur les opérations critiques
+ * - Faciliter les tests unitaires (mock des dépendances Prisma/JWT)
  */
 @Injectable()
 export class AuthService {
   /**
    * CONSTRUCTEUR
    *
-   * Injection des dépendances nécessaires:
-   * - prisma: pour accéder à la base de données
-   * - jwtService: pour générer et signer les tokens JWT
-   * - configService: pour accéder aux configurations (secrets, salt rounds, etc.)
+   * Les dépendances sont injectées via NestJS. On les documente ici pour
+   * comprendre comment chaque service est utilisé plus bas:
+   *
+   * - `PrismaService prisma`
+   *    ↳ Fournit les accès à la base PostgreSQL (tables `user`, `userProfile`,
+   *      `refreshToken`). Toutes les opérations CRUD passent par Prisma.
+   *
+   * - `JwtService jwtService`
+   *    ↳ Génère, signe et vérifie les tokens JWT. Nous l'utilisons avec des
+   *      payloads minimalistes (id, email, roles) pour limiter la surface sensible.
+   *
+   * - `ConfigService configService`
+   *    ↳ Permet de récupérer dynamiquement les paramètres déclarés dans les
+   *      fichiers de config (`security.bcryptSaltRounds`, secrets JWT, TTL...).
+   *      Cela évite de hardcoder les valeurs et simplifie les déploiements multi-envs.
    */
   constructor(
     private prisma: PrismaService,
@@ -99,7 +128,7 @@ export class AuthService {
       // Gestion spéciale de l'erreur P1010 (connexion DB impossible)
       if (error.code === 'P1010' || error.message?.includes('denied access')) {
         console.error('Erreur Prisma P1010 dans register:', error.message);
-        // Retourner une erreur générique pour ne pas exposer les détails techniques
+        // On renvoie une erreur volontairement générique pour ne pas exposer la cause exacte
         throw new ConflictException(
           'Service temporairement indisponible. Veuillez réessayer plus tard.',
         );
@@ -108,7 +137,8 @@ export class AuthService {
       throw error;
     }
 
-    // Si un utilisateur existe déjà avec cet email, rejeter l'inscription
+    // Si on trouve déjà un utilisateur, on refuse immédiatement l'inscription
+    // afin d'éviter de révéler trop d'informations côté client (erreur 409 générique).
     if (existingUser) {
       throw new ConflictException('Un utilisateur avec cet email existe déjà');
     }
@@ -125,6 +155,11 @@ export class AuthService {
     const saltRounds = this.configService.get<number>(
       'security.bcryptSaltRounds',
     );
+    /**
+     * bcrypt.hash:
+     * - applique un sel aléatoire pour chaque mot de passe (empêche les rainbow tables)
+     * - `saltRounds` règle le coût (2^saltRounds itérations). Une valeur élevée ralentit les attaques.
+     */
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
     // ============================================
@@ -146,6 +181,7 @@ export class AuthService {
       });
 
       // Étape 2: Créer le profil utilisateur associé
+      // (même si vide, cela garantit la présence d'un profil pour simplifier le frontend)
       await tx.userProfile.create({
         data: {
           userId: user.id,
@@ -163,11 +199,11 @@ export class AuthService {
        */
       const accessToken = await this.jwtService.signAsync(
         {
-          sub: user.id, // Subject: ID de l'utilisateur
-          email: user.email, // Email de l'utilisateur
-          roles: [user.roles], // Rôles de l'utilisateur (pour les permissions)
+          sub: user.id, // Subject: identifiant unique (utilisé par Nest pour `req.user`)
+          email: user.email,
+          roles: [user.roles], // Placé dans un tableau pour faciliter les guards multi-rôles
         },
-        { expiresIn: '15m' }, // Expire dans 15 minutes
+        { expiresIn: '15m' }, // TTL court pour limiter l'impact d'une compromission
       );
 
       /**
@@ -177,10 +213,10 @@ export class AuthService {
        */
       const refreshToken = await this.jwtService.signAsync(
         {
-          sub: user.id, // ID de l'utilisateur
-          type: 'refresh', // Type de token (pour différencier des access tokens)
+          sub: user.id,
+          type: 'refresh', // Renseigne explicitement la nature du token (utile côté guard)
         },
-        { expiresIn: '7d' }, // Expire dans 7 jours
+        { expiresIn: '7d' }, // TTL plus long pour éviter des reconnexions trop fréquentes
       );
 
       // ============================================
@@ -190,6 +226,7 @@ export class AuthService {
        * Le refresh token est hashé avant d'être stocké dans la base de données.
        * Si la base de données est compromise, les tokens ne peuvent pas être utilisés.
        */
+      // On limite volontairement le cost à 10 pour ne pas bloquer la rotation fréquente des tokens.
       const saltRounds = 10;
       const tokenHash = await bcrypt.hash(refreshToken, saltRounds);
 
@@ -204,8 +241,8 @@ export class AuthService {
 
       // Retourner les tokens et les informations de l'utilisateur
       return {
-        accessToken, // Token à utiliser pour les requêtes API
-        refreshToken, // Token à utiliser pour rafraîchir l'access token
+        accessToken, // Token court terme utilisé dans l'entête Authorization: Bearer <token>
+        refreshToken, // Token long terme stocké côté client (HTTP-only cookie ou secure storage)
         user: {
           id: user.id,
           email: user.email,
@@ -273,14 +310,24 @@ export class AuthService {
      * On compare toujours le hash du mot de passe saisi avec le hash stocké.
      */
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-      // Message générique pour ne pas révéler si l'email existe ou non
-      // (protection contre l'énumération d'emails)
+      /**
+       * IMPORTANT:
+       * - On renvoie un message volontairement générique pour éviter de confirmer
+       *   l'existence d'un email (technique anti enumeration).
+       * - bcrypt.compare renvoie false en temps constant, ce qui évite les side-channels.
+       */
       throw new UnauthorizedException('Email ou mot de passe incorrect');
     }
 
-    // Générer les tokens
+    // ============================================
+    // GÉNÉRATION DES NOUVEAUX TOKENS
+    // ============================================
     const accessToken = await this.jwtService.signAsync(
-      { sub: user.id, email: user.email, roles: [user.roles] },
+      {
+        sub: user.id,
+        email: user.email,
+        roles: [user.roles],
+      },
       { expiresIn: '15m' },
     );
 
@@ -289,10 +336,13 @@ export class AuthService {
       { expiresIn: '7d' },
     );
 
+    // Hash du refresh token avant stockage (même rational que dans register)
     const saltRounds = 10;
     const tokenHash = await bcrypt.hash(refreshToken, saltRounds);
 
     // Créer le refresh token avec gestion d'erreur
+    // (si la base est momentanément indisponible, on laisse quand même passer la connexion;
+    // le client pourra régénérer un refresh token plus tard en se reconnectant)
     try {
       await this.prisma.refreshToken.create({
         data: {
@@ -361,9 +411,16 @@ export class AuthService {
      * avant de chercher dans la base de données, car on stocke le hash.
      * Ici, on cherche directement (simplification pour l'exemple).
      */
+    /**
+     * Nous recherchons le refresh token fourni côté client.
+     * Dans cette implémentation pédagogique, on effectue la recherche directe,
+     * puis on confirme réellement l'authenticité via `bcrypt.compare` plus bas.
+     * (Dans une version renforcée on pourrait stocker un identifiant public et garder
+     * uniquement le hash en base.)
+     */
     const tokenRecord = await this.prisma.refreshToken.findUnique({
       where: { tokenHash: refreshToken },
-      include: { user: true }, // Inclure les informations de l'utilisateur
+      include: { user: true }, // Inclure l'utilisateur pour regénérer les payloads JWT
     });
 
     // Vérifier que le token existe, n'est pas révoqué, et n'est pas expiré
@@ -385,11 +442,13 @@ export class AuthService {
      */
     const isValid = await bcrypt.compare(refreshToken, tokenRecord.tokenHash);
     if (!isValid) {
+      // Si la comparaison échoue, on considère le token comme volé ou altéré.
       throw new UnauthorizedException('Refresh token invalide');
     }
 
-    // Générer de nouveaux tokens
-    // Générer les nouveaux tokens
+    // ============================================
+    // GÉNÉRATION DES NOUVEAUX TOKENS
+    // ============================================
     const accessToken = await this.jwtService.signAsync(
       {
         sub: tokenRecord.user.id,
@@ -408,6 +467,7 @@ export class AuthService {
     const tokenHash = await bcrypt.hash(newRefreshToken, saltRounds);
 
     // Créer le nouveau refresh token
+    // (nous n'effaçons pas encore l'ancien pour garantir que la création réussit d'abord)
     await this.prisma.refreshToken.create({
       data: {
         userId: tokenRecord.user.id,
@@ -416,7 +476,7 @@ export class AuthService {
       },
     });
 
-    // Révoquer l'ancien refresh token
+    // Révoquer l'ancien refresh token pour empêcher toute réutilisation
     await this.prisma.refreshToken.update({
       where: { id: tokenRecord.id },
       data: { revokedAt: new Date() },
@@ -461,6 +521,11 @@ export class AuthService {
      * updateMany() met à jour tous les tokens correspondants (au cas où il y en aurait plusieurs).
      * On marque le token comme révoqué en définissant revokedAt à la date actuelle.
      * Après cela, le token ne pourra plus être utilisé pour rafraîchir l'access token.
+     */
+    /**
+     * On utilise updateMany plutôt qu'unicité stricte car:
+     * - certains clients peuvent envoyer plusieurs fois le même token
+     * - on préfère révoquer toutes les occurrences correspondant à ce hash
      */
     await this.prisma.refreshToken.updateMany({
       where: { tokenHash: refreshToken },

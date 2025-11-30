@@ -1,3 +1,30 @@
+/**
+ * FICHIER: components/ui/dropdown-menu.tsx
+ *
+ * DESCRIPTION:
+ * Wrapper autour de `@radix-ui/react-dropdown-menu` avec styles Tailwind uniformes.
+ * Fournit toutes les primitives (Trigger, Content, Item, CheckboxItem, etc.) déjà
+ * stylées pour usage direct dans l'app.
+ *
+ * UTILISATION:
+ * ```tsx
+ * <DropdownMenu>
+ *   <DropdownMenuTrigger asChild>
+ *     <Button>Options</Button>
+ *   </DropdownMenuTrigger>
+ *   <DropdownMenuContent>
+ *     <DropdownMenuItem>Profil</DropdownMenuItem>
+ *     <DropdownMenuCheckboxItem checked>Actif</DropdownMenuCheckboxItem>
+ *   </DropdownMenuContent>
+ * </DropdownMenu>
+ * ```
+ *
+ * TECHNIQUE:
+ * - Tous les composants forwardRef pour fonctionner avec Radix.
+ * - `cn` permet de surcharger les classes.
+ * - Icônes lucide-react intégrées pour radio/checkbox/submenus.
+ */
+
 'use client';
 
 import * as React from 'react';

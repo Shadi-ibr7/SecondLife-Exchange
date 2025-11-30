@@ -408,6 +408,24 @@ function ExchangeDetailPageContent() {
     );
   }
 
+  if (!otherUser) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <p className="mb-4 text-destructive">
+            Impossible de récupérer les informations utilisateur
+          </p>
+          <Button asChild>
+            <Link href="/exchanges">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Retour aux échanges
+            </Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   const allMessages = [...messages, ...optimisticMessages].sort((a, b) => {
     const dateA = new Date(a.createdAt || 0).getTime();
     const dateB = new Date(b.createdAt || 0).getTime();

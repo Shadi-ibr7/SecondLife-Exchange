@@ -1,3 +1,21 @@
+/**
+ * FICHIER: src/types/index.ts
+ *
+ * DESCRIPTION:
+ * Ce fichier centralise tous les types TypeScript partagés côté frontend.
+ * Il décrit la forme des entités (User, Item, Exchange, Theme, etc.),
+ * les DTOs utilisés par les formulaires, et les réponses des APIs.
+ *
+ * UTILISATION:
+ * - Importer ces interfaces pour typer les composants React, stores Zustand,
+ *   hooks, et clients API.
+ * - Facilite la synchronisation entre le frontend et le backend NestJS.
+ *
+ * NOTE:
+ * Certaines interfaces dérivent directement des schémas Prisma/DTO backend.
+ * Si l'API évolue, ce fichier doit être mis à jour pour éviter les incohérences.
+ */
+
 export interface User {
   id: string;
   email: string;

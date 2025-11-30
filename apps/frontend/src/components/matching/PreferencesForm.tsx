@@ -1,3 +1,25 @@
+/**
+ * FICHIER: components/matching/PreferencesForm.tsx
+ *
+ * DESCRIPTION:
+ * Formulaire interactif pour que l’utilisateur définisse ses préférences
+ * (catégories aimées/déconseillées, conditions, zone géographique…). Ces
+ * informations alimentent l’algorithme de matching pour personnaliser les
+ * recommandations.
+ *
+ * FONCTIONNALITÉS:
+ * - Ajout/suppression de catégories via badges + champs texte
+ * - Sélection/désélection des conditions souhaitées
+ * - Saisie du pays et rayon (pour filtrer géographiquement)
+ * - Sauvegarde des données via `matchingApi.savePreferences`
+ * - Feedback visuel (toast, état de chargement)
+ *
+ * TECHNIQUE:
+ * - `react-hook-form` + `zodResolver` pour la validation côté client
+ * - Composants UI (Card, Input, Badge, Button…) pour un rendu cohérent
+ * - Animations Framer Motion sur le titre
+ */
+
 'use client';
 
 import { useState } from 'react';

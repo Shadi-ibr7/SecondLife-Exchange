@@ -1,0 +1,295 @@
+/**
+ * FICHIER: admin.api.ts
+ *
+ * DESCRIPTION:
+ * Client API pour les routes admin.
+ */
+
+import axios from 'axios';
+import { ADMIN_API_BASE } from './admin.config';
+
+// Construire l'URL de base de l'API
+const getApiBaseURL = () => {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  // Le backend a un préfixe global /api/v1, donc on doit l'inclure
+  // Si l'URL contient déjà /api/v1, ne pas l'ajouter deux fois
+  if (apiUrl.includes('/api/v1')) {
+    return apiUrl;
+  }
+  // Sinon, ajouter /api/v1
+  return `${apiUrl}${ADMIN_API_BASE}`;
+};
+
+console.log('🔧 Admin API Base URL:', getApiBaseURL());
+
+const adminApiClient = axios.create({
+  baseURL: getApiBaseURL(),
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Intercepteur pour ajouter le token admin
+adminApiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('admin_access_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+    console.log('🔑 Token ajouté aux headers');
+  } else {
+    console.warn('⚠️  Pas de token admin trouvé dans localStorage');
+  }
+  return config;
+});
+
+// Intercepteur pour gérer les erreurs
+adminApiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('admin_access_token');
+      window.location.href = `/${process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7'}/login`;
+    }
+    return Promise.reject(error);
+  }
+);
+
+export const adminApi = {
+  // Auth
+  login: async (email: string, password: string) => {
+    try {
+      const url = '/auth/admin/login';
+      console.log('🔐 Tentative de connexion admin...');
+      console.log('📍 URL:', `${adminApiClient.defaults.baseURL}${url}`);
+      console.log('📧 Email:', email);
+      
+      const response = await adminApiClient.post(url, {
+        email,
+        password,
+      });
+      
+      if (response.data.accessToken) {
+        localStorage.setItem('admin_access_token', response.data.accessToken);
+        console.log('✅ Connexion réussie, token sauvegardé');
+      }
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Erreur de connexion admin:', error);
+      if (error.code === 'ECONNREFUSED' || error.message === 'Network Error') {
+        throw new Error(
+          'Impossible de contacter le serveur. Vérifiez que le backend est démarré sur http://localhost:4000'
+        );
+      }
+      throw error;
+    }
+  },
+
+  // Dashboard
+  getDashboardStats: async () => {
+    const adminBasePath = process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.get(`/${adminBasePath}/dashboard`);
+    return response.data;
+  },
+
+  // Users
+  getUsers: async (page = 1, limit = 20, search?: string) => {
+    const adminBasePath = process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
+    if (search) params.append('search', search);
+    const response = await adminApiClient.get(`/${adminBasePath}/users?${params.toString()}`);
+    return response.data;
+  },
+
+  getUserById: async (id: string) => {
+    const adminBasePath = process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.get(`/${adminBasePath}/users/${id}`);
+    return response.data;
+  },
+
+  banUser: async (id: string, reason?: string) => {
+    const adminBasePath = process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.patch(`/${adminBasePath}/users/${id}/ban`, { reason });
+    return response.data;
+  },
+
+  unbanUser: async (id: string) => {
+    const adminBasePath = process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.patch(`/${adminBasePath}/users/${id}/unban`);
+    return response.data;
+  },
+
+  // Items
+  getItems: async (page = 1, limit = 20, filters?: { ownerId?: string; category?: string; status?: string }) => {
+    const adminBasePath = process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
+    if (filters?.ownerId) params.append('ownerId', filters.ownerId);
+    if (filters?.category) params.append('category', filters.category);
+    if (filters?.status) params.append('status', filters.status);
+    const response = await adminApiClient.get(`/${adminBasePath}/items?${params.toString()}`);
+    return response.data;
+  },
+
+  archiveItem: async (id: string) => {
+    const adminBasePath = process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.patch(`/${adminBasePath}/items/${id}/archive`);
+    return response.data;
+  },
+
+  deleteItem: async (id: string) => {
+    const adminBasePath = process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.delete(`/${adminBasePath}/items/${id}`);
+    return response.data;
+  },
+
+  // Reports
+  getReports: async (page = 1, limit = 20, resolved?: boolean) => {
+    const adminBasePath = process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
+    if (resolved !== undefined) params.append('resolved', resolved.toString());
+    const response = await adminApiClient.get(`/${adminBasePath}/reports?${params.toString()}`);
+    return response.data;
+  },
+
+  resolveReport: async (id: string, banUser = false) => {
+    const adminBasePath = process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.patch(`/${adminBasePath}/reports/${id}/resolve`, { banUser });
+    return response.data;
+  },
+
+  // Themes
+  getThemes: async () => {
+    const adminBasePath = process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.get(`/${adminBasePath}/themes`);
+    // S'assurer qu'on retourne toujours un tableau
+    const data = response.data;
+    return Array.isArray(data) ? data : [];
+  },
+
+  getThemeById: async (id: string) => {
+    const adminBasePath = process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.get(`/${adminBasePath}/themes/${id}`);
+    return response.data;
+  },
+
+  createTheme: async (payload: {
+    title: string;
+    slug: string;
+    startOfWeek: string;
+    impactText?: string;
+    isActive?: boolean;
+  }) => {
+    const adminBasePath = process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.post(`/${adminBasePath}/themes`, payload);
+    return response.data;
+  },
+
+  updateTheme: async (
+    id: string,
+    payload: Partial<{
+      title: string;
+      slug: string;
+      startOfWeek: string;
+      impactText?: string;
+      isActive?: boolean;
+    }>
+  ) => {
+    const adminBasePath = process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.patch(`/${adminBasePath}/themes/${id}`, payload);
+    return response.data;
+  },
+
+  activateTheme: async (id: string) => {
+    const adminBasePath = process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.patch(`/${adminBasePath}/themes/${id}/activate`);
+    return response.data;
+  },
+
+  deleteTheme: async (id: string) => {
+    const adminBasePath = process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.delete(`/${adminBasePath}/themes/${id}`);
+    return response.data;
+  },
+
+  generateThemeSuggestions: async (id: string, locales?: string[]) => {
+    const adminBasePath = process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.post(`/${adminBasePath}/themes/${id}/suggestions`, {
+      locales,
+    });
+    return response.data;
+  },
+
+  getThemeSuggestions: async (
+    id: string,
+    page = 1,
+    limit = 10,
+    sort = '-createdAt'
+  ) => {
+    const adminBasePath = process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      sort,
+    });
+    const response = await adminApiClient.get(
+      `/${adminBasePath}/themes/${id}/suggestions?${params.toString()}`
+    );
+    return response.data;
+  },
+
+  getThemeSuggestionStats: async (id: string) => {
+    const adminBasePath = process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.get(
+      `/${adminBasePath}/themes/${id}/suggestions/stats`
+    );
+    return response.data;
+  },
+
+  generateTheme: async () => {
+    const adminBasePath = process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const token = localStorage.getItem('admin_access_token');
+    console.log('🔑 Token admin présent:', !!token);
+    console.log('📍 URL complète:', `${adminApiClient.defaults.baseURL}/${adminBasePath}/themes/generate`);
+    try {
+      const response = await adminApiClient.post(`/${adminBasePath}/themes/generate`);
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Erreur génération thème:', error);
+      console.error('📍 URL tentée:', `${adminApiClient.defaults.baseURL}/${adminBasePath}/themes/generate`);
+      console.error('📊 Status:', error.response?.status);
+      console.error('📊 Headers envoyés:', error.config?.headers);
+      throw error;
+    }
+  },
+
+  generateMonthlyThemes: async (month?: string) => {
+    const adminBasePath = process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    try {
+      const response = await adminApiClient.post(
+        `/${adminBasePath}/themes/generate-monthly`,
+        month ? { month } : {}
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Erreur génération thèmes mensuels:', error);
+      throw error;
+    }
+  },
+
+  // Eco Content
+  getEcoContent: async (page = 1, limit = 20) => {
+    const adminBasePath = process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
+    const response = await adminApiClient.get(`/${adminBasePath}/eco?${params.toString()}`);
+    return response.data;
+  },
+
+  // Logs
+  getLogs: async (page = 1, limit = 50, adminId?: string) => {
+    const adminBasePath = process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
+    if (adminId) params.append('adminId', adminId);
+    const response = await adminApiClient.get(`/${adminBasePath}/logs?${params.toString()}`);
+    return response.data;
+  },
+};
+

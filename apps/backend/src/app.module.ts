@@ -35,6 +35,7 @@ import { MatchingModule } from './modules/matching/matching.module'; // Algorith
 import { EcoModule } from './modules/eco/eco.module'; // Contenu écologique
 import { CommunityModule } from './modules/community/community.module'; // Communauté (forums)
 import { NotificationsModule } from './modules/notifications/notifications.module'; // Notifications
+import { AdminModule } from './modules/admin/admin.module'; // Administration
 
 // Import des fichiers de configuration
 import appConfig from './config/app.config'; // Configuration générale de l'app
@@ -138,6 +139,7 @@ import prismaConfig from './config/prisma.config'; // Configuration de la base d
     EcoModule,
     CommunityModule,
     NotificationsModule,
+    AdminModule,
   ],
 })
 /**

@@ -1,3 +1,27 @@
+/**
+ * FICHIER: components/ui/select.tsx
+ *
+ * DESCRIPTION:
+ * Composant Select basé sur Radix UI. Fournit toutes les primitives
+ * (Trigger, Content, Item, Group…) déjà stylées selon notre charte. Permet
+ * de créer des listes déroulantes accessibles avec scroll, labels, etc.
+ *
+ * UTILISATION:
+ * ```tsx
+ * <Select value={value} onValueChange={setValue}>
+ *   <SelectTrigger><SelectValue placeholder="Choisir..." /></SelectTrigger>
+ *   <SelectContent>
+ *     <SelectItem value="A">Option A</SelectItem>
+ *   </SelectContent>
+ * </Select>
+ * ```
+ *
+ * NOTES:
+ * - Animation + position gérées par Radix (popper/popup).
+ * - Icônes lucide-react pour l’indicateur de sélection.
+ * - `forwardRef` partout pour intégration avec React Hook Form.
+ */
+
 'use client';
 
 import * as React from 'react';

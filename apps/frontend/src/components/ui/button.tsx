@@ -1,3 +1,23 @@
+/**
+ * FICHIER: components/ui/button.tsx
+ *
+ * DESCRIPTION:
+ * Bouton réutilisable basé sur les primitives Radix + class-variance-authority.
+ * Permet de définir différentes variantes (default, outline, destructive, etc.)
+ * et tailles cohérentes dans toute l'application.
+ *
+ * UTILISATION:
+ * ```tsx
+ * <Button variant="outline" size="lg">Action</Button>
+ * <Button asChild><Link href="/...">Voir plus</Link></Button>
+ * ```
+ *
+ * TECHNIQUE:
+ * - `cva` centralise les classes Tailwind pour chaque variante/size.
+ * - `asChild` autorise le rendu comme `<a>` via Radix Slot.
+ * - `cn` fusionne proprement les classes dynamiques.
+ */
+
 import * as React from 'react';
 import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
@@ -39,9 +59,21 @@ export interface ButtonProps
   asChild?: boolean;
 }
 
+/**
+ * COMPOSANT: Button
+ *
+ * `asChild` permet de rendre un `<Link>` ou tout autre élément via Radix `Slot`
+ * sans perdre les styles. Astuce utile pour avoir des liens stylés comme des boutons.
+ */
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
+    // `Comp` sera soit un `<button>`, soit l’élément passé via `asChild`
     const Comp = asChild ? Slot : 'button';
+
+    /**
+     * `buttonVariants` calcule la classe finale selon `variant` + `size`.
+     * On merge avec `className` pour permettre des overrides ciblés.
+     */
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}

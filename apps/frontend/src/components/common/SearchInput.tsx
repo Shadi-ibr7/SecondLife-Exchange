@@ -1,3 +1,15 @@
+/**
+ * FICHIER: components/common/SearchInput.tsx
+ *
+ * DESCRIPTION:
+ * Champ de recherche compact (utilisé dans la navbar) pour rediriger vers
+ * `/explore` avec la query. Similaire à SearchOverlay mais inline.
+ *
+ * FLUX:
+ * - Récupère le texte saisi, `router.push` avec ?search=...
+ * - Icône Search positionnée en absolu, Input stylisé.
+ */
+
 'use client';
 
 import { useState } from 'react';

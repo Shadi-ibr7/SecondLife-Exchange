@@ -236,6 +236,58 @@ export const themesApi = {
   },
 
   /**
+   * Récupère les 4 semaines du mois actuel
+   */
+  async getMonthCalendar(month?: string): Promise<CalendarResponse> {
+    try {
+      const url = month
+        ? `/themes/calendar/month?month=${month}`
+        : '/themes/calendar/month';
+      const response = await apiClient.client.get<CalendarResponse>(url);
+      return response.data;
+    } catch (error) {
+      console.warn(
+        'Backend non disponible, utilisation des données mockées pour le calendrier mensuel'
+      );
+      // Fallback avec données mockées
+      const now = new Date();
+      const year = month ? parseInt(month.split('-')[0]) : now.getFullYear();
+      const monthIndex = month
+        ? parseInt(month.split('-')[1]) - 1
+        : now.getMonth();
+
+      const firstDay = new Date(year, monthIndex, 1);
+      let firstMonday = new Date(firstDay);
+      const dayOfWeek = firstMonday.getDay();
+      const daysToAdd = dayOfWeek === 0 ? 1 : (8 - dayOfWeek) % 7 || 7;
+      firstMonday.setDate(firstDay.getDate() + (daysToAdd === 7 ? 0 : daysToAdd));
+
+      const weeks = [];
+      for (let week = 0; week < 4; week++) {
+        const weekStart = new Date(firstMonday);
+        weekStart.setDate(firstMonday.getDate() + week * 7);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+
+        weeks.push({
+          weekStart: weekStart.toISOString(),
+          weekEnd: weekEnd.toISOString(),
+          title: week === 0 ? 'Thème à venir' : 'Thème à venir',
+          isActive: false,
+          themeId: null,
+          theme: null,
+        });
+      }
+
+      return {
+        weeks,
+        totalWeeks: 4,
+        currentWeek: -1,
+      };
+    }
+  },
+
+  /**
    * Récupère le calendrier des thèmes
    */
   async getCalendar(weeks: number = 12): Promise<CalendarResponse> {

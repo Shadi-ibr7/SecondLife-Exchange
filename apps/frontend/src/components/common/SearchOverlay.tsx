@@ -1,3 +1,22 @@
+/**
+ * FICHIER: components/common/SearchOverlay.tsx
+ *
+ * DESCRIPTION:
+ * Overlay plein écran pour lancer une recherche rapide depuis n’importe où.
+ * Gestion du focus, fermeture via Escape, suggestions rapides et redirection
+ * vers `/explore?search=...`.
+ *
+ * FLUX:
+ * - `isOpen` contrôle l’affichage (AnimatePresence + motion).
+ * - focus automatique sur l’input, blocage du scroll body.
+ * - submit => redirige vers /explore avec la query + ferme l’overlay.
+ * - suggestions cliquables (“Électronique”, etc.) pré-remplissent la recherche.
+ *
+ * UX:
+ * - Fond sombre (backdrop) et carte stylée.
+ * - Bouton clair pour refermer et bouton action “Rechercher”.
+ */
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';

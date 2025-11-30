@@ -146,6 +146,54 @@ export class WeeklyCronService {
   }
 
   // ============================================
+  // TÂCHE CRON: generateMonthlyThemes
+  // ============================================
+
+  /**
+   * Job cron mensuel pour générer les 4 thèmes du mois.
+   *
+   * EXPRESSION CRON: '0 0 1 * *'
+   * - 0: minute 0
+   * - 0: heure 0 (00:00)
+   * - 1: jour 1 du mois
+   * - *: tous les mois
+   * - *: tous les jours de la semaine
+   *
+   * Résultat: Le premier jour de chaque mois à 00:00
+   *
+   * PROCESSUS:
+   * 1. Génère les 4 thèmes du mois en une fois
+   * 2. Un thème par semaine (4 semaines)
+   * 3. Les utilisateurs peuvent voir les 4 thèmes à l'avance
+   */
+  @Cron('0 0 1 * *', {
+    name: 'monthly-themes-generation',
+    timeZone: 'Europe/Paris',
+  })
+  async generateMonthlyThemes(): Promise<void> {
+    this.logger.log('📅 Début du job mensuel de génération des thèmes');
+
+    try {
+      const now = new Date();
+      const themes = await this.themesService.generateMonthlyThemes(now);
+
+      this.logger.log(`✅ ${themes.length} thème(s) généré(s) pour le mois:`);
+      themes.forEach((theme, index) => {
+        this.logger.log(
+          `  ${index + 1}. "${theme.title}" - Semaine du ${new Date(theme.startOfWeek).toLocaleDateString('fr-FR')}`,
+        );
+      });
+
+      this.logger.log('🎉 Génération mensuelle des thèmes terminée avec succès');
+    } catch (error) {
+      this.logger.error(
+        `❌ Erreur lors de la génération mensuelle des thèmes: ${error.message}`,
+      );
+      this.logger.error(error.stack);
+    }
+  }
+
+  // ============================================
   // TÂCHE CRON: cleanupOldSuggestions
   // ============================================
 

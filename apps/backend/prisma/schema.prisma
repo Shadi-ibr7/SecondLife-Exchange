@@ -8,15 +8,15 @@ datasource db {
 }
 
 model User {
-  id                 String         @id @default(cuid())
-  email              String         @unique
-  createdAt          DateTime       @default(now())
+  id                 String              @id @default(cuid())
+  email              String              @unique
+  createdAt          DateTime            @default(now())
   avatarUrl          String?
   displayName        String
   passwordHash       String
-  roles              UserRole       @default(USER)
-  exchangesRequested Exchange[]     @relation("ExchangeRequester")
-  exchangesResponded Exchange[]     @relation("ExchangeResponder")
+  roles              UserRole            @default(USER)
+  exchangesRequested Exchange[]          @relation("ExchangeRequester")
+  exchangesResponded Exchange[]          @relation("ExchangeResponder")
   items              Item[]
   preferences        Preference?
   refreshTokens      RefreshToken[]
@@ -24,7 +24,9 @@ model User {
   threads            Thread[]
   posts              Post[]
   notificationTokens NotificationToken[]
-  chatMessages       ChatMessage[]  @relation("MessageSender")
+  chatMessages       ChatMessage[]       @relation("MessageSender")
+  ban                Ban?
+  adminLogs          AdminLog[]          @relation("AdminLogs")
 
   @@index([email])
   @@map("users")
@@ -144,15 +146,17 @@ model ItemPhoto {
 }
 
 model WeeklyTheme {
-  id          String          @id @default(cuid())
-  title       String
-  slug        String          @unique
-  startOfWeek DateTime
-  impactText  String?
-  isActive    Boolean         @default(false)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  suggestions SuggestedItem[]
+  id              String          @id @default(cuid())
+  title           String
+  slug            String          @unique
+  startOfWeek     DateTime
+  impactText      String?
+  photoUrl        String? // URL de la photo depuis Unsplash
+  photoUnsplashId String? // ID de la photo Unsplash pour attribution
+  isActive        Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  suggestions     SuggestedItem[]
 
   @@index([startOfWeek])
   @@index([isActive])
@@ -247,7 +251,6 @@ model NotificationToken {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, provider])
-
   @@index([userId])
   @@index([provider])
   @@map("notification_tokens")
@@ -292,4 +295,54 @@ enum ItemCategory {
   VINTAGE
   HANDCRAFT
   OTHER
+}
+
+model Ban {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  reason    String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("bans")
+}
+
+model Report {
+  id               String    @id @default(cuid())
+  type             String
+  message          String
+  targetUserId     String?
+  targetItemId     String?
+  targetExchangeId String?
+  targetPostId     String?
+  reporterId       String?
+  createdAt        DateTime  @default(now())
+  resolved         Boolean   @default(false)
+  resolvedAt       DateTime?
+  resolvedBy       String?
+
+  @@index([targetUserId])
+  @@index([targetItemId])
+  @@index([resolved])
+  @@index([createdAt])
+  @@map("reports")
+}
+
+model AdminLog {
+  id           String   @id @default(cuid())
+  action       String
+  resourceType String
+  resourceId   String?
+  adminId      String
+  meta         Json?
+  ip           String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+  admin        User     @relation("AdminLogs", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+  @@map("admin_logs")
 }

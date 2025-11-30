@@ -1,3 +1,20 @@
+/**
+ * FICHIER: components/common/ThemeToggle.tsx
+ *
+ * DESCRIPTION:
+ * Bouton permettant de basculer entre thème clair/sombre. Ajoute ou retire
+ * la classe `dark` sur `<html>` pour que Tailwind applique les styles `dark:`.
+ *
+ * FONCTIONNEMENT:
+ * - À l’init, on détecte le thème actuel via la classe sur `<html>` ou la
+ *   préférence système (`prefers-color-scheme`).
+ * - Au clic, on inverse `isDark` et on met à jour les classes `dark`/`light`.
+ *
+ * UX:
+ * - Utilise `Button` variant ghost + icônes Sun/Moon avec une rotation animée
+ *   pour indiquer visuellement le changement.
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';
