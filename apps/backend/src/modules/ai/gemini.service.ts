@@ -32,6 +32,25 @@ import { z } from 'zod';
 // Import des utilitaires
 import { HashUtil } from '../../common/utils/hash.util';
 
+// ============================================
+// TYPES POUR L'API GEMINI
+// ============================================
+
+/**
+ * Type pour une partie de la réponse Gemini (contenant le texte)
+ */
+type GeminiPart = { text?: string };
+
+/**
+ * Type pour un candidat de réponse Gemini
+ */
+type GeminiCandidate = { content?: { parts?: GeminiPart[] } };
+
+/**
+ * Type pour la réponse complète de l'API Gemini
+ */
+type GeminiResponse = { candidates?: GeminiCandidate[] };
+
 /**
  * INTERFACE: GeminiAnalysisResult
  *
@@ -346,7 +365,7 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
         throw new Error(`API Gemini error: ${response.status} - ${errorText}`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as GeminiResponse;
 
       if (
         !data ||
