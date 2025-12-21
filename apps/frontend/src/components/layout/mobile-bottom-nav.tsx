@@ -17,13 +17,20 @@ import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
-const mobileLinks = [
+type MobileLink = {
+  label: string;
+  href: string;
+  icon: typeof Home;
+  isProfile?: boolean;
+};
+
+const mobileLinks: MobileLink[] = [
   { label: 'Accueil', href: '/', icon: Home },
   { label: 'Explorer', href: '/explore', icon: Compass },
   { label: 'Proposer', href: '/item/new', icon: PlusCircle },
   { label: 'Échanger', href: '/exchanges', icon: RefreshCw },
   { label: 'Profil', href: '/profile', icon: User, isProfile: true },
-] as const;
+];
 
 export function MobileBottomNav() {
   const pathname = usePathname();

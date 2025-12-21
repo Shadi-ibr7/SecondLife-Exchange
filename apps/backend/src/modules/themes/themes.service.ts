@@ -193,8 +193,8 @@ export class ThemesService {
    *
    * @returns Thème actif avec suggestions, ou null si aucun thème n'est actif
    */
-  async getActiveTheme(): Promise<ThemeWithSuggestions | null> {
-    return this.prisma.weeklyTheme.findFirst({
+  async getActiveTheme(): Promise<any | null> {
+    const theme = await this.prisma.weeklyTheme.findFirst({
       where: { isActive: true },
       include: {
         suggestions: {
@@ -211,6 +211,18 @@ export class ThemesService {
         },
       },
     });
+
+    if (!theme) return null;
+
+    // Mapper pour inclure targetCategories comme array
+    return {
+      ...theme,
+      targetCategories: Array.isArray(theme.targetCategories)
+        ? theme.targetCategories
+        : theme.targetCategories
+        ? JSON.parse(theme.targetCategories as any)
+        : [],
+    };
   }
 
   // ============================================
@@ -224,7 +236,7 @@ export class ThemesService {
    * @returns Thème avec suggestions
    * @throws NotFoundException si le thème n'existe pas
    */
-  async getThemeById(id: string): Promise<ThemeWithSuggestions> {
+  async getThemeById(id: string): Promise<any> {
     const theme = await this.prisma.weeklyTheme.findUnique({
       where: { id },
       include: {
@@ -247,7 +259,15 @@ export class ThemesService {
       throw new NotFoundException('Thème non trouvé');
     }
 
-    return theme;
+    // Mapper pour inclure targetCategories comme array
+    return {
+      ...theme,
+      targetCategories: Array.isArray(theme.targetCategories)
+        ? theme.targetCategories
+        : theme.targetCategories
+        ? JSON.parse(theme.targetCategories as any)
+        : [],
+    };
   }
 
   // ============================================
@@ -273,7 +293,7 @@ export class ThemesService {
     from?: string,
     to?: string,
   ): Promise<{
-    themes: WeeklyTheme[];
+    themes: any[];
     total: number;
     page: number;
     limit: number;
@@ -303,8 +323,18 @@ export class ThemesService {
       this.prisma.weeklyTheme.count({ where }),
     ]);
 
+    // Mapper pour inclure targetCategories comme array
+    const themesWithCategories = themes.map((theme) => ({
+      ...theme,
+      targetCategories: Array.isArray(theme.targetCategories)
+        ? theme.targetCategories
+        : theme.targetCategories
+        ? JSON.parse(theme.targetCategories as any)
+        : [],
+    }));
+
     return {
-      themes,
+      themes: themesWithCategories,
       total,
       page,
       limit,
@@ -477,20 +507,39 @@ export class ThemesService {
       console.warn('⚠️  L\'IA n\'a pas pu générer le thème, utilisation du fallback');
     } else {
       console.log('✅ Thème généré par l\'IA:', aiTheme.title);
+      console.log('📋 Catégories ciblées:', aiTheme.targetCategories?.join(', ') || 'Aucune');
     }
 
     if (!aiTheme) {
-      // Fallback si l'IA échoue
-      const defaultTitle = `Thème de la semaine du ${startOfWeek.toLocaleDateString('fr-FR')}`;
-      const defaultSlug = `theme-${startOfWeek.toISOString().split('T')[0]}`;
+      // Fallback si l'IA échoue - générer un titre plus créatif avec slug unique
+      const monthNames = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+      const monthName = monthNames[startOfWeek.getMonth()];
+      const timestamp = Date.now();
+      const defaultTitle = `Échange Écoresponsable - ${monthName} ${startOfWeek.getFullYear()}`;
+      const defaultSlug = `echange-ecoresponsable-${monthName.toLowerCase()}-${startOfWeek.getFullYear()}-${timestamp}`;
+
+      // Vérifier si le slug existe déjà et générer un nouveau slug si nécessaire
+      let finalSlug = defaultSlug;
+      let slugExists = await this.prisma.weeklyTheme.findUnique({
+        where: { slug: finalSlug },
+      });
+      
+      if (slugExists) {
+        // Ajouter un suffixe aléatoire si le slug existe déjà
+        finalSlug = `${defaultSlug}-${Math.random().toString(36).substring(2, 9)}`;
+      }
 
       const theme = await this.prisma.weeklyTheme.create({
         data: {
           title: defaultTitle,
-          slug: defaultSlug,
+          slug: finalSlug,
           startOfWeek,
           impactText:
-            "Thème généré automatiquement pour encourager l'échange d'objets écoresponsables.",
+            "Ce thème a été généré automatiquement pour encourager les échanges d'objets écoresponsables. " +
+            "Profitez-en pour proposer, par exemple, une veste en jean vintage que vous ne portez plus, " +
+            "un service de vaisselle en céramique que vous souhaitez transmettre, ou encore un petit appareil " +
+            "électronique réparable (radio, console de jeux, enceinte) qui peut avoir une seconde vie chez quelqu'un d'autre.",
+          targetCategories: [],
           isActive: true,
         },
       });
@@ -557,6 +606,7 @@ export class ThemesService {
         impactText: aiTheme.impactText,
         photoUrl,
         photoUnsplashId,
+        targetCategories: aiTheme.targetCategories || [],
         isActive: isCurrentWeek,
       },
     });
@@ -653,6 +703,11 @@ export class ThemesService {
               slug: theme.slug,
               photoUrl: theme.photoUrl,
               impactText: theme.impactText,
+              targetCategories: Array.isArray(theme.targetCategories)
+                ? theme.targetCategories
+                : theme.targetCategories
+                ? JSON.parse(theme.targetCategories as any)
+                : [],
             }
           : null,
       });
@@ -726,6 +781,13 @@ export class ThemesService {
               title: activeTheme.title,
               startOfWeek: activeTheme.startOfWeek.toISOString(),
               slug: activeTheme.slug,
+              photoUrl: activeTheme.photoUrl,
+              impactText: activeTheme.impactText,
+              targetCategories: Array.isArray(activeTheme.targetCategories)
+                ? activeTheme.targetCategories
+                : activeTheme.targetCategories
+                ? JSON.parse(activeTheme.targetCategories as any)
+                : [],
             }
           : null,
       });

@@ -16,8 +16,10 @@ import {
   ArrowRight,
   Sparkles,
   Leaf,
+  Tag,
 } from 'lucide-react';
 import { useUnsplashImages } from '@/hooks/useUnsplashImages';
+import { ITEM_CATEGORY_LABELS } from '@/lib/constants';
 
 interface CalendarGridProps {
   weeks: CalendarWeek[];
@@ -72,10 +74,11 @@ export function CalendarGrid({
           selectedWeek.theme.impactText ||
           selectedWeek.theme.description ||
           "Les suggestions seront générées prochainement par l'IA.",
-        photoUrl: selectedWeek.theme.photoUrl,
+        photoUrl: selectedWeek.theme.photoUrl || null,
         query: selectedWeek.theme.title || 'sustainable theme',
         href: `/themes/${selectedWeek.theme.slug}`,
         isActiveWeek: selectedWeek.isActive,
+        targetCategories: selectedWeek.theme.targetCategories || [],
       }
     : {
         id: `coming-soon-${selectedWeek.weekStart}`,
@@ -86,6 +89,7 @@ export function CalendarGrid({
         query: 'sustainable future',
         href: '#',
         isActiveWeek: false,
+        targetCategories: [],
       };
 
   return (
@@ -173,6 +177,7 @@ interface WeeklyThemeCardProps {
     query: string;
     href: string;
     isActiveWeek: boolean;
+    targetCategories?: string[];
   };
   weekStart: Date;
   weekEnd: Date;
@@ -240,6 +245,20 @@ function WeeklyThemeCard({
           <h3 className="text-2xl font-bold leading-tight mb-2">
             {data.title}
           </h3>
+          {data.targetCategories && data.targetCategories.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {data.targetCategories.map((category) => (
+                <Badge
+                  key={category}
+                  variant="secondary"
+                  className="text-xs"
+                >
+                  <Tag className="mr-1 h-3 w-3" />
+                  {ITEM_CATEGORY_LABELS[category] || category}
+                </Badge>
+              ))}
+            </div>
+          )}
           <p className="text-base text-muted-foreground leading-relaxed">
             {data.description}
           </p>

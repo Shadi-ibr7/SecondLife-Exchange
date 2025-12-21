@@ -43,7 +43,7 @@ export function MobileDockNav() {
               : pathname.startsWith(link.href);
 
           // Pour le profil, utiliser l'avatar si connecté
-          const showAvatar = link.avatar && isAuthenticated && user;
+          const showAvatar = !!(link.avatar && isAuthenticated && user);
 
           return (
             <MobileDockItem

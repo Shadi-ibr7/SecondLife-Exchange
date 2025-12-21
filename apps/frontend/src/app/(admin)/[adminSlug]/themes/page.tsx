@@ -310,10 +310,10 @@ export default function AdminThemesPage() {
         <div className="flex flex-col sm:flex-row gap-2 md:self-start">
           <Button
             onClick={() => generateThemeMutation.mutate()}
-            disabled={generateThemeMutation.isLoading}
+            disabled={generateThemeMutation.isPending}
             variant="outline"
           >
-            {generateThemeMutation.isLoading ? (
+            {generateThemeMutation.isPending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Génération...
@@ -327,9 +327,9 @@ export default function AdminThemesPage() {
           </Button>
           <Button
             onClick={() => generateMonthlyThemesMutation.mutate()}
-            disabled={generateMonthlyThemesMutation.isLoading}
+            disabled={generateMonthlyThemesMutation.isPending}
           >
-            {generateMonthlyThemesMutation.isLoading ? (
+            {generateMonthlyThemesMutation.isPending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Génération...
@@ -458,10 +458,10 @@ export default function AdminThemesPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => activateThemeMutation.mutate(theme.id)}
-                        disabled={activateThemeMutation.isLoading}
+                        disabled={activateThemeMutation.isPending}
                         aria-label="Activer"
                       >
-                        {activateThemeMutation.isLoading ? (
+                        {activateThemeMutation.isPending ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                           <RefreshCw className="w-4 h-4" />
@@ -615,8 +615,8 @@ export default function AdminThemesPage() {
               >
                 Annuler
               </Button>
-              <Button type="submit" disabled={upsertThemeMutation.isLoading}>
-                {upsertThemeMutation.isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              <Button type="submit" disabled={upsertThemeMutation.isPending}>
+                {upsertThemeMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {editingThemeId ? 'Mettre à jour' : 'Créer'}
               </Button>
             </DialogFooter>
@@ -696,9 +696,9 @@ export default function AdminThemesPage() {
                     <Button
                       type="button"
                       onClick={handleGenerateSuggestions}
-                      disabled={generateSuggestionsMutation.isLoading}
+                      disabled={generateSuggestionsMutation.isPending}
                     >
-                      {generateSuggestionsMutation.isLoading && (
+                      {generateSuggestionsMutation.isPending && (
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       )}
                       Relancer l’IA

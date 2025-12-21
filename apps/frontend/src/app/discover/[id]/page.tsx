@@ -19,7 +19,7 @@
  * - Utilisation de date-fns pour formater la date en français
  */
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { ecoApi } from '@/lib/eco.api';
@@ -39,13 +39,10 @@ import {
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
-export default function EcoContentDetailPage({
-  params,
-}: {
-  params: { id: string };
-}) {
-  const { id } = params;
+export default function EcoContentDetailPage() {
+  const params = useParams();
   const router = useRouter();
+  const id = params.id as string;
 
   const {
     data: content,

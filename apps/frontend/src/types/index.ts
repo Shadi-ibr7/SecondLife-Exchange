@@ -86,6 +86,8 @@ export interface WeeklyTheme {
   createdAt: string;
   updatedAt: string;
   suggestions: SuggestedItem[];
+  targetCategories?: string[]; // Catégories ciblées par le thème (ex: ["VINTAGE", "CLOTHING"])
+  photoUrl?: string; // URL de la photo du thème depuis Unsplash
 }
 
 export interface SuggestedItem {
@@ -249,6 +251,8 @@ export interface WeeklyTheme {
   createdAt: string;
   updatedAt: string;
   suggestions: SuggestedItem[];
+  targetCategories?: string[]; // Catégories ciblées par le thème (ex: ["VINTAGE", "CLOTHING"])
+  photoUrl?: string; // URL de la photo du thème depuis Unsplash
 }
 
 export interface SuggestedItem {
@@ -556,9 +560,12 @@ export interface CalendarWeek {
   theme: {
     id: string;
     title: string;
-    description: string;
+    description?: string;
     startOfWeek: string;
     slug: string;
+    photoUrl?: string;
+    impactText?: string;
+    targetCategories?: string[];
   } | null;
 }
 

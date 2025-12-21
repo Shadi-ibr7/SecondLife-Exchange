@@ -153,6 +153,7 @@ model WeeklyTheme {
   impactText      String?
   photoUrl        String? // URL de la photo depuis Unsplash
   photoUnsplashId String? // ID de la photo Unsplash pour attribution
+  targetCategories Json? // Catégories ciblées par le thème (ex: ["VINTAGE", "CLOTHING"])
   isActive        Boolean         @default(false)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt

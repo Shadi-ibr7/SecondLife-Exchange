@@ -24,13 +24,15 @@ import { motion } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { CalendarGrid } from '@/components/themes/CalendarGrid';
 import { themesApi } from '@/lib/themes.api';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, Sparkles, AlertCircle } from 'lucide-react';
+import { Calendar, Sparkles, AlertCircle, Tag } from 'lucide-react';
 import Link from 'next/link';
 import { useUnsplashImages } from '@/hooks/useUnsplashImages';
 import { SuggestedItem } from '@/types';
+import { ITEM_CATEGORY_LABELS } from '@/lib/constants';
 
 export default function ThemesPage() {
   const [selectedWeekIndex, setSelectedWeekIndex] = useState(0);
@@ -151,6 +153,20 @@ export default function ThemesPage() {
                 <h3 className="text-2xl font-semibold md:text-3xl">
                   {activeTheme.title}
                 </h3>
+                {activeTheme.targetCategories && activeTheme.targetCategories.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {activeTheme.targetCategories.map((category) => (
+                      <Badge
+                        key={category}
+                        variant="secondary"
+                        className="text-sm"
+                      >
+                        <Tag className="mr-1 h-3.5 w-3.5" />
+                        {ITEM_CATEGORY_LABELS[category] || category}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
                 {activeTheme.impactText && (
                   <p className="text-muted-foreground">
                     {activeTheme.impactText}

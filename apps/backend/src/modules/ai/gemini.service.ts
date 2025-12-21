@@ -1,16 +1,16 @@
 /**
  * FICHIER: gemini.service.ts
- * 
+ *
  * DESCRIPTION:
  * Ce service gère l'intégration avec l'API Google Gemini pour l'analyse IA.
  * Il permet d'analyser des items et de générer des suggestions d'objets.
- * 
+ *
  * FONCTIONNALITÉS:
  * - Analyse automatique d'items (catégorisation, tags, résumé, conseils de réparation)
  * - Génération de suggestions d'objets basées sur des thèmes
  * - Validation des réponses IA avec Zod
  * - Gestion des erreurs et timeouts
- * 
+ *
  * CONFIGURATION:
  * - Utilise la clé API Gemini depuis les variables d'environnement
  * - Modèle par défaut: gemini-2.5-flash (rapide et économique)
@@ -34,26 +34,26 @@ import { HashUtil } from '../../common/utils/hash.util';
 
 /**
  * INTERFACE: GeminiAnalysisResult
- * 
+ *
  * Résultat de l'analyse IA d'un item.
  * Contient la catégorie suggérée, les tags, un résumé et des conseils de réparation.
  */
 export interface GeminiAnalysisResult {
   category: ItemCategory; // Catégorie suggérée par l'IA
-  tags: string[];         // Tags pertinents (3-4 tags)
-  aiSummary: string;      // Résumé concis (max 240 caractères)
-  aiRepairTip: string;    // Conseil de réparation (max 240 caractères)
+  tags: string[]; // Tags pertinents (3-4 tags)
+  aiSummary: string; // Résumé concis (max 240 caractères)
+  aiRepairTip: string; // Conseil de réparation (max 240 caractères)
 }
 
 /**
  * INTERFACE: AnalyzeItemRequest
- * 
+ *
  * Requête pour analyser un item avec l'IA.
  */
 export interface AnalyzeItemRequest {
-  title: string;        // Titre de l'item
+  title: string; // Titre de l'item
   description: string; // Description de l'item
-  locale?: string;      // Langue (défaut: 'fr')
+  locale?: string; // Langue (défaut: 'fr')
 }
 
 // ============================================
@@ -65,16 +65,16 @@ export interface AnalyzeItemRequest {
  * Utilisé pour valider les réponses de l'API Gemini.
  */
 const SuggestedItemDraftSchema = z.object({
-  name: z.string().min(1).max(120),                    // Nom de l'objet
-  category: z.string().min(1).max(50),                // Catégorie
-  country: z.string().min(1).max(50),                  // Pays d'origine
-  era: z.string().max(50).nullable(),                  // Époque (optionnel)
-  materials: z.string().max(200).nullable(),           // Matériaux (optionnel)
-  ecoReason: z.string().min(1).max(240),              // Raison écologique
+  name: z.string().min(1).max(120), // Nom de l'objet
+  category: z.string().min(1).max(50), // Catégorie
+  country: z.string().min(1).max(50), // Pays d'origine
+  era: z.string().max(50).nullable(), // Époque (optionnel)
+  materials: z.string().max(200).nullable(), // Matériaux (optionnel)
+  ecoReason: z.string().min(1).max(240), // Raison écologique
   repairDifficulty: z.enum(['faible', 'moyenne', 'elevee']), // Difficulté de réparation
-  popularity: z.number().int().min(1).max(5),         // Popularité (1-5)
-  tags: z.array(z.string().max(30)).max(8),           // Tags (max 8)
-  photoRef: z.string().max(200).nullable(),          // Référence photo (optionnel)
+  popularity: z.number().int().min(1).max(5), // Popularité (1-5)
+  tags: z.array(z.string().max(30)).max(8), // Tags (max 8)
+  photoRef: z.string().max(200).nullable(), // Référence photo (optionnel)
 });
 
 /**
@@ -85,15 +85,36 @@ const SuggestedItemsResponseSchema = z.object({
 });
 
 /**
+ * Schéma Zod pour valider un thème généré par l'IA.
+ *
+ * Note: impactText est volontairement autorisé jusqu'à ~800 caractères
+ * pour permettre un texte explicatif riche avec plusieurs exemples concrets.
+ */
+const ThemeDraftSchema = z.object({
+  title: z.string().min(1).max(200), // Titre du thème
+  slug: z.string().min(1).max(100), // Slug URL-friendly
+  impactText: z.string().min(1).max(800), // Texte explicatif + exemples
+  photoSearchQuery: z.string().min(1).max(100), // Terme de recherche Unsplash
+  targetCategories: z.array(z.string()).min(1).max(3), // 1 à 3 catégories ciblées
+});
+
+/**
+ * TYPE: ThemeDraft
+ *
+ * Type TypeScript inféré depuis le schéma Zod.
+ */
+export type ThemeDraft = z.infer<typeof ThemeDraftSchema>;
+
+/**
  * TYPE: SuggestedItemDraft
- * 
+ *
  * Type TypeScript inféré depuis le schéma Zod.
  */
 export type SuggestedItemDraft = z.infer<typeof SuggestedItemDraftSchema>;
 
 /**
  * TYPE: SuggestedItemsResponse
- * 
+ *
  * Type pour la réponse complète de suggestions.
  */
 export type SuggestedItemsResponse = z.infer<
@@ -102,30 +123,30 @@ export type SuggestedItemsResponse = z.infer<
 
 /**
  * INTERFACE: SuggestedItemWithMetadata
- * 
+ *
  * Étend SuggestedItemDraft avec les métadonnées IA.
  * Utilisé pour stocker les suggestions avec leurs métadonnées.
  */
 export interface SuggestedItemWithMetadata extends SuggestedItemDraft {
-  aiModel?: string;        // Modèle IA utilisé
-  aiPromptHash?: string;   // Hash du prompt (pour déduplication)
-  aiRaw?: any;             // Réponse brute de l'IA (pour débogage)
+  aiModel?: string; // Modèle IA utilisé
+  aiPromptHash?: string; // Hash du prompt (pour déduplication)
+  aiRaw?: any; // Réponse brute de l'IA (pour débogage)
 }
 
 /**
  * INTERFACE: GenerateSuggestionsRequest
- * 
+ *
  * Requête pour générer des suggestions d'objets basées sur un thème.
  */
 export interface GenerateSuggestionsRequest {
-  themeTitle: string;  // Titre du thème
-  locale: string[];    // Locales cibles (ex: ['FR', 'MA', 'JP'])
-  trends?: any;        // Tendances (optionnel)
+  themeTitle: string; // Titre du thème
+  locale: string[]; // Locales cibles (ex: ['FR', 'MA', 'JP'])
+  trends?: any; // Tendances (optionnel)
 }
 
 /**
  * SERVICE: GeminiService
- * 
+ *
  * Service pour interagir avec l'API Google Gemini.
  */
 @Injectable()
@@ -137,14 +158,14 @@ export class GeminiService {
 
   /**
    * Configuration IA
-   * 
+   *
    * Contient la clé API, le modèle, le timeout, etc.
    */
   private readonly aiConfig;
 
   /**
    * CONSTRUCTEUR
-   * 
+   *
    * Charge la configuration IA et configure les fallbacks.
    */
   constructor(private readonly configService: ConfigService) {
@@ -180,16 +201,16 @@ export class GeminiService {
   // ============================================
   // MÉTHODE: analyzeItem (Analyser un item)
   // ============================================
-  
+
   /**
    * Analyse un item avec Gemini pour auto-catégorisation et suggestions.
-   * 
+   *
    * PROCESSUS:
    * 1. Construit un prompt avec le titre et la description
    * 2. Appelle l'API Gemini
    * 3. Parse et valide la réponse JSON
    * 4. Retourne le résultat structuré
-   * 
+   *
    * @param request - Requête d'analyse (title, description, locale)
    * @returns Résultat de l'analyse (category, tags, summary, repairTip) ou null si erreur
    */
@@ -220,16 +241,16 @@ export class GeminiService {
   // ============================================
   // MÉTHODE PRIVÉE: buildAnalysisPrompt
   // ============================================
-  
+
   /**
    * Construit le prompt pour l'analyse Gemini d'un item.
-   * 
+   *
    * Le prompt demande à l'IA de:
    * - Catégoriser l'objet
    * - Générer des tags pertinents
    * - Créer un résumé concis
    * - Proposer des conseils de réparation
-   * 
+   *
    * @param request - Requête d'analyse
    * @returns Prompt texte pour l'API Gemini
    */
@@ -263,20 +284,20 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
   // ============================================
   // MÉTHODE PRIVÉE: callGeminiAPI
   // ============================================
-  
+
   /**
    * Appelle l'API Google Gemini avec un prompt.
-   * 
+   *
    * FONCTIONNEMENT:
    * - Construit l'URL de l'API avec la clé API
    * - Envoie une requête POST avec le prompt
    * - Gère le timeout (annule la requête si trop longue)
    * - Parse la réponse JSON
-   * 
+   *
    * CONFIGURATION:
    * - temperature: 0.3 (réponses plus déterministes)
    * - maxOutputTokens: 500 (limite la longueur de la réponse)
-   * 
+   *
    * @param prompt - Prompt texte à envoyer à l'IA
    * @returns Réponse texte de l'IA, ou null si erreur
    * @throws Error si l'API retourne une erreur ou timeout
@@ -328,11 +349,21 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
       const data = await response.json();
 
       if (
+        !data ||
         !data.candidates ||
         !data.candidates[0] ||
-        !data.candidates[0].content
+        !data.candidates[0].content ||
+        !data.candidates[0].content.parts ||
+        !data.candidates[0].content.parts[0] ||
+        !data.candidates[0].content.parts[0].text
       ) {
-        throw new Error('Réponse Gemini invalide');
+        this.logger.error(
+          'Réponse Gemini invalide:',
+          JSON.stringify(data, null, 2),
+        );
+        throw new Error(
+          'Réponse Gemini invalide: structure de réponse inattendue',
+        );
       }
 
       return data.candidates[0].content.parts[0].text;
@@ -350,10 +381,10 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
   // ============================================
   // MÉTHODE PRIVÉE: parseGeminiResponse
   // ============================================
-  
+
   /**
    * Parse et valide la réponse Gemini pour l'analyse d'un item.
-   * 
+   *
    * PROCESSUS:
    * 1. Nettoie la réponse (enlève markdown si présent)
    * 2. Parse le JSON
@@ -361,7 +392,7 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
    * 4. Valide la catégorie (doit être une valeur valide de ItemCategory)
    * 5. Valide les tags (doit être un tableau non vide)
    * 6. Tronque les textes si trop longs (max 240 caractères)
-   * 
+   *
    * @param response - Réponse texte de l'API Gemini
    * @returns Résultat structuré de l'analyse
    * @throws BadRequestException si la réponse est invalide
@@ -421,20 +452,20 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
   // ============================================
   // MÉTHODE: generateSuggestions
   // ============================================
-  
+
   /**
    * Génère des suggestions d'objets pour un thème hebdomadaire.
-   * 
+   *
    * PROCESSUS:
    * 1. Construit un prompt avec le thème et les locales
    * 2. Appelle l'API Gemini
    * 3. Parse et valide la réponse avec Zod
    * 4. Ajoute les métadonnées IA (modèle, hash du prompt, réponse brute)
-   * 
+   *
    * DIVERSITÉ:
    * - Le prompt demande une diversité géographique (max 2 par pays)
    * - Le prompt demande une diversité temporelle (max 2 par époque)
-   * 
+   *
    * @param request - Requête de génération (themeTitle, locale, trends?)
    * @returns Liste de suggestions avec métadonnées IA
    */
@@ -488,16 +519,16 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
   // ============================================
   // MÉTHODE PRIVÉE: buildSuggestionsPrompt
   // ============================================
-  
+
   /**
    * Construit le prompt pour la génération de suggestions d'objets.
-   * 
+   *
    * Le prompt demande à l'IA de:
    * - Proposer 20 objets maximum
    * - Respecter la diversité (max 2 par pays et par époque)
    * - Préférer vintage, artisanat, objets réparables
    * - Focus sur les pays spécifiés dans locale
-   * 
+   *
    * @param request - Requête de génération
    * @returns Prompt texte pour l'API Gemini
    */
@@ -537,15 +568,15 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
   // ============================================
   // MÉTHODE PRIVÉE: parseSuggestionsResponse
   // ============================================
-  
+
   /**
    * Parse et valide la réponse Gemini pour les suggestions.
-   * 
+   *
    * PROCESSUS:
    * 1. Nettoie la réponse (enlève markdown si présent)
    * 2. Parse le JSON
    * 3. Valide avec le schéma Zod SuggestedItemsResponseSchema
-   * 
+   *
    * @param response - Réponse texte de l'API Gemini
    * @returns Réponse validée avec Zod
    * @throws BadRequestException si la réponse est invalide
@@ -573,16 +604,16 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
   // ============================================
   // MÉTHODE: generateTheme
   // ============================================
-  
+
   /**
    * Génère un thème hebdomadaire avec l'IA.
-   * 
+   *
    * PROCESSUS:
    * 1. Construit un prompt pour générer un thème créatif et écologique
    * 2. Appelle l'API Gemini
    * 3. Parse et valide la réponse
    * 4. Retourne le thème avec titre, slug, impactText et terme de recherche pour photo
-   * 
+   *
    * @param date - Date de la semaine pour le thème
    * @returns Thème généré avec titre, slug, impactText et photoSearchQuery
    */
@@ -591,23 +622,32 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
     slug: string;
     impactText: string;
     photoSearchQuery: string;
+    targetCategories: string[];
   } | null> {
     if (!this.aiConfig.geminiApiKey) {
-      this.logger.error('❌ Clé API Gemini non configurée ! Vérifiez AI_GEMINI_API_KEY dans .env');
+      this.logger.error(
+        '❌ Clé API Gemini non configurée ! Vérifiez AI_GEMINI_API_KEY dans .env',
+      );
       return null;
     }
 
-    this.logger.log(`🔑 Clé API Gemini: ${this.aiConfig.geminiApiKey ? '✅ Configurée' : '❌ Manquante'}`);
+    this.logger.log(
+      `🔑 Clé API Gemini: ${this.aiConfig.geminiApiKey ? '✅ Configurée' : '❌ Manquante'}`,
+    );
 
     try {
       const prompt = this.buildThemePrompt(date);
-      
-      this.logger.log(`🎨 Génération de thème pour la semaine du ${date.toLocaleDateString('fr-FR')}`);
+
+      this.logger.log(
+        `🎨 Génération de thème pour la semaine du ${date.toLocaleDateString('fr-FR')}`,
+      );
 
       const response = await this.callGeminiAPI(prompt);
 
       if (!response) {
-        this.logger.warn('⚠️  Réponse Gemini vide, génération de thème ignorée');
+        this.logger.warn(
+          '⚠️  Réponse Gemini vide, génération de thème ignorée',
+        );
         return null;
       }
 
@@ -616,7 +656,9 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
       this.logger.log(`✅ Thème généré: "${parsed.title}"`);
       return parsed;
     } catch (error: any) {
-      this.logger.error(`❌ Erreur lors de la génération de thème: ${error.message}`);
+      this.logger.error(
+        `❌ Erreur lors de la génération de thème: ${error.message}`,
+      );
       this.logger.error(`Stack: ${error.stack}`);
       return null;
     }
@@ -625,7 +667,7 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
   // ============================================
   // MÉTHODE PRIVÉE: buildThemePrompt
   // ============================================
-  
+
   /**
    * Construit le prompt pour la génération de thème hebdomadaire.
    */
@@ -639,21 +681,46 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
     });
 
     return `Rôle: Tu es un créateur de thèmes hebdomadaires pour une plateforme d'échange d'objets écoresponsables.
-Tâche: Créer un thème inspirant pour la semaine du ${weekFormatted}.
+Tâche: Créer un thème inspirant et créatif pour la semaine du ${weekFormatted}.
+
+IMPORTANT - Le titre du thème doit être:
+- Créatif, accrocheur et mémorable (PAS juste "Thème de la semaine du...")
+- Inspirant et engageant
+- Spécifique à une ou plusieurs catégories d'objets
+- Exemples de BONS titres: "Objets Vintage des Années 80", "Artisanat Local et Fait Main", "Électronique Durable et Réparable", "Livres de Science-Fiction Rétro", "Outils de Jardinage Écologiques", "Jouets en Bois Naturel", "Art et Créations Originales", "Vêtements Vintage et Mode Circulaire"
+- Exemples de MAUVAIS titres: "Thème de la semaine du 29/11/2025", "Échange d'objets", "Thème écologique"
+
+Catégories d'objets disponibles sur la plateforme:
+- CLOTHING (Vêtements, chaussures, accessoires)
+- ELECTRONICS (Électronique, smartphones, ordinateurs, gadgets)
+- BOOKS (Livres, romans, manuels, bandes dessinées)
+- HOME (Maison, décoration, mobilier, ustensiles)
+- TOOLS (Outils, bricolage, jardinage)
+- TOYS (Jouets, jeux de société, puzzles)
+- SPORTS (Équipement sportif, vêtements de sport)
+- ART (Peintures, sculptures, objets d'art)
+- VINTAGE (Objets rétro, collection, antiquités)
+- HANDCRAFT (Artisanat, objets faits main, créations)
+- OTHER (Autre)
 
 Le thème doit:
+- Mettre en avant 1 à 3 catégories principales (choisies parmi la liste ci-dessus)
 - Être créatif et engageant
 - Mettre en avant l'échange, la réparation, la réutilisation
 - Être écologique et durable
 - Inspirer les utilisateurs à échanger des objets vintage, artisanaux, réparables
 - Être adapté à un public international (France, Maroc, Japon, USA, Brésil)
+- Varier chaque semaine pour éviter la répétition
 
 Réponds UNIQUEMENT en JSON valide (pas de texte hors JSON):
 {
-  "title": string,              // Titre du thème (ex: "Objets artisanaux du monde")
-  "slug": string,              // Slug URL-friendly (ex: "objets-artisanaux-monde")
-  "impactText": string,        // Texte d'impact (2-3 phrases expliquant pourquoi ce thème)
-  "photoSearchQuery": string    // Terme de recherche pour trouver une photo sur Unsplash (ex: "handmade crafts sustainable")
+  "title": string,              // Titre créatif et accrocheur (ex: "Objets Vintage des Années 80", "Artisanat Local et Fait Main")
+  "slug": string,               // Slug URL-friendly (ex: "objets-vintage-annees-80", "artisanat-local-fait-main")
+  "impactText": string,         // Texte explicatif (3-5 phrases) qui décrit le thème, explique son intérêt écologique
+                                // ET donne au moins 2 à 3 exemples concrets d'objets typiques de ce thème
+                                // (ex: "veste en jean vintage", "console de jeux des années 90", "service de vaisselle en céramique fait main")
+  "photoSearchQuery": string,   // Terme de recherche pour trouver une photo sur Unsplash (en anglais, ex: "vintage 80s objects", "handmade crafts sustainable")
+  "targetCategories": string[]  // 1 à 3 catégories principales ciblées par ce thème (ex: ["VINTAGE", "CLOTHING"], ["HANDCRAFT", "HOME"])
 }
 
 Sortie: Réponds uniquement le JSON, sans texte supplémentaire.`;
@@ -662,7 +729,7 @@ Sortie: Réponds uniquement le JSON, sans texte supplémentaire.`;
   // ============================================
   // MÉTHODE PRIVÉE: parseThemeResponse
   // ============================================
-  
+
   /**
    * Parse et valide la réponse Gemini pour un thème.
    */
@@ -671,6 +738,7 @@ Sortie: Réponds uniquement le JSON, sans texte supplémentaire.`;
     slug: string;
     impactText: string;
     photoSearchQuery: string;
+    targetCategories: string[];
   } {
     try {
       const cleanResponse = response
@@ -680,17 +748,22 @@ Sortie: Réponds uniquement le JSON, sans texte supplémentaire.`;
 
       const parsed = JSON.parse(cleanResponse);
 
-      // Validation basique
-      if (!parsed.title || !parsed.slug || !parsed.impactText || !parsed.photoSearchQuery) {
-        throw new Error('Champs manquants dans la réponse');
-      }
+      // Validation avec Zod
+      const validated = ThemeDraftSchema.parse(parsed);
 
       // Nettoyer et valider les longueurs
       return {
-        title: parsed.title.trim().substring(0, 200),
-        slug: parsed.slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').substring(0, 100),
-        impactText: parsed.impactText.trim().substring(0, 500),
-        photoSearchQuery: parsed.photoSearchQuery.trim().substring(0, 100),
+        title: validated.title.trim().substring(0, 200),
+        slug: validated.slug
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9-]/g, '-')
+          .substring(0, 100),
+        impactText: validated.impactText.trim().substring(0, 500),
+        photoSearchQuery: validated.photoSearchQuery.trim().substring(0, 100),
+        targetCategories: validated.targetCategories
+          .map((cat) => cat.trim().toUpperCase())
+          .slice(0, 3),
       };
     } catch (error) {
       this.logger.error(`Erreur parsing réponse thème: ${error.message}`);
@@ -701,14 +774,14 @@ Sortie: Réponds uniquement le JSON, sans texte supplémentaire.`;
   // ============================================
   // MÉTHODE: testConnection
   // ============================================
-  
+
   /**
    * Teste la connexion à l'API Gemini.
-   * 
+   *
    * UTILISATION:
    * - Vérifier que la clé API est valide
    * - Vérifier que l'API est accessible
-   * 
+   *
    * @returns true si la connexion réussit, false sinon
    */
   async testConnection(): Promise<boolean> {
