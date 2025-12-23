@@ -134,7 +134,7 @@ export default function RootLayout({
         {/* Providers: Enveloppe avec React Query, thème, auth */}
         <Providers>
           <AdminLayoutWrapper>
-          {/* Contenu principal (pages) */}
+            {/* Contenu principal (pages) */}
             <main className="pb-20 md:pb-0">{children}</main>
           </AdminLayoutWrapper>
 
