@@ -10,14 +10,15 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ADMIN_BASE_PATH } from '@/lib/admin.config';
+import { getAdminToken } from '@/lib/admin.token';
 
 export default function AdminIndexPage() {
   const router = useRouter();
 
   useEffect(() => {
     // Vérifier si l'admin est authentifié
-    const token = localStorage.getItem('admin_access_token');
-    
+    const token = getAdminToken();
+
     if (token) {
       // Si authentifié, rediriger vers le dashboard
       router.replace(`/${ADMIN_BASE_PATH}/dashboard`);

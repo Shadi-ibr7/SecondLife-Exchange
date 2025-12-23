@@ -16,6 +16,7 @@ import {
   ADMIN_LOGIN_ENDPOINT,
   getAdminApiBaseUrl,
 } from '@/lib/admin.api';
+import { setAdminToken } from '@/lib/admin.token';
 import { ADMIN_BASE_PATH } from '@/lib/admin.config';
 import { toast } from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
@@ -48,6 +49,9 @@ export default function AdminLoginPage() {
     try {
       const { data, status } = await adminApi.login(email, password);
       console.log('LOGIN RESPONSE', status, data);
+      if (data?.accessToken) {
+        setAdminToken(data.accessToken);
+      }
       toast.success('Connexion réussie');
       router.push(`/${ADMIN_BASE_PATH}/dashboard`);
     } catch (error: unknown) {

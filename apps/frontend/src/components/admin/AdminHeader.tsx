@@ -10,12 +10,13 @@
 import { LogOut, Menu } from 'lucide-react';
 import { ADMIN_BASE_PATH } from '@/lib/admin.config';
 import { useRouter } from 'next/navigation';
+import { clearAdminToken } from '@/lib/admin.token';
 
 export function AdminHeader() {
   const router = useRouter();
 
   const handleLogout = () => {
-    localStorage.removeItem('admin_access_token');
+    clearAdminToken();
     router.push(`/${ADMIN_BASE_PATH}/login`);
   };
 
