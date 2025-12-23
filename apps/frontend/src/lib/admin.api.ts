@@ -22,6 +22,9 @@ const getApiBaseURL = () => {
 
 console.log('🔧 Admin API Base URL:', getApiBaseURL());
 
+export const ADMIN_LOGIN_ENDPOINT = '/auth/admin/login';
+export const getAdminApiBaseUrl = getApiBaseURL;
+
 const adminApiClient = axios.create({
   baseURL: getApiBaseURL(),
   timeout: 10000,
@@ -56,23 +59,25 @@ adminApiClient.interceptors.response.use(
 
 export const adminApi = {
   // Auth
-  login: async (email: string, password: string) => {
+  login: async (
+    email: string,
+    password: string
+  ): Promise<{ data: any; status: number }> => {
     try {
-      const url = '/auth/admin/login';
-      console.log('🔐 Tentative de connexion admin...');
-      console.log('📍 URL:', `${adminApiClient.defaults.baseURL}${url}`);
-      console.log('📧 Email:', email);
+      const url = ADMIN_LOGIN_ENDPOINT;
+      console.log('LOGIN REQUEST', `${adminApiClient.defaults.baseURL}${url}`, { email });
       
       const response = await adminApiClient.post(url, {
         email,
         password,
       });
+      console.log('LOGIN RESPONSE', response.status, response.data);
       
       if (response.data.accessToken) {
         localStorage.setItem('admin_access_token', response.data.accessToken);
         console.log('✅ Connexion réussie, token sauvegardé');
       }
-      return response.data;
+      return { data: response.data, status: response.status };
     } catch (error: any) {
       console.error('❌ Erreur de connexion admin:', error);
       if (error.code === 'ECONNREFUSED' || error.message === 'Network Error') {
