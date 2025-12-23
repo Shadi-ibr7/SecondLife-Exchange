@@ -35,6 +35,7 @@ import { Toaster } from 'react-hot-toast';
 import { Navbar } from '@/components/layout/navbar';
 import { MobileDockNav } from '@/components/mobile/MobileDockNav';
 import { AdminLayoutWrapper } from './admin-layout-wrapper';
+import { RegisterSW } from '@/components/pwa/RegisterSW';
 
 /**
  * Configuration de la police Inter
@@ -131,6 +132,9 @@ export default function RootLayout({
           BODY: Contenu principal
           ============================================ */}
       <body className={inter.className}>
+        {/* Enregistrement du Service Worker PWA */}
+        <RegisterSW />
+
         {/* Providers: Enveloppe avec React Query, thème, auth */}
         <Providers>
           <AdminLayoutWrapper>
