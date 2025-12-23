@@ -86,7 +86,7 @@ export const metadata: Metadata = {
  * Contrôle l'affichage sur mobile et tablette.
  */
 export const viewport: Viewport = {
-  themeColor: '#000000', // Couleur de la barre d'adresse (mobile)
+  themeColor: '#10B981', // Couleur de la barre d'adresse (mobile)
   width: 'device-width', // Largeur adaptée à l'appareil
   initialScale: 1, // Zoom initial à 100%
   maximumScale: 1, // Zoom maximum à 100% (empêche le zoom)
@@ -119,7 +119,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/logo.svg" />
 
         {/* Couleur du thème pour la barre d'adresse mobile */}
-        <meta name="theme-color" content="#802ADB" />
+        <meta name="theme-color" content="#10B981" />
 
         {/* Configuration PWA pour iOS */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
