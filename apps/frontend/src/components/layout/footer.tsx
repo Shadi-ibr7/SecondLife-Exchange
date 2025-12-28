@@ -1,5 +1,6 @@
-import { Recycle, Leaf, Users, Sparkles } from 'lucide-react';
+import { Leaf, Users, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export function Footer() {
   const footerLinks = {
@@ -35,10 +36,14 @@ export function Footer() {
           {/* Logo & Mission */}
           <div className="lg:col-span-2">
             <div className="mb-4 flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary">
-                <Recycle className="h-5 w-5 text-primary-foreground" />
-              </div>
-              <span className="font-semibold">SecondLife Exchange</span>
+              <Image
+                src="/icons/icon-192x192.png"
+                alt="SecondLife Exchange"
+                width={40}
+                height={40}
+                className="h-8 w-8 sm:h-10 sm:w-10"
+              />
+              <span className="text-base font-semibold sm:text-lg">SecondLife Exchange</span>
             </div>
             <p className="mb-6 text-muted-foreground">
               Donnez une seconde vie à vos objets et contribuez à un avenir plus

@@ -114,7 +114,7 @@ export default function RootLayout({
           ============================================ */}
       <head>
         {/* Favicon */}
-        <link rel="icon" href="/logo.svg" />
+        <link rel="icon" href="/icons/icon-192x192.png" />
 
         {/* Icônes pour iOS (Apple Touch Icon) - iOS nécessite des PNG, pas SVG */}
         <link

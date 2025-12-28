@@ -24,7 +24,7 @@
 'use client';
 
 // Import des icônes
-import { Bell, Menu, Recycle, Search, X } from 'lucide-react';
+import { Bell, Menu, Search } from 'lucide-react';
 
 // Import des composants UI
 import { Button } from '@/components/ui/button';
@@ -52,6 +52,7 @@ import { useState } from 'react';
 
 // Import de Next.js
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 
 // Import des stores
@@ -157,10 +158,17 @@ export function Navbar() {
             href="/"
             className="flex items-center gap-2 transition-opacity hover:opacity-80"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary">
-              <Recycle className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="font-semibold">SecondLife Exchange</span>
+            <Image
+              src="/icons/icon-192x192.png"
+              alt="SecondLife Exchange"
+              width={40}
+              height={40}
+              className="h-8 w-8 sm:h-10 sm:w-10"
+              priority
+            />
+            <span className="text-base font-semibold sm:text-lg">
+              SecondLife Exchange
+            </span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -252,37 +260,37 @@ export function Navbar() {
                   <Link href="/item/new">Publier</Link>
                 </Button>
                 <div className="hidden md:block">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Avatar className="h-9 w-9 cursor-pointer transition-all hover:ring-2 hover:ring-primary">
-                      <AvatarImage src={user?.avatarUrl || ''} />
-                      <AvatarFallback>
-                        {user?.displayName?.[0]?.toUpperCase() || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem asChild>
-                      <Link href="/profile">Mon profil</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={async () => {
-                        const ok =
-                          typeof window !== 'undefined'
-                            ? window.confirm(
-                                'Voulez-vous vraiment vous déconnecter ?'
-                              )
-                            : true;
-                        if (!ok) return;
-                        await logout();
-                        toast.success('Vous êtes déconnecté.');
-                      }}
-                    >
-                      Se déconnecter
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Avatar className="h-9 w-9 cursor-pointer transition-all hover:ring-2 hover:ring-primary">
+                        <AvatarImage src={user?.avatarUrl || ''} />
+                        <AvatarFallback>
+                          {user?.displayName?.[0]?.toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem asChild>
+                        <Link href="/profile">Mon profil</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={async () => {
+                          const ok =
+                            typeof window !== 'undefined'
+                              ? window.confirm(
+                                  'Voulez-vous vraiment vous déconnecter ?'
+                                )
+                              : true;
+                          if (!ok) return;
+                          await logout();
+                          toast.success('Vous êtes déconnecté.');
+                        }}
+                      >
+                        Se déconnecter
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             )}
@@ -303,19 +311,19 @@ export function Navbar() {
                   {navLinks
                     .filter((link) => !bottomNavHrefs.has(link.href))
                     .map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`text-left transition-colors hover:text-primary ${
-                        isActive(link.href)
-                          ? 'text-primary'
-                          : 'text-muted-foreground'
-                      }`}
-                    >
-                      {link.name}
-                    </Link>
-                  ))}
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`text-left transition-colors hover:text-primary ${
+                          isActive(link.href)
+                            ? 'text-primary'
+                            : 'text-muted-foreground'
+                        }`}
+                      >
+                        {link.name}
+                      </Link>
+                    ))}
 
                   <div className="space-y-3 border-t border-border pt-6">
                     <Button
