@@ -30,9 +30,9 @@ export function Footer() {
   };
 
   return (
-    <footer className="mt-20 border-t border-border bg-card">
-      <div className="container mx-auto px-4 py-12 lg:px-8">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-6">
+    <footer className="relative mt-20 overflow-hidden border-t border-border bg-card">
+      <div className="container mx-auto pb-[48px] pt-[48px] lg:px-8">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-6 pb-[48px]">
           {/* Logo & Mission */}
           <div className="lg:col-span-2">
             <div className="mb-4 flex items-center gap-2">
@@ -43,7 +43,9 @@ export function Footer() {
                 height={40}
                 className="h-8 w-8 sm:h-10 sm:w-10"
               />
-              <span className="text-base font-semibold sm:text-lg">SecondLife Exchange</span>
+              <span className="text-base font-semibold sm:text-lg">
+                SecondLife Exchange
+              </span>
             </div>
             <p className="mb-6 text-muted-foreground">
               Donnez une seconde vie à vos objets et contribuez à un avenir plus
@@ -94,4 +96,3 @@ export function Footer() {
     </footer>
   );
 }
-

@@ -20,7 +20,6 @@
 'use client';
 
 // Import des composants UI
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ItemCard } from '@/components/ui/item-card';
 import { Footer } from '@/components/layout/footer';
@@ -133,7 +132,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Hero Section - Design Figma */}
+      {/* Hero Section - Design Figma (2-369) */}
       {/* Section: 1101px × 735px selon Figma - se termine à y=735, pas d'espace après */}
       <section className="relative overflow-hidden border-b border-[#27272a] bg-gradient-to-b from-[rgba(16,185,129,0.1)] via-[#0b0b0d] via-50% to-[#0b0b0d]">
         {/* Section: 1101px × 735px selon Figma */}
@@ -215,8 +214,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Thème hebdomadaire - Design Figma */}
-      {/* Section: 1024px de large, padding top 64px, padding horizontal 32px selon Figma */}
+      {/* Thème hebdomadaire - Design Figma (2-148) */}
+      {/* Section: 1024px × 955.75px selon Figma - commence à y=735, se termine à y=1690.75 */}
       {/* IMPORTANT: Pas d'espace entre les sections - la section Thème commence directement après Hero (y=735 selon Figma) */}
       <section className="mx-auto w-full max-w-[1024px] px-8 pb-[128px] pt-[128px]">
         {/* Container header: gap de 32px entre header et carte selon Figma (148-64-52=32) */}
@@ -306,36 +305,46 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Suggestions IA */}
-      <section className="container mx-auto bg-gradient-to-b from-transparent to-primary/5 px-4 py-16 pb-[128px] pt-[128px] lg:px-8">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <div className="mb-2 flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              <span className="text-sm text-primary">
-                Recommandations personnalisées
-              </span>
-            </div>
-            <h2>Suggestions par IA</h2>
-            <p className="mt-2 text-muted-foreground">
-              Objets sélectionnés spécialement pour vous selon vos intérêts
-            </p>
+      {/* Suggestions IA - Design Figma (2-189) */}
+      {/* Section: 1024px × 672px selon Figma - commence à y=1690.75, se termine à y=2362.75 */}
+      {/* IMPORTANT: Pas d'espace entre les sections */}
+      <section className="relative mx-auto w-full max-w-[1024px] bg-gradient-to-b from-transparent to-[rgba(16,185,129,0.05)] px-8 pb-[128px] pt-[128px]">
+        {/* Header */}
+        <div className="mb-8 flex flex-col gap-2">
+          <div className="flex h-5 items-center gap-2">
+            <Sparkles className="h-5 w-5 text-[#10b981]" />
+            <span className="text-sm leading-[20px] tracking-[-0.1504px] text-[#10b981]">
+              Recommandations personnalisées
+            </span>
           </div>
+          <h2 className="text-base leading-[24px] tracking-[-0.3125px] text-[#ededee]">
+            Suggestions par IA
+          </h2>
+          <p className="text-base leading-[24px] tracking-[-0.3125px] text-[#a1a1aa]">
+            Objets sélectionnés spécialement pour vous selon vos intérêts
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Grille de 4 cartes - gap 24px selon Figma */}
+        <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-[24px]">
           {aiSuggestions.map((item) => (
             <ItemCard
               key={item.id}
               {...item}
+              aiSuggested={true}
               onClick={() => (window.location.href = '/item-detail')}
             />
           ))}
         </div>
 
-        <div className="mt-8 text-center">
-          <Button variant="outline" asChild className="gap-2">
-            <Link href="/explore">
+        {/* Bouton centré */}
+        <div className="flex justify-center">
+          <Button
+            variant="outline"
+            asChild
+            className="h-9 rounded-[8px] border border-[#1a1a1f] bg-[rgba(26,26,31,0.3)] px-3 text-sm font-semibold leading-[20px] tracking-[-0.1504px] text-[#ededee] hover:bg-[rgba(26,26,31,0.5)]"
+          >
+            <Link href="/explore" className="flex items-center gap-2">
               Voir toutes les suggestions
               <ArrowRight className="h-4 w-4" />
             </Link>
@@ -343,40 +352,54 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Découverte écologique */}
-      <section className="container mx-auto px-4 py-16 pb-[128px] pt-[128px] lg:px-8">
-        <div className="mb-8">
-          <div className="mb-2 flex items-center gap-2">
-            <Leaf className="h-5 w-5 text-green-400" />
-            <span className="text-sm text-green-400">Impact positif</span>
+      {/* Découverte écologique - Design Figma */}
+      {/* Section: 1024px de large, padding top 64px, padding horizontal 32px selon Figma */}
+      <section className="mx-auto w-full max-w-[1024px] px-8 pb-[128px] pt-[128px]">
+        {/* Header */}
+        <div className="mb-8 flex flex-col gap-2">
+          <div className="flex h-5 items-center gap-2">
+            <Leaf className="h-5 w-5 text-[#05df72]" />
+            <span className="text-sm leading-[20px] tracking-[-0.1504px] text-[#05df72]">
+              Impact positif
+            </span>
           </div>
-          <h2>Découverte écologique</h2>
-          <p className="mt-2 text-muted-foreground">
+          <h2 className="text-base leading-[24px] tracking-[-0.3125px] text-[#ededee]">
+            Découverte écologique
+          </h2>
+          <p className="text-base leading-[24px] tracking-[-0.3125px] text-[#a1a1aa]">
             Apprenez-en plus sur l&apos;économie circulaire et son impact
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        {/* Grille de 3 cartes - gap 24px selon Figma */}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-[24px]">
           {ecoContent.map((content, index) => (
-            <Card
+            <div
               key={index}
-              className="group cursor-pointer space-y-4 border-border bg-card p-6 transition-all hover:border-primary/30"
+              className="flex h-[311px] flex-col gap-[40px] rounded-[14px] border border-[#27272a] bg-[#121216] p-[25px]"
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500/10">
-                <Leaf className="h-6 w-6 text-green-400" />
+              {/* Icône Leaf dans cercle */}
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[rgba(0,201,80,0.1)]">
+                <Leaf className="h-6 w-6 text-[#05df72]" />
               </div>
-              <div>
-                <h3 className="mb-2 transition-colors group-hover:text-primary">
+
+              {/* Contenu texte */}
+              <div className="flex flex-1 flex-col gap-2">
+                <h3 className="text-base leading-[24px] tracking-[-0.3125px] text-[#ededee]">
                   {content.title}
                 </h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm leading-[20px] tracking-[-0.1504px] text-[#a1a1aa]">
                   {content.description}
                 </p>
               </div>
-              <div className="border-t border-border pt-4">
-                <span className="text-primary">{content.stat}</span>
+
+              {/* Métrique en bas avec bordure supérieure */}
+              <div className="border-t border-[#27272a] pt-5">
+                <span className="text-base leading-[24px] tracking-[-0.3125px] text-[#10b981]">
+                  {content.stat}
+                </span>
               </div>
-            </Card>
+            </div>
           ))}
         </div>
       </section>
