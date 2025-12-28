@@ -63,7 +63,7 @@ export const metadata: Metadata = {
   // Configuration Apple Web App (iOS)
   appleWebApp: {
     capable: true, // L'app peut être installée
-    statusBarStyle: 'default', // Style de la barre de statut
+    statusBarStyle: 'black-translucent', // Style de la barre de statut (meilleur pour iOS)
     title: 'SecondLife Exchange',
   },
 
@@ -116,16 +116,40 @@ export default function RootLayout({
         {/* Favicon */}
         <link rel="icon" href="/logo.svg" />
 
-        {/* Icône pour iOS (Apple Touch Icon) */}
-        <link rel="apple-touch-icon" href="/logo.svg" />
+        {/* Icônes pour iOS (Apple Touch Icon) - iOS nécessite des PNG, pas SVG */}
+        <link
+          rel="apple-touch-icon"
+          sizes="180x180"
+          href="/icons/apple-touch-icon-180x180.png"
+        />
+        <link
+          rel="apple-touch-icon"
+          sizes="152x152"
+          href="/icons/apple-touch-icon-152x152.png"
+        />
+        {/* Fallback pour les anciens appareils et compatibilité maximale */}
+        <link
+          rel="apple-touch-icon"
+          href="/icons/apple-touch-icon-180x180.png"
+        />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        {/* Lien à la racine pour compatibilité iOS maximale */}
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
         {/* Couleur du thème pour la barre d'adresse mobile */}
         <meta name="theme-color" content="#10B981" />
 
         {/* Configuration PWA pour iOS */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta
+          name="apple-mobile-web-app-status-bar-style"
+          content="black-translucent"
+        />
         <meta name="apple-mobile-web-app-title" content="SecondLife Exchange" />
+
+        {/* Meta tags supplémentaires pour iOS */}
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-touch-fullscreen" content="yes" />
       </head>
 
       {/* ============================================

@@ -4,10 +4,10 @@ import { useEffect } from 'react';
 
 /**
  * Composant pour enregistrer le Service Worker PWA.
- * 
+ *
  * Ce composant s'exécute côté client et enregistre le service worker
  * généré par next-pwa pour activer les fonctionnalités PWA (cache, offline, etc.).
- * 
+ *
  * IMPORTANT: Ce composant doit être rendu uniquement côté client et en production.
  */
 export function RegisterSW() {
@@ -32,7 +32,10 @@ export function RegisterSW() {
           const newWorker = registration.installing;
           if (newWorker) {
             newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              if (
+                newWorker.state === 'installed' &&
+                navigator.serviceWorker.controller
+              ) {
                 console.log('🔄 Nouvelle version du Service Worker disponible');
               }
             });
@@ -40,11 +43,13 @@ export function RegisterSW() {
         });
       })
       .catch((error) => {
-        console.error('❌ Erreur lors de l\'enregistrement du Service Worker:', error);
+        console.error(
+          "❌ Erreur lors de l'enregistrement du Service Worker:",
+          error
+        );
       });
   }, []);
 
   // Ce composant ne rend rien visuellement
   return null;
 }
-
