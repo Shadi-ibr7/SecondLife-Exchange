@@ -94,6 +94,11 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Supprimer les marges par défaut des sections pour respecter le design Figma */
+  section {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
 }
 
 /* Custom scrollbar */

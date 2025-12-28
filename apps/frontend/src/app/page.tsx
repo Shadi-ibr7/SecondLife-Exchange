@@ -23,14 +23,14 @@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ItemCard } from '@/components/ui/item-card';
-import { ThemeCard } from '@/components/ui/theme-card';
 import { Footer } from '@/components/layout/footer';
 
 // Import des icônes
 import { Sparkles, ArrowRight, TrendingUp, Leaf } from 'lucide-react';
 
-// Import de Next.js pour la navigation
+// Import de Next.js pour la navigation et images
 import Link from 'next/link';
+import Image from 'next/image';
 
 /**
  * COMPOSANT: HomePage
@@ -133,59 +133,80 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden border-b border-border bg-gradient-to-b from-primary/10 via-background to-background">
-        <div className="container mx-auto px-4 py-20 lg:px-8 lg:py-32">
-          <div className="mx-auto max-w-4xl space-y-8 text-center">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-primary">
-              <Sparkles className="h-4 w-4" />
-              <span className="text-sm">Plateforme propulsée par IA</span>
+      {/* Hero Section - Design Figma */}
+      {/* Section: 1101px × 735px selon Figma - se termine à y=735, pas d'espace après */}
+      <section className="relative overflow-hidden border-b border-[#27272a] bg-gradient-to-b from-[rgba(16,185,129,0.1)] via-[#0b0b0d] via-50% to-[#0b0b0d]">
+        {/* Section: 1101px × 735px selon Figma */}
+        <div className="mx-auto w-full max-w-[1101px] px-4 pb-[128px] pt-[128px] lg:px-[102.5px]">
+          {/* Container interne: 896px de large selon Figma */}
+          <div className="mx-auto w-full max-w-[896px] text-center">
+            {/* Badge IA */}
+            <div className="mb-[16px] inline-flex h-[38px] items-center gap-2 rounded-full border border-[rgba(16,185,129,0.2)] bg-[rgba(16,185,129,0.1)] px-4">
+              <Sparkles className="h-4 w-4 text-[#10b981]" />
+              <span className="text-sm leading-[20px] tracking-[-0.1504px] text-[#10b981]">
+                Plateforme propulsée par IA
+              </span>
             </div>
 
-            <h1 className="text-4xl md:text-5xl lg:text-6xl">
+            {/* Titre principal */}
+            <h1 className="mb-[32px] text-[60px] leading-[60px] tracking-[0.2637px] text-[#ededee] md:text-[60px]">
               Donnez une seconde vie
               <br />
-              <span className="text-primary">à vos objets</span>
+              <span className="text-[#10b981]">à vos objets</span>
             </h1>
 
-            <p className="mx-auto max-w-2xl text-lg text-muted-foreground md:text-xl">
+            {/* Paragraphe descriptif */}
+            <p className="mx-auto mb-[40px] max-w-[672px] text-[20px] leading-[28px] tracking-[-0.4492px] text-[#a1a1aa]">
               Échangez, revalorisez et découvrez des objets uniques grâce à
               notre plateforme éco-responsable assistée par intelligence
               artificielle.
             </p>
 
-            <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+            {/* Boutons CTA */}
+            <div className="mb-[72px] flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Button
                 size="lg"
                 asChild
-                className="bg-primary px-8 hover:bg-primary/90"
+                className="h-[40px] rounded-[8px] bg-[#10b981] px-4 text-[14px] font-semibold leading-[20px] tracking-[-0.1504px] text-white hover:bg-[#10b981]/90"
               >
-                <Link href="/new-item">
+                <Link href="/new-item" className="flex items-center gap-2">
                   Proposer un objet
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" asChild>
+              <Button
+                size="lg"
+                variant="outline"
+                asChild
+                className="h-[40px] rounded-[8px] border border-[#1a1a1f] bg-[rgba(26,26,31,0.3)] px-[25px] text-[14px] font-semibold leading-[20px] tracking-[-0.1504px] text-[#ededee] hover:bg-[rgba(26,26,31,0.5)]"
+              >
                 <Link href="/explore">Explorer le catalogue</Link>
               </Button>
             </div>
 
-            <div className="mx-auto grid max-w-2xl grid-cols-3 gap-8 pt-12">
-              <div className="text-center">
-                <div className="mb-2 text-3xl">50k+</div>
-                <div className="text-sm text-muted-foreground">
+            {/* Statistiques */}
+            <div className="mx-auto grid max-w-[672px] grid-cols-3 gap-[32px]">
+              <div className="flex flex-col gap-2 text-center">
+                <div className="text-[30px] leading-[36px] tracking-[0.3955px] text-[#ededee]">
+                  50k+
+                </div>
+                <div className="text-sm leading-[20px] tracking-[-0.1504px] text-[#a1a1aa]">
                   Objets échangés
                 </div>
               </div>
-              <div className="text-center">
-                <div className="mb-2 text-3xl">12k+</div>
-                <div className="text-sm text-muted-foreground">
+              <div className="flex flex-col gap-2 text-center">
+                <div className="text-[30px] leading-[36px] tracking-[0.3955px] text-[#ededee]">
+                  12k+
+                </div>
+                <div className="text-sm leading-[20px] tracking-[-0.1504px] text-[#a1a1aa]">
                   Membres actifs
                 </div>
               </div>
-              <div className="text-center">
-                <div className="mb-2 text-3xl">-70%</div>
-                <div className="text-sm text-muted-foreground">
+              <div className="flex flex-col gap-2 text-center">
+                <div className="text-[30px] leading-[36px] tracking-[0.3955px] text-[#ededee]">
+                  -70%
+                </div>
+                <div className="text-sm leading-[20px] tracking-[-0.1504px] text-[#a1a1aa]">
                   CO₂ économisé
                 </div>
               </div>
@@ -194,37 +215,99 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Thème de la semaine */}
-      <section className="container mx-auto px-4 py-16 lg:px-8">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <div className="mb-2 flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              <span className="text-sm text-primary">Cette semaine</span>
+      {/* Thème hebdomadaire - Design Figma */}
+      {/* Section: 1024px de large, padding top 64px, padding horizontal 32px selon Figma */}
+      {/* IMPORTANT: Pas d'espace entre les sections - la section Thème commence directement après Hero (y=735 selon Figma) */}
+      <section className="mx-auto w-full max-w-[1024px] px-8 pb-[128px] pt-[128px]">
+        {/* Container header: gap de 32px entre header et carte selon Figma (148-64-52=32) */}
+        <div className="mb-[32px] flex h-[52px] items-center justify-between">
+          {/* Header gauche */}
+          <div className="flex h-[52px] flex-col gap-2">
+            <div className="flex h-5 items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-[#10b981]" />
+              <span className="text-sm leading-[20px] tracking-[-0.1504px] text-[#10b981]">
+                Cette semaine
+              </span>
             </div>
-            <h2>Thème hebdomadaire</h2>
+            <h2 className="text-base leading-[24px] tracking-[-0.3125px] text-[#ededee]">
+              Thème hebdomadaire
+            </h2>
           </div>
-          <Button variant="ghost" asChild className="hidden sm:flex">
-            <Link href="/themes">
+
+          {/* Bouton droit */}
+          <Button
+            variant="ghost"
+            asChild
+            className="h-9 rounded-[8px] text-sm font-semibold leading-[20px] tracking-[-0.1504px] text-[#ededee]"
+          >
+            <Link href="/themes" className="flex items-center gap-2">
               Voir le calendrier
-              <ArrowRight className="ml-2 h-4 w-4" />
+              <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
         </div>
 
-        <ThemeCard
-          title="Mode Vintage & Rétro"
-          image="https://images.unsplash.com/photo-1534639077088-d702bcf685e7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdXN0YWluYWJsZSUyMGZhc2hpb258ZW58MXx8fHwxNzYxMDkyNzE1fDA&ixlib=rb-4.1.0&q=80&w=1080"
-          period="Du 20 au 26 octobre 2025"
-          description="Cette semaine, redécouvrez le charme du vintage ! Vêtements, accessoires et pièces uniques des années passées."
-          impact="En moyenne -45kg de CO₂ par vêtement échangé vs acheté neuf"
-          isActive={true}
-          onExplore={() => (window.location.href = '/explore')}
-        />
+        {/* Carte thème - Design Figma */}
+        <div className="relative h-[743.75px] w-full overflow-hidden rounded-[14px] border-2 border-[#10b981] bg-[rgba(16,185,129,0.05)]">
+          {/* Image avec overlay */}
+          <div className="relative h-[537.75px] w-full overflow-hidden">
+            <Image
+              src="https://images.unsplash.com/photo-1534639077088-d702bcf685e7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdXN0YWluYWJsZSUyMGZhc2hpb258ZW58MXx8fHwxNzYxMDkyNzE1fDA&ixlib=rb-4.1.0&q=80&w=1080"
+              alt="Mode Vintage & Rétro"
+              fill
+              className="object-cover object-center"
+            />
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+
+            {/* Badge "Thème actif" */}
+            <div className="absolute left-3 top-[13px] flex h-[22px] items-center gap-2 rounded-[8px] bg-[#10b981] px-2">
+              <TrendingUp className="h-3 w-3 text-white" />
+              <span className="text-xs font-semibold leading-4 text-white">
+                Thème actif
+              </span>
+            </div>
+
+            {/* Titre et date superposés */}
+            <div className="absolute bottom-0 left-3 flex flex-col gap-1 pb-4">
+              <h3 className="text-base leading-[24px] tracking-[-0.3125px] text-white">
+                Mode Vintage & Rétro
+              </h3>
+              <p className="text-sm leading-[20px] tracking-[-0.1504px] text-white/80">
+                Du 20 au 26 octobre 2025
+              </p>
+            </div>
+          </div>
+
+          {/* Contenu en bas de la carte */}
+          <div className="absolute bottom-0 left-0 right-0 flex flex-col gap-4 p-5">
+            {/* Description */}
+            <p className="text-base leading-[24px] tracking-[-0.3125px] text-[#a1a1aa]">
+              Cette semaine, redécouvrez le charme du vintage ! Vêtements,
+              accessoires et pièces uniques des années passées.
+            </p>
+
+            {/* Métrique CO2 */}
+            <div className="flex h-[46px] items-center gap-2 rounded-[14px] border border-[rgba(0,201,80,0.2)] bg-[rgba(0,201,80,0.1)] px-[13px]">
+              <Leaf className="h-4 w-4 text-[#05df72]" />
+              <span className="text-sm leading-[20px] tracking-[-0.1504px] text-[#05df72]">
+                En moyenne -45kg de CO₂ par vêtement échangé vs acheté neuf
+              </span>
+            </div>
+
+            {/* Bouton CTA */}
+            <Button
+              onClick={() => (window.location.href = '/explore')}
+              className="h-9 w-full rounded-[8px] bg-[#10b981] text-sm font-semibold leading-[20px] tracking-[-0.1504px] text-white hover:bg-[#10b981]/90"
+            >
+              Voir les suggestions
+            </Button>
+          </div>
+        </div>
       </section>
 
       {/* Suggestions IA */}
-      <section className="container mx-auto bg-gradient-to-b from-transparent to-primary/5 px-4 py-16 lg:px-8">
+      <section className="container mx-auto bg-gradient-to-b from-transparent to-primary/5 px-4 py-16 pb-[128px] pt-[128px] lg:px-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
             <div className="mb-2 flex items-center gap-2">
@@ -261,7 +344,7 @@ export default function HomePage() {
       </section>
 
       {/* Découverte écologique */}
-      <section className="container mx-auto px-4 py-16 lg:px-8">
+      <section className="container mx-auto px-4 py-16 pb-[128px] pt-[128px] lg:px-8">
         <div className="mb-8">
           <div className="mb-2 flex items-center gap-2">
             <Leaf className="h-5 w-5 text-green-400" />
@@ -269,7 +352,7 @@ export default function HomePage() {
           </div>
           <h2>Découverte écologique</h2>
           <p className="mt-2 text-muted-foreground">
-            Apprenez-en plus sur l'économie circulaire et son impact
+            Apprenez-en plus sur l&apos;économie circulaire et son impact
           </p>
         </div>
 
