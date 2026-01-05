@@ -168,13 +168,13 @@ export const useThemeStore = create<ThemeState>()(
       // ============================================
 
       /**
-       * Thème par défaut: système
+       * Thème par défaut: light (clair)
        *
-       * POURQUOI 'system':
-       * Par défaut, l'application suit le thème du système d'exploitation.
-       * Cela offre une meilleure expérience utilisateur (cohérence avec l'OS).
+       * POURQUOI 'light':
+       * Par défaut, l'application est en mode clair (light mode).
+       * L'utilisateur peut basculer vers le dark mode via le toggle.
        */
-      theme: 'system',
+      theme: 'light',
 
       /**
        * Thème résolu par défaut: clair
@@ -321,7 +321,7 @@ export const useThemeStore = create<ThemeState>()(
        * Nom de la clé dans localStorage
        *
        * Les données seront sauvegardées sous la clé 'theme-storage'
-       * Format: { theme: 'system', resolvedTheme: 'dark' }
+       * Format: { theme: 'light', resolvedTheme: 'light' }
        */
       name: 'theme-storage',
 
@@ -337,6 +337,21 @@ export const useThemeStore = create<ThemeState>()(
        * et resolvedTheme depuis localStorage. Cela permet de maintenir
        * le thème même après un rafraîchissement de page.
        */
+      onRehydrateStorage: () => (state) => {
+        // Appliquer le thème initial après la réhydratation depuis localStorage
+        if (state && typeof window !== 'undefined') {
+          const root = document.documentElement;
+          if (state.theme === 'system') {
+            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
+              .matches
+              ? 'dark'
+              : 'light';
+            root.classList.toggle('dark', systemTheme === 'dark');
+          } else {
+            root.classList.toggle('dark', state.theme === 'dark');
+          }
+        }
+      },
     }
   )
 );

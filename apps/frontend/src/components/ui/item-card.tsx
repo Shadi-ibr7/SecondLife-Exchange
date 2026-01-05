@@ -60,7 +60,7 @@ export function ItemCard({
 
   return (
     <div
-      className="group relative h-[360px] cursor-pointer overflow-hidden rounded-[14px] border border-[#27272a] bg-[#121216] transition-all duration-300 hover:border-[#27272a]/80"
+      className="group relative h-[360px] cursor-pointer overflow-hidden rounded-[14px] border border-[#e4e4e7] bg-white transition-all duration-300 hover:border-[#e4e4e7]/80 dark:border-[#27272a] dark:bg-[#121216] dark:hover:border-[#27272a]/80"
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -85,10 +85,10 @@ export function ItemCard({
       {/* Contenu en bas - Design Figma */}
       <div className="flex flex-col gap-3 p-4">
         <div className="flex flex-col gap-1">
-          <h3 className="line-clamp-2 text-base leading-[24px] tracking-[-0.3125px] text-[#ededee]">
+          <h3 className="line-clamp-2 text-base leading-[24px] tracking-[-0.3125px] text-[#0b0b0d] dark:text-[#ededee]">
             {title}
           </h3>
-          <p className="text-sm leading-[20px] tracking-[-0.1504px] text-[#a1a1aa]">
+          <p className="text-sm leading-[20px] tracking-[-0.1504px] text-[#71717a] dark:text-[#a1a1aa]">
             {category}
           </p>
         </div>
@@ -102,8 +102,10 @@ export function ItemCard({
           </div>
           {/* Localisation */}
           <div className="flex items-center gap-1">
-            <MapPin className="h-3.5 w-3.5 text-[#a1a1aa]" />
-            <span className="text-xs leading-4 text-[#a1a1aa]">{location}</span>
+            <MapPin className="h-3.5 w-3.5 text-[#71717a] dark:text-[#a1a1aa]" />
+            <span className="text-xs leading-4 text-[#71717a] dark:text-[#a1a1aa]">
+              {location}
+            </span>
           </div>
         </div>
       </div>

@@ -96,20 +96,28 @@ export function Providers({ children }: { children: React.ReactNode }) {
           'dark',
           systemTheme === 'dark'
         );
+      } else {
+        // Thème explicite (light ou dark)
+        // Appliquer le thème sur l'élément HTML
+        document.documentElement.classList.toggle('dark', theme === 'dark');
+        // Mettre à jour le thème résolu
+        setResolvedTheme(theme);
       }
     };
 
     // Appliquer le thème initial
     handleThemeChange();
 
-    // Écouter les changements du thème système
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    mediaQuery.addEventListener('change', handleThemeChange);
+    // Écouter les changements du thème système (seulement si theme === 'system')
+    if (theme === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      mediaQuery.addEventListener('change', handleThemeChange);
 
-    // Nettoyer l'écouteur au démontage
-    return () => {
-      mediaQuery.removeEventListener('change', handleThemeChange);
-    };
+      // Nettoyer l'écouteur au démontage
+      return () => {
+        mediaQuery.removeEventListener('change', handleThemeChange);
+      };
+    }
   }, [theme, setResolvedTheme]); // Réexécuter si le thème change
 
   // ============================================

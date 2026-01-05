@@ -131,10 +131,10 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-[#fafafa] text-[#0b0b0d] dark:bg-[#0b0b0d] dark:text-[#ededee]">
       {/* Hero Section - Design Figma (2-369) */}
       {/* Section: 1101px × 735px selon Figma - se termine à y=735, pas d'espace après */}
-      <section className="relative overflow-hidden border-b border-[#27272a] bg-gradient-to-b from-[rgba(16,185,129,0.1)] via-[#0b0b0d] via-50% to-[#0b0b0d]">
+      <section className="relative overflow-hidden border-b border-[#e4e4e7] bg-gradient-to-b from-[rgba(16,185,129,0.1)] via-[#fafafa] via-50% to-[#fafafa] dark:border-[#27272a] dark:via-[#0b0b0d] dark:to-[#0b0b0d]">
         {/* Section: 1101px × 735px selon Figma */}
         <div className="mx-auto w-full max-w-[1101px] px-4 pb-[128px] pt-[128px] lg:px-[102.5px]">
           {/* Container interne: 896px de large selon Figma */}
@@ -148,14 +148,14 @@ export default function HomePage() {
             </div>
 
             {/* Titre principal */}
-            <h1 className="mb-[32px] text-[60px] leading-[60px] tracking-[0.2637px] text-[#ededee] md:text-[60px]">
+            <h1 className="mb-[32px] text-[60px] leading-[60px] tracking-[0.2637px] text-[#0b0b0d] dark:text-[#ededee] md:text-[60px]">
               Donnez une seconde vie
               <br />
               <span className="text-[#10b981]">à vos objets</span>
             </h1>
 
             {/* Paragraphe descriptif */}
-            <p className="mx-auto mb-[40px] max-w-[672px] text-[20px] leading-[28px] tracking-[-0.4492px] text-[#a1a1aa]">
+            <p className="mx-auto mb-[40px] max-w-[672px] text-[20px] leading-[28px] tracking-[-0.4492px] text-[#71717a] dark:text-[#a1a1aa]">
               Échangez, revalorisez et découvrez des objets uniques grâce à
               notre plateforme éco-responsable assistée par intelligence
               artificielle.
@@ -177,7 +177,7 @@ export default function HomePage() {
                 size="lg"
                 variant="outline"
                 asChild
-                className="h-[40px] rounded-[8px] border border-[#1a1a1f] bg-[rgba(26,26,31,0.3)] px-[25px] text-[14px] font-semibold leading-[20px] tracking-[-0.1504px] text-[#ededee] hover:bg-[rgba(26,26,31,0.5)]"
+                className="h-[40px] rounded-[8px] border border-[#e4e4e7] bg-[#fafafa] px-[25px] text-[14px] font-semibold leading-[20px] tracking-[-0.1504px] text-[#0b0b0d] hover:bg-[#f4f4f5] dark:border-[#1a1a1f] dark:bg-[rgba(26,26,31,0.3)] dark:text-[#ededee] dark:hover:bg-[rgba(26,26,31,0.5)]"
               >
                 <Link href="/explore">Explorer le catalogue</Link>
               </Button>
@@ -186,26 +186,26 @@ export default function HomePage() {
             {/* Statistiques */}
             <div className="mx-auto grid max-w-[672px] grid-cols-3 gap-[32px]">
               <div className="flex flex-col gap-2 text-center">
-                <div className="text-[30px] leading-[36px] tracking-[0.3955px] text-[#ededee]">
+                <div className="text-[30px] leading-[36px] tracking-[0.3955px] text-[#0b0b0d] dark:text-[#ededee]">
                   50k+
                 </div>
-                <div className="text-sm leading-[20px] tracking-[-0.1504px] text-[#a1a1aa]">
+                <div className="text-sm leading-[20px] tracking-[-0.1504px] text-[#71717a] dark:text-[#a1a1aa]">
                   Objets échangés
                 </div>
               </div>
               <div className="flex flex-col gap-2 text-center">
-                <div className="text-[30px] leading-[36px] tracking-[0.3955px] text-[#ededee]">
+                <div className="text-[30px] leading-[36px] tracking-[0.3955px] text-[#0b0b0d] dark:text-[#ededee]">
                   12k+
                 </div>
-                <div className="text-sm leading-[20px] tracking-[-0.1504px] text-[#a1a1aa]">
+                <div className="text-sm leading-[20px] tracking-[-0.1504px] text-[#71717a] dark:text-[#a1a1aa]">
                   Membres actifs
                 </div>
               </div>
               <div className="flex flex-col gap-2 text-center">
-                <div className="text-[30px] leading-[36px] tracking-[0.3955px] text-[#ededee]">
+                <div className="text-[30px] leading-[36px] tracking-[0.3955px] text-[#0b0b0d] dark:text-[#ededee]">
                   -70%
                 </div>
-                <div className="text-sm leading-[20px] tracking-[-0.1504px] text-[#a1a1aa]">
+                <div className="text-sm leading-[20px] tracking-[-0.1504px] text-[#71717a] dark:text-[#a1a1aa]">
                   CO₂ économisé
                 </div>
               </div>
@@ -228,7 +228,7 @@ export default function HomePage() {
                 Cette semaine
               </span>
             </div>
-            <h2 className="text-base leading-[24px] tracking-[-0.3125px] text-[#ededee]">
+            <h2 className="text-base leading-[24px] tracking-[-0.3125px] text-[#0b0b0d] dark:text-[#ededee]">
               Thème hebdomadaire
             </h2>
           </div>
@@ -237,7 +237,7 @@ export default function HomePage() {
           <Button
             variant="ghost"
             asChild
-            className="h-9 rounded-[8px] text-sm font-semibold leading-[20px] tracking-[-0.1504px] text-[#ededee]"
+            className="h-9 rounded-[8px] text-sm font-semibold leading-[20px] tracking-[-0.1504px] text-[#0b0b0d] dark:text-[#ededee]"
           >
             <Link href="/themes" className="flex items-center gap-2">
               Voir le calendrier
@@ -281,7 +281,7 @@ export default function HomePage() {
           {/* Contenu en bas de la carte */}
           <div className="absolute bottom-0 left-0 right-0 flex flex-col gap-4 p-5">
             {/* Description */}
-            <p className="text-base leading-[24px] tracking-[-0.3125px] text-[#a1a1aa]">
+            <p className="text-base leading-[24px] tracking-[-0.3125px] text-[#71717a] dark:text-[#a1a1aa]">
               Cette semaine, redécouvrez le charme du vintage ! Vêtements,
               accessoires et pièces uniques des années passées.
             </p>
@@ -317,10 +317,10 @@ export default function HomePage() {
               Recommandations personnalisées
             </span>
           </div>
-          <h2 className="text-base leading-[24px] tracking-[-0.3125px] text-[#ededee]">
+          <h2 className="text-base leading-[24px] tracking-[-0.3125px] text-[#0b0b0d] dark:text-[#ededee]">
             Suggestions par IA
           </h2>
-          <p className="text-base leading-[24px] tracking-[-0.3125px] text-[#a1a1aa]">
+          <p className="text-base leading-[24px] tracking-[-0.3125px] text-[#71717a] dark:text-[#a1a1aa]">
             Objets sélectionnés spécialement pour vous selon vos intérêts
           </p>
         </div>
@@ -342,7 +342,7 @@ export default function HomePage() {
           <Button
             variant="outline"
             asChild
-            className="h-9 rounded-[8px] border border-[#1a1a1f] bg-[rgba(26,26,31,0.3)] px-3 text-sm font-semibold leading-[20px] tracking-[-0.1504px] text-[#ededee] hover:bg-[rgba(26,26,31,0.5)]"
+            className="h-9 rounded-[8px] border border-[#e4e4e7] bg-[#fafafa] px-3 text-sm font-semibold leading-[20px] tracking-[-0.1504px] text-[#0b0b0d] hover:bg-[#f4f4f5] dark:border-[#1a1a1f] dark:bg-[rgba(26,26,31,0.3)] dark:text-[#ededee] dark:hover:bg-[rgba(26,26,31,0.5)]"
           >
             <Link href="/explore" className="flex items-center gap-2">
               Voir toutes les suggestions
@@ -363,10 +363,10 @@ export default function HomePage() {
               Impact positif
             </span>
           </div>
-          <h2 className="text-base leading-[24px] tracking-[-0.3125px] text-[#ededee]">
+          <h2 className="text-base leading-[24px] tracking-[-0.3125px] text-[#0b0b0d] dark:text-[#ededee]">
             Découverte écologique
           </h2>
-          <p className="text-base leading-[24px] tracking-[-0.3125px] text-[#a1a1aa]">
+          <p className="text-base leading-[24px] tracking-[-0.3125px] text-[#71717a] dark:text-[#a1a1aa]">
             Apprenez-en plus sur l&apos;économie circulaire et son impact
           </p>
         </div>
@@ -376,7 +376,7 @@ export default function HomePage() {
           {ecoContent.map((content, index) => (
             <div
               key={index}
-              className="flex h-[311px] flex-col gap-[40px] rounded-[14px] border border-[#27272a] bg-[#121216] p-[25px]"
+              className="flex h-[311px] flex-col gap-[40px] rounded-[14px] border border-[#e4e4e7] bg-white p-[25px] dark:border-[#27272a] dark:bg-[#121216]"
             >
               {/* Icône Leaf dans cercle */}
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[rgba(0,201,80,0.1)]">
@@ -385,16 +385,16 @@ export default function HomePage() {
 
               {/* Contenu texte */}
               <div className="flex flex-1 flex-col gap-2">
-                <h3 className="text-base leading-[24px] tracking-[-0.3125px] text-[#ededee]">
+                <h3 className="text-base leading-[24px] tracking-[-0.3125px] text-[#0b0b0d] dark:text-[#ededee]">
                   {content.title}
                 </h3>
-                <p className="text-sm leading-[20px] tracking-[-0.1504px] text-[#a1a1aa]">
+                <p className="text-sm leading-[20px] tracking-[-0.1504px] text-[#71717a] dark:text-[#a1a1aa]">
                   {content.description}
                 </p>
               </div>
 
               {/* Métrique en bas avec bordure supérieure */}
-              <div className="border-t border-[#27272a] pt-5">
+              <div className="border-t border-[#e4e4e7] pt-5 dark:border-[#27272a]">
                 <span className="text-base leading-[24px] tracking-[-0.3125px] text-[#10b981]">
                   {content.stat}
                 </span>
