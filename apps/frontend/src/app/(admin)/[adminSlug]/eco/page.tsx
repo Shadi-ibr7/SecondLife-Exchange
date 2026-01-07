@@ -7,10 +7,12 @@
 
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, ExternalLink, Leaf } from 'lucide-react';
+import { Search, ExternalLink, Leaf, Eye } from 'lucide-react';
 import { adminApi } from '@/lib/admin.api';
+import { ADMIN_BASE_PATH } from '@/lib/admin.config';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -151,13 +153,22 @@ export default function AdminEcoPage() {
                       : '-'}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => window.open(item.url, '_blank')}
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center justify-end gap-2">
+                      <Button variant="ghost" size="icon" asChild>
+                        <Link href={`/${ADMIN_BASE_PATH}/eco/${item.id}`}>
+                          <Eye className="w-4 h-4" />
+                        </Link>
+                      </Button>
+                      {item.url && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => window.open(item.url, '_blank')}
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

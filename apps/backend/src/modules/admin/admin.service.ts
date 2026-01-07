@@ -557,6 +557,83 @@ export class AdminService {
     };
   }
 
+  async getEcoContentById(id: string) {
+    const content = await this.prisma.ecoContent.findUnique({
+      where: { id },
+    });
+
+    if (!content) {
+      throw new NotFoundException('Contenu éco non trouvé');
+    }
+
+    return content;
+  }
+
+  async createEcoContent(data: any, adminId: string) {
+    const content = await this.prisma.ecoContent.create({
+      data: {
+        kind: data.kind || 'article',
+        title: data.title,
+        url: data.url || '',
+        locale: data.locale || 'fr',
+        tags: data.tags || [],
+        source: data.source,
+        summary: data.summary,
+        kpis: data.kpis,
+        publishedAt: data.published ? new Date() : null,
+      },
+    });
+
+    await this.logAction(adminId, 'CREATE_ECO_CONTENT', 'EcoContent', content.id, {
+      title: content.title,
+    });
+
+    return content;
+  }
+
+  async updateEcoContent(id: string, data: any, adminId: string) {
+    const existing = await this.prisma.ecoContent.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException('Contenu éco non trouvé');
+    }
+
+    const updateData: any = {};
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.url !== undefined) updateData.url = data.url;
+    if (data.locale !== undefined) updateData.locale = data.locale;
+    if (data.tags !== undefined) updateData.tags = data.tags;
+    if (data.source !== undefined) updateData.source = data.source;
+    if (data.summary !== undefined) updateData.summary = data.summary;
+    if (data.kpis !== undefined) updateData.kpis = data.kpis;
+    if (data.kind !== undefined) updateData.kind = data.kind;
+    if (data.published !== undefined) {
+      updateData.publishedAt = data.published ? new Date() : null;
+    }
+
+    const content = await this.prisma.ecoContent.update({
+      where: { id },
+      data: updateData,
+    });
+
+    await this.logAction(adminId, 'UPDATE_ECO_CONTENT', 'EcoContent', id, {
+      title: content.title,
+    });
+
+    return content;
+  }
+
+  async deleteEcoContent(id: string, adminId: string) {
+    const existing = await this.prisma.ecoContent.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException('Contenu éco non trouvé');
+    }
+
+    await this.prisma.ecoContent.delete({ where: { id } });
+    await this.logAction(adminId, 'DELETE_ECO_CONTENT', 'EcoContent', id);
+
+    return { success: true };
+  }
+
   // Logs
   async getLogs(page = 1, limit = 50, adminId?: string) {
     const skip = (page - 1) * limit;
@@ -728,7 +805,54 @@ export class AdminService {
     };
   }
 
+  async getThreadById(id: string) {
+    const thread = await this.prisma.thread.findUnique({
+      where: { id },
+      include: {
+        author: {
+          select: {
+            id: true,
+            email: true,
+            displayName: true,
+            avatarUrl: true,
+            createdAt: true,
+          },
+        },
+        posts: {
+          include: {
+            author: {
+              select: {
+                id: true,
+                displayName: true,
+                avatarUrl: true,
+              },
+            },
+            _count: {
+              select: { replies: true },
+            },
+          },
+          orderBy: { createdAt: 'asc' },
+          take: 50,
+        },
+        _count: {
+          select: { posts: true },
+        },
+      },
+    });
+
+    if (!thread) {
+      throw new NotFoundException('Thread non trouvé');
+    }
+
+    return thread;
+  }
+
   async deleteThread(threadId: string, adminId: string) {
+    const thread = await this.prisma.thread.findUnique({ where: { id: threadId } });
+    if (!thread) {
+      throw new NotFoundException('Thread non trouvé');
+    }
+
     await this.prisma.thread.delete({ where: { id: threadId } });
     await this.logAction(adminId, 'DELETE_THREAD', 'Thread', threadId);
     return { success: true };
@@ -780,7 +904,58 @@ export class AdminService {
     };
   }
 
+  async getPostById(id: string) {
+    const post = await this.prisma.post.findUnique({
+      where: { id },
+      include: {
+        author: {
+          select: {
+            id: true,
+            email: true,
+            displayName: true,
+            avatarUrl: true,
+            createdAt: true,
+          },
+        },
+        thread: {
+          select: {
+            id: true,
+            title: true,
+            scope: true,
+          },
+        },
+        replies: {
+          include: {
+            author: {
+              select: {
+                id: true,
+                displayName: true,
+                avatarUrl: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'asc' },
+          take: 50,
+        },
+        _count: {
+          select: { replies: true },
+        },
+      },
+    });
+
+    if (!post) {
+      throw new NotFoundException('Post non trouvé');
+    }
+
+    return post;
+  }
+
   async deletePost(postId: string, adminId: string) {
+    const post = await this.prisma.post.findUnique({ where: { id: postId } });
+    if (!post) {
+      throw new NotFoundException('Post non trouvé');
+    }
+
     await this.prisma.post.delete({ where: { id: postId } });
     await this.logAction(adminId, 'DELETE_POST', 'Post', postId);
     return { success: true };

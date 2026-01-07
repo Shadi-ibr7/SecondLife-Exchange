@@ -403,6 +403,55 @@ export const adminApi = {
     return response.data;
   },
 
+  getEcoContentById: async (id: string) => {
+    const adminBasePath =
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.get(`/${adminBasePath}/eco/${id}`);
+    return response.data;
+  },
+
+  createEcoContent: async (data: {
+    title: string;
+    url: string;
+    kind?: string;
+    locale?: string;
+    summary?: string;
+    source?: string;
+    tags?: string[];
+    published?: boolean;
+  }) => {
+    const adminBasePath =
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.post(`/${adminBasePath}/eco`, data);
+    return response.data;
+  },
+
+  updateEcoContent: async (
+    id: string,
+    data: {
+      title?: string;
+      url?: string;
+      kind?: string;
+      locale?: string;
+      summary?: string;
+      source?: string;
+      tags?: string[];
+      published?: boolean;
+    }
+  ) => {
+    const adminBasePath =
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.patch(`/${adminBasePath}/eco/${id}`, data);
+    return response.data;
+  },
+
+  deleteEcoContent: async (id: string) => {
+    const adminBasePath =
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.delete(`/${adminBasePath}/eco/${id}`);
+    return response.data;
+  },
+
   // Exchanges
   getExchanges: async (
     page = 1,
@@ -455,6 +504,15 @@ export const adminApi = {
     return response.data;
   },
 
+  getThreadById: async (id: string) => {
+    const adminBasePath =
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.get(
+      `/${adminBasePath}/community/threads/${id}`
+    );
+    return response.data;
+  },
+
   deleteThread: async (id: string) => {
     const adminBasePath =
       process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
@@ -479,6 +537,15 @@ export const adminApi = {
     if (filters?.authorId) params.append('authorId', filters.authorId);
     const response = await adminApiClient.get(
       `/${adminBasePath}/community/posts?${params.toString()}`
+    );
+    return response.data;
+  },
+
+  getPostById: async (id: string) => {
+    const adminBasePath =
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.get(
+      `/${adminBasePath}/community/posts/${id}`
     );
     return response.data;
   },

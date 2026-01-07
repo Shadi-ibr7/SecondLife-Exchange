@@ -253,6 +253,30 @@ export class AdminController {
     );
   }
 
+  @Get('eco/:id')
+  @ApiOperation({ summary: "Détails d'un contenu éco" })
+  async getEcoContentById(@Param('id') id: string) {
+    return this.adminService.getEcoContentById(id);
+  }
+
+  @Post('eco')
+  @ApiOperation({ summary: 'Créer un contenu éco' })
+  async createEcoContent(@Body() data: any, @Request() req: any) {
+    return this.adminService.createEcoContent(data, req.user.id);
+  }
+
+  @Patch('eco/:id')
+  @ApiOperation({ summary: 'Mettre à jour un contenu éco' })
+  async updateEcoContent(@Param('id') id: string, @Body() data: any, @Request() req: any) {
+    return this.adminService.updateEcoContent(id, data, req.user.id);
+  }
+
+  @Delete('eco/:id')
+  @ApiOperation({ summary: 'Supprimer un contenu éco' })
+  async deleteEcoContent(@Param('id') id: string, @Request() req: any) {
+    return this.adminService.deleteEcoContent(id, req.user.id);
+  }
+
   // Exchanges
   @Get('exchanges')
   @ApiOperation({ summary: 'Liste des échanges' })
@@ -297,6 +321,12 @@ export class AdminController {
     );
   }
 
+  @Get('community/threads/:id')
+  @ApiOperation({ summary: "Détails d'un thread" })
+  async getThreadById(@Param('id') id: string) {
+    return this.adminService.getThreadById(id);
+  }
+
   @Delete('community/threads/:id')
   @ApiOperation({ summary: 'Supprimer un thread' })
   async deleteThread(@Param('id') id: string, @Request() req: any) {
@@ -316,6 +346,12 @@ export class AdminController {
       limit ? parseInt(limit) : 20,
       { threadId, authorId },
     );
+  }
+
+  @Get('community/posts/:id')
+  @ApiOperation({ summary: "Détails d'un post" })
+  async getPostById(@Param('id') id: string) {
+    return this.adminService.getPostById(id);
   }
 
   @Delete('community/posts/:id')
