@@ -156,7 +156,7 @@ export default function ThemeDetailPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Détails thème</h1>
+          <h1 className="admin-page-title">Détails thème</h1>
           <p className="text-muted-foreground">Chargement...</p>
         </div>
       </div>
@@ -167,7 +167,7 @@ export default function ThemeDetailPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Thème non trouvé</h1>
+          <h1 className="admin-page-title">Thème non trouvé</h1>
           <p className="text-muted-foreground">Le thème demandé n'existe pas</p>
           <Button onClick={() => router.push(`/${ADMIN_BASE_PATH}/themes`)} className="mt-4">
             Retour à la liste
@@ -191,7 +191,7 @@ export default function ThemeDetailPage() {
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-medium mb-1">{theme.title}</h1>
+              <h1 className="admin-page-title">{theme.title}</h1>
               {theme.isActive ? (
                 <Badge variant="default" className="flex items-center gap-1">
                   <CheckCircle className="w-3 h-3" />

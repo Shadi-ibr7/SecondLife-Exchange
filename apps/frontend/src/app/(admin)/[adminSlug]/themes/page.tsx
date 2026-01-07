@@ -272,8 +272,8 @@ export default function AdminThemesPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Gestion des thèmes IA</h1>
-          <p className="text-muted-foreground">Chargement...</p>
+          <h1 className="admin-page-title">Gestion des thèmes IA</h1>
+          <p className="admin-page-description">Chargement...</p>
         </div>
       </div>
     );
@@ -283,7 +283,7 @@ export default function AdminThemesPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Gestion des thèmes IA</h1>
+          <h1 className="admin-page-title">Gestion des thèmes IA</h1>
           <p className="text-destructive">
             Erreur lors du chargement des thèmes :{' '}
             {error instanceof Error ? error.message : 'Erreur inconnue'}
@@ -304,7 +304,7 @@ export default function AdminThemesPage() {
     <div className="space-y-6 lg:space-y-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Gestion des thèmes IA</h1>
+          <h1 className="admin-page-title">Gestion des thèmes IA</h1>
           <p className="text-muted-foreground">
             Surveillez et modérez les thèmes hebdomadaires générés automatiquement par l'IA.
           </p>

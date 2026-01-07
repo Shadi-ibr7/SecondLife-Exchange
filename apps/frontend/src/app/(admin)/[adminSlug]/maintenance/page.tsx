@@ -122,8 +122,8 @@ export default function MaintenancePage() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-medium mb-1">Maintenance système</h1>
-            <p className="text-muted-foreground">
+            <h1 className="admin-page-title">Maintenance système</h1>
+            <p className="admin-page-description">
               Gestion de la maintenance, sauvegardes et configuration système
             </p>
           </div>

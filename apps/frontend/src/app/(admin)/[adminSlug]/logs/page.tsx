@@ -46,7 +46,7 @@ export default function AdminLogsPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Logs d'administration</h1>
+          <h1 className="admin-page-title">Logs d'administration</h1>
           <p className="text-muted-foreground">Chargement...</p>
         </div>
       </div>
@@ -57,8 +57,8 @@ export default function AdminLogsPage() {
     <div className="space-y-6 lg:space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-medium mb-1">Logs d'administration</h1>
-        <p className="text-muted-foreground">Consulter l'historique des actions administrateurs</p>
+        <h1 className="admin-page-title">Logs d'administration</h1>
+        <p className="admin-page-description">Consulter l'historique des actions administrateurs</p>
       </div>
 
       {/* Stats */}

@@ -113,8 +113,8 @@ export default function DashboardStatisticsPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Statistiques avancées</h1>
-          <p className="text-muted-foreground">Chargement...</p>
+          <h1 className="admin-page-title">Statistiques avancées</h1>
+          <p className="admin-page-description">Chargement...</p>
         </div>
       </div>
     );
@@ -131,7 +131,7 @@ export default function DashboardStatisticsPage() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-medium mb-1">Statistiques avancées</h1>
+            <h1 className="admin-page-title">Statistiques avancées</h1>
             <p className="text-muted-foreground">
               Analyse approfondie et métriques de performance de la plateforme
             </p>

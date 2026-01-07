@@ -82,166 +82,164 @@ export default function AdminUsersPage() {
 
   const getStatusBadge = (user: any) => {
     if (user.ban) {
-      return <Badge variant="destructive">Banni</Badge>;
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[rgba(220,38,38,0.1)] dark:bg-[rgba(239,68,68,0.1)] text-[#dc2626] dark:text-[#ef4444]">
+          Banni
+        </span>
+      );
     }
-    return <Badge variant="default">Actif</Badge>;
+    return (
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[rgba(27,56,40,0.1)] dark:bg-[rgba(45,90,69,0.1)] text-[#1b3828] dark:text-[#2d5a45]">
+        Actif
+      </span>
+    );
   };
 
   if (isLoading) {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Gestion des utilisateurs</h1>
-          <p className="text-muted-foreground">Chargement...</p>
+          <h1 className="admin-page-title">Gestion des utilisateurs</h1>
+          <p className="admin-page-description">Chargement...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 lg:space-y-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-medium mb-1">Gestion des utilisateurs</h1>
-          <p className="text-muted-foreground">Gérer les utilisateurs de la plateforme</p>
-        </div>
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-medium text-[#1e1e20] dark:text-[#ececed]">Gestion des utilisateurs</h1>
+        <p className="text-base text-[#6f6f73] dark:text-[#9a9a9d]">Gérer les utilisateurs de la plateforme</p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Total utilisateurs</CardDescription>
-            <CardTitle className="text-2xl">{data?.total || 0}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Utilisateurs bannis</CardDescription>
-            <CardTitle className="text-2xl">
-              {data?.users?.filter((u: any) => u.ban).length || 0}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Page actuelle</CardDescription>
-            <CardTitle className="text-2xl">{page}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Total pages</CardDescription>
-            <CardTitle className="text-2xl">{data?.totalPages || 0}</CardTitle>
-          </CardHeader>
-        </Card>
+        <div className="bg-white dark:bg-[#141416] border border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] rounded-lg shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] p-6">
+          <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal mb-1">Total utilisateurs</p>
+          <p className="text-2xl font-normal text-[#1e1e20] dark:text-[#ececed]">{data?.total || 0}</p>
+        </div>
+        <div className="bg-white dark:bg-[#141416] border border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] rounded-lg shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] p-6">
+          <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal mb-1">Utilisateurs bannis</p>
+          <p className="text-2xl font-normal text-[#1e1e20] dark:text-[#ececed]">
+            {data?.users?.filter((u: any) => u.ban).length || 0}
+          </p>
+        </div>
+        <div className="bg-white dark:bg-[#141416] border border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] rounded-lg shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] p-6">
+          <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal mb-1">Page actuelle</p>
+          <p className="text-2xl font-normal text-[#1e1e20] dark:text-[#ececed]">{page}</p>
+        </div>
+        <div className="bg-white dark:bg-[#141416] border border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] rounded-lg shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] p-6">
+          <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal mb-1">Total pages</p>
+          <p className="text-2xl font-normal text-[#1e1e20] dark:text-[#ececed]">{data?.totalPages || 0}</p>
+        </div>
       </div>
 
       {/* Search */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Rechercher par nom ou email..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                className="pl-10"
-              />
-            </div>
+      <div className="bg-white dark:bg-[#141416] border border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] rounded-lg shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] p-6">
+        <div className="flex items-center gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6f6f73] dark:text-[#9a9a9d]" />
+            <Input
+              placeholder="Rechercher par nom ou email..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              className="pl-10 bg-white dark:bg-[#1a1a1c] border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] text-[#1e1e20] dark:text-[#ececed]"
+            />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Users Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Liste des utilisateurs</CardTitle>
-          <CardDescription>
+      <div className="bg-white dark:bg-[#141416] border border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] rounded-lg shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] p-6">
+        <div className="mb-6">
+          <h3 className="text-base font-normal text-[#1e1e20] dark:text-[#ececed] mb-1">Liste des utilisateurs</h3>
+          <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal">
             {data?.total || 0} utilisateur{data?.total !== 1 ? 's' : ''} au total
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Utilisateur</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead>Objets</TableHead>
-                <TableHead>Échanges</TableHead>
-                <TableHead>Date d'inscription</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data?.users?.map((user: any) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarImage src={user.avatarUrl || undefined} />
-                        <AvatarFallback>
-                          {user.displayName?.charAt(0).toUpperCase() || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium">{user.displayName}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>{getStatusBadge(user)}</TableCell>
-                  <TableCell>{user._count?.items || 0}</TableCell>
-                  <TableCell>
-                    {(user._count?.exchangesRequested || 0) +
-                      (user._count?.exchangesResponded || 0)}
-                  </TableCell>
-                  <TableCell>
-                    {new Date(user.createdAt).toLocaleDateString('fr-FR')}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        asChild
-                      >
-                        <Link href={`/${ADMIN_BASE_PATH}/users/${user.id}`}>
-                          <Eye className="w-4 h-4" />
-                        </Link>
-                      </Button>
-                      {user.ban ? (
+          </p>
+        </div>
+        <div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)]">
+                  <th className="text-left py-3 px-4 text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d]">Utilisateur</th>
+                  <th className="text-left py-3 px-4 text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d]">Email</th>
+                  <th className="text-left py-3 px-4 text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d]">Statut</th>
+                  <th className="text-left py-3 px-4 text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d]">Objets</th>
+                  <th className="text-left py-3 px-4 text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d]">Échanges</th>
+                  <th className="text-left py-3 px-4 text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d]">Date d'inscription</th>
+                  <th className="text-right py-3 px-4 text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d]">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data?.users?.map((user: any) => (
+                  <tr key={user.id} className="border-b border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] last:border-0">
+                    <td className="py-4 px-4">
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarImage src={user.avatarUrl || undefined} />
+                          <AvatarFallback>
+                            {user.displayName?.charAt(0).toUpperCase() || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed]">{user.displayName}</span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-4 text-sm font-normal text-[#1e1e20] dark:text-[#ececed]">{user.email}</td>
+                    <td className="py-4 px-4">{getStatusBadge(user)}</td>
+                    <td className="py-4 px-4 text-sm font-normal text-[#1e1e20] dark:text-[#ececed]">{user._count?.items || 0}</td>
+                    <td className="py-4 px-4 text-sm font-normal text-[#1e1e20] dark:text-[#ececed]">
+                      {(user._count?.exchangesRequested || 0) +
+                        (user._count?.exchangesResponded || 0)}
+                    </td>
+                    <td className="py-4 px-4 text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d]">
+                      {new Date(user.createdAt).toLocaleDateString('fr-FR')}
+                    </td>
+                    <td className="py-4 px-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleUnban(user.id)}
+                          asChild
                         >
-                          <UserCheck className="w-4 h-4" />
+                          <Link href={`/${ADMIN_BASE_PATH}/users/${user.id}`}>
+                            <Eye className="w-4 h-4" />
+                          </Link>
                         </Button>
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleBan(user)}
-                        >
-                          <Ban className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                        {user.ban ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleUnban(user.id)}
+                          >
+                            <UserCheck className="w-4 h-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleBan(user)}
+                          >
+                            <Ban className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           {/* Pagination */}
           {data && data.totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4">
-              <p className="text-sm text-muted-foreground">
+            <div className="flex items-center justify-between mt-6 pt-4 border-t border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)]">
+              <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal">
                 Page {page} sur {data.totalPages}
               </p>
               <div className="flex gap-2">
@@ -250,6 +248,7 @@ export default function AdminUsersPage() {
                   size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
+                  className="border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)]"
                 >
                   Précédent
                 </Button>
@@ -258,14 +257,15 @@ export default function AdminUsersPage() {
                   size="sm"
                   onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))}
                   disabled={page === data.totalPages}
+                  className="border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)]"
                 >
                   Suivant
                 </Button>
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Ban Dialog */}
       <Dialog open={banDialogOpen} onOpenChange={setBanDialogOpen}>

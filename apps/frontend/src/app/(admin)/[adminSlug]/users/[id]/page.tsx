@@ -95,7 +95,7 @@ export default function UserDetailPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Détails utilisateur</h1>
+          <h1 className="admin-page-title">Détails utilisateur</h1>
           <p className="text-muted-foreground">Chargement...</p>
         </div>
       </div>
@@ -106,7 +106,7 @@ export default function UserDetailPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Utilisateur non trouvé</h1>
+          <h1 className="admin-page-title">Utilisateur non trouvé</h1>
           <p className="text-muted-foreground">L'utilisateur demandé n'existe pas</p>
           <Button onClick={() => router.push(`/${ADMIN_BASE_PATH}/users`)} className="mt-4">
             Retour à la liste
@@ -129,7 +129,7 @@ export default function UserDetailPage() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-medium mb-1">Détails utilisateur</h1>
+            <h1 className="admin-page-title">Détails utilisateur</h1>
             <p className="text-muted-foreground">Informations complètes sur l'utilisateur</p>
           </div>
         </div>

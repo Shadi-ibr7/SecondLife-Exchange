@@ -141,8 +141,8 @@ export default function AnalyticsReportsPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Rapports analytiques</h1>
-          <p className="text-muted-foreground">Chargement...</p>
+          <h1 className="admin-page-title">Rapports analytiques</h1>
+          <p className="admin-page-description">Chargement...</p>
         </div>
       </div>
     );
@@ -157,8 +157,8 @@ export default function AnalyticsReportsPage() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-medium mb-1">Rapports analytiques</h1>
-            <p className="text-muted-foreground">
+            <h1 className="admin-page-title">Rapports analytiques</h1>
+            <p className="admin-page-description">
               Analyse détaillée et rapports de la plateforme
             </p>
           </div>

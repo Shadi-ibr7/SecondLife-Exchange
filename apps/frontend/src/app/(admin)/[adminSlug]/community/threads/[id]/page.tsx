@@ -99,7 +99,7 @@ export default function ThreadDetailPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Détails du thread</h1>
+          <h1 className="admin-page-title">Détails du thread</h1>
           <p className="text-muted-foreground">Chargement...</p>
         </div>
       </div>
@@ -110,7 +110,7 @@ export default function ThreadDetailPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Thread non trouvé</h1>
+          <h1 className="admin-page-title">Thread non trouvé</h1>
           <p className="text-muted-foreground">Le thread demandé n'existe pas</p>
           <Button onClick={() => router.push(`/${ADMIN_BASE_PATH}/community`)} className="mt-4">
             Retour à la liste
@@ -130,7 +130,7 @@ export default function ThreadDetailPage() {
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-medium mb-1">Détails du thread</h1>
+              <h1 className="admin-page-title">Détails du thread</h1>
               {getScopeBadge(thread.scope)}
             </div>
             <p className="text-muted-foreground">

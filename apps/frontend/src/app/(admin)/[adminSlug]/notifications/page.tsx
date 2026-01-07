@@ -151,12 +151,12 @@ export default function AdminNotificationsPage() {
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-medium mb-1">Notifications</h1>
+              <h1 className="admin-page-title">Notifications</h1>
               {unreadCount > 0 && (
                 <Badge variant="destructive">{unreadCount} non lues</Badge>
               )}
             </div>
-            <p className="text-muted-foreground">
+            <p className="admin-page-description">
               Gérer les notifications et alertes système
             </p>
           </div>

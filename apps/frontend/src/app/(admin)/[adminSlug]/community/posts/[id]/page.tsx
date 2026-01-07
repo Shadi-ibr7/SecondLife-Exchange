@@ -67,7 +67,7 @@ export default function PostDetailPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Détails du post</h1>
+          <h1 className="admin-page-title">Détails du post</h1>
           <p className="text-muted-foreground">Chargement...</p>
         </div>
       </div>
@@ -78,7 +78,7 @@ export default function PostDetailPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Post non trouvé</h1>
+          <h1 className="admin-page-title">Post non trouvé</h1>
           <p className="text-muted-foreground">Le post demandé n'existe pas</p>
           <Button onClick={() => router.push(`/${ADMIN_BASE_PATH}/community`)} className="mt-4">
             Retour à la liste
@@ -97,7 +97,7 @@ export default function PostDetailPage() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-medium mb-1">Détails du post</h1>
+            <h1 className="admin-page-title">Détails du post</h1>
             <p className="text-muted-foreground">
               Créé le {format(new Date(post.createdAt), 'PPpp', { locale: fr })}
             </p>

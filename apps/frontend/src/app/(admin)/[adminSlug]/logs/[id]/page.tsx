@@ -69,7 +69,7 @@ export default function LogDetailPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Détails du log</h1>
+          <h1 className="admin-page-title">Détails du log</h1>
           <p className="text-muted-foreground">Chargement...</p>
         </div>
       </div>
@@ -80,7 +80,7 @@ export default function LogDetailPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Log non trouvé</h1>
+          <h1 className="admin-page-title">Log non trouvé</h1>
           <p className="text-muted-foreground">Le log demandé n'existe pas</p>
           <Button onClick={() => router.push(`/${ADMIN_BASE_PATH}/logs`)} className="mt-4">
             Retour à la liste
@@ -105,7 +105,7 @@ export default function LogDetailPage() {
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-medium mb-1">Détails du log</h1>
+              <h1 className="admin-page-title">Détails du log</h1>
               <Badge variant={actionConfig.variant}>{actionConfig.label}</Badge>
             </div>
             <p className="text-muted-foreground">

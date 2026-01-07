@@ -91,7 +91,7 @@ export default function ItemDetailPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Détails objet</h1>
+          <h1 className="admin-page-title">Détails objet</h1>
           <p className="text-muted-foreground">Chargement...</p>
         </div>
       </div>
@@ -102,7 +102,7 @@ export default function ItemDetailPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Objet non trouvé</h1>
+          <h1 className="admin-page-title">Objet non trouvé</h1>
           <p className="text-muted-foreground">L'objet demandé n'existe pas</p>
           <Button onClick={() => router.push(`/${ADMIN_BASE_PATH}/items`)} className="mt-4">
             Retour à la liste
@@ -121,7 +121,7 @@ export default function ItemDetailPage() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-medium mb-1">Détails objet</h1>
+            <h1 className="admin-page-title">Détails objet</h1>
             <p className="text-muted-foreground">Informations complètes sur l'objet</p>
           </div>
         </div>

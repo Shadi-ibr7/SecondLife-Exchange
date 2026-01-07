@@ -298,3 +298,12 @@
     @apply grid-cols-4;
   }
 }
+
+/* Admin Page Styles - Figma Design */
+.admin-page-title {
+  @apply text-2xl font-medium mb-1 text-[#1e1e20] dark:text-[#ececed];
+}
+
+.admin-page-description {
+  @apply text-base text-[#6f6f73] dark:text-[#9a9a9d];
+}

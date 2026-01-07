@@ -136,10 +136,10 @@ export default function AdminDetailPage() {
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-medium mb-1">Détails administrateur</h1>
+              <h1 className="admin-page-title">Détails administrateur</h1>
               {getRoleBadge(admin.role)}
             </div>
-            <p className="text-muted-foreground">
+            <p className="admin-page-description">
               Gérer le compte et les permissions de cet administrateur
             </p>
           </div>

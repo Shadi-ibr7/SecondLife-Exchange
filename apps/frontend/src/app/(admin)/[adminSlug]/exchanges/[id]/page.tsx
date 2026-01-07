@@ -86,7 +86,7 @@ export default function ExchangeDetailPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Détails échange</h1>
+          <h1 className="admin-page-title">Détails échange</h1>
           <p className="text-muted-foreground">Chargement...</p>
         </div>
       </div>
@@ -97,7 +97,7 @@ export default function ExchangeDetailPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Échange non trouvé</h1>
+          <h1 className="admin-page-title">Échange non trouvé</h1>
           <p className="text-muted-foreground">L'échange demandé n'existe pas</p>
           <Button onClick={() => router.push(`/${ADMIN_BASE_PATH}/exchanges`)} className="mt-4">
             Retour à la liste
@@ -117,7 +117,7 @@ export default function ExchangeDetailPage() {
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-medium mb-1">Détails échange</h1>
+              <h1 className="admin-page-title">Détails échange</h1>
               {getStatusBadge(exchange.status)}
             </div>
             <p className="text-muted-foreground">

@@ -87,7 +87,7 @@ export default function AdminItemsPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Gestion des objets</h1>
+          <h1 className="admin-page-title">Gestion des objets</h1>
           <p className="text-muted-foreground">Chargement...</p>
         </div>
       </div>
@@ -98,8 +98,8 @@ export default function AdminItemsPage() {
     <div className="space-y-6 lg:space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-medium mb-1">Gestion des objets</h1>
-        <p className="text-muted-foreground">Gérer les objets publiés sur la plateforme</p>
+        <h1 className="admin-page-title">Gestion des objets</h1>
+        <p className="admin-page-description">Gérer les objets publiés sur la plateforme</p>
       </div>
 
       {/* Stats */}

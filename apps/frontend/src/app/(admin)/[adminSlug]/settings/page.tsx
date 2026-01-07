@@ -91,8 +91,8 @@ export default function AdminSettingsPage() {
     <div className="space-y-6 lg:space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-medium mb-1">Paramètres</h1>
-        <p className="text-muted-foreground">Configuration de la plateforme SecondLife Exchange</p>
+        <h1 className="admin-page-title">Paramètres</h1>
+        <p className="admin-page-description">Configuration de la plateforme SecondLife Exchange</p>
       </div>
 
       {/* Warning Alert */}

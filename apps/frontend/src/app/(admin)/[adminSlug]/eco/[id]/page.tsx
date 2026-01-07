@@ -140,7 +140,7 @@ export default function EcoContentDetailPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Détails du contenu</h1>
+          <h1 className="admin-page-title">Détails du contenu</h1>
           <p className="text-muted-foreground">Chargement...</p>
         </div>
       </div>
@@ -151,7 +151,7 @@ export default function EcoContentDetailPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Contenu non trouvé</h1>
+          <h1 className="admin-page-title">Contenu non trouvé</h1>
           <p className="text-muted-foreground">Le contenu demandé n'existe pas</p>
           <Button onClick={() => router.push(`/${ADMIN_BASE_PATH}/eco`)} className="mt-4">
             Retour à la liste
@@ -171,7 +171,7 @@ export default function EcoContentDetailPage() {
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-medium mb-1">{content.title}</h1>
+              <h1 className="admin-page-title">{content.title}</h1>
               {isPublished ? (
                 <Badge variant="default" className="flex items-center gap-1">
                   <Eye className="w-3 h-3" />

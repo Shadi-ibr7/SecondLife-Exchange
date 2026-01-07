@@ -3,6 +3,7 @@
  *
  * DESCRIPTION:
  * Layout principal pour l'admin dashboard avec sidebar et header.
+ * Design aligné avec Figma.
  */
 
 'use client';
@@ -18,11 +19,11 @@ interface AdminLayoutProps {
 
 export function AdminLayout({ children }: AdminLayoutProps) {
   return (
-    <div className="min-h-screen bg-muted">
+    <div className="min-h-screen bg-[#f7f7f8] dark:bg-[#0b0b0d]">
       <AdminSidebar />
       <div className="lg:ml-60">
         <AdminHeader />
-        <main className="p-4 lg:p-8">{children}</main>
+        <main className="p-6 lg:p-8 pt-24 lg:pt-24">{children}</main>
       </div>
     </div>
   );

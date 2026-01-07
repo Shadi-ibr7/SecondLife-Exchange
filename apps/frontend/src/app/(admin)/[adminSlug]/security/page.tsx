@@ -126,8 +126,8 @@ export default function SecurityPage() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-medium mb-1">Sécurité et permissions</h1>
-            <p className="text-muted-foreground">
+            <h1 className="admin-page-title">Sécurité et permissions</h1>
+            <p className="admin-page-description">
               Gérer les paramètres de sécurité et les permissions d'accès
             </p>
           </div>

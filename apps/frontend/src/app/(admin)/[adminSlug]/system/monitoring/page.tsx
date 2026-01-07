@@ -150,8 +150,8 @@ export default function SystemMonitoringPage() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-medium mb-1">Monitoring système</h1>
-            <p className="text-muted-foreground">
+            <h1 className="admin-page-title">Monitoring système</h1>
+            <p className="admin-page-description">
               Surveillance en temps réel de l'infrastructure et des performances
             </p>
           </div>

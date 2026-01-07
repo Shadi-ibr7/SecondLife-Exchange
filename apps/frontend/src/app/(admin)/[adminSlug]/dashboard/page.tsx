@@ -29,30 +29,28 @@ function StatsCard({
   icon: React.ReactNode;
 }) {
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            <CardDescription>{title}</CardDescription>
-            <CardTitle className="text-3xl tracking-tight">{value}</CardTitle>
-            {change && (
-              <p
-                className={`text-xs ${
-                  trend === 'up'
-                    ? 'text-primary'
-                    : trend === 'down'
-                      ? 'text-destructive'
-                      : 'text-muted-foreground'
-                }`}
-              >
-                {change}
-              </p>
-            )}
-          </div>
-          <div className="text-muted-foreground">{icon}</div>
+    <div className="bg-white dark:bg-[#141416] border border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] rounded-lg shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] p-6">
+      <div className="flex items-start justify-between">
+        <div className="space-y-2">
+          <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal">{title}</p>
+          <p className="text-3xl font-normal text-[#1e1e20] dark:text-[#ececed] tracking-tight">{value}</p>
+          {change && (
+            <p
+              className={`text-xs font-normal ${
+                trend === 'up'
+                  ? 'text-[#1b3828] dark:text-[#2d5a45]'
+                  : trend === 'down'
+                    ? 'text-[#dc2626] dark:text-[#ef4444]'
+                    : 'text-[#6f6f73] dark:text-[#9a9a9d]'
+              }`}
+            >
+              {change}
+            </p>
+          )}
         </div>
-      </CardHeader>
-    </Card>
+        <div className="text-[#6f6f73] dark:text-[#9a9a9d]">{icon}</div>
+      </div>
+    </div>
   );
 }
 
@@ -85,7 +83,7 @@ export default function AdminDashboardPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Dashboard</h1>
+          <h1 className="admin-page-title">Dashboard</h1>
           <p className="text-muted-foreground">Chargement...</p>
         </div>
       </div>
@@ -105,8 +103,8 @@ export default function AdminDashboardPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Dashboard</h1>
-          <p className="text-muted-foreground">Erreur lors du chargement des données</p>
+          <h1 className="admin-page-title">Dashboard</h1>
+          <p className="admin-page-description">Erreur lors du chargement des données</p>
         </div>
         <div className="rounded-lg border border-destructive bg-destructive/10 p-4">
           <h3 className="font-semibold text-destructive mb-2">
@@ -138,26 +136,17 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="space-y-6 lg:space-y-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-medium mb-1">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Vue d'ensemble de la plateforme SecondLife Exchange
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`/${ADMIN_BASE_PATH}/analytics`}>
-              Voir Analytics complet
-            </Link>
-          </Button>
-        </div>
+      <div className="flex flex-col gap-1">
+        <h1 className="admin-page-title">Dashboard</h1>
+        <p className="admin-page-description">
+          Vue d'ensemble de la plateforme SecondLife Exchange
+        </p>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
           title="Utilisateurs totaux"
           value={stats?.totalUsers?.toLocaleString() || '0'}
@@ -189,102 +178,100 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Quick Access Panels */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Recent Users */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+        <div className="bg-white dark:bg-[#141416] border border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] rounded-lg shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] p-6">
+          <div className="flex flex-row items-center justify-between mb-6">
             <div>
-              <CardTitle>Utilisateurs récents</CardTitle>
-              <CardDescription>Derniers inscrits</CardDescription>
+              <h3 className="text-base font-normal text-[#1e1e20] dark:text-[#ececed] mb-1">Utilisateurs récents</h3>
+              <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal">Derniers inscrits</p>
             </div>
             <Button variant="ghost" size="sm" asChild>
               <Link href={`/${ADMIN_BASE_PATH}/users`}>Voir tout</Link>
             </Button>
-          </CardHeader>
-          <CardContent>
+          </div>
+          <div>
             {recentUsers?.users?.length > 0 ? (
               <div className="space-y-3">
                 {recentUsers.users.map((user: any) => (
-                  <div key={user.id} className="flex items-center justify-between">
+                  <div key={user.id} className="flex items-center justify-between pb-3 border-b border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] last:border-0 last:pb-0">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className="text-xs font-medium">
+                      <div className="w-8 h-8 rounded-full bg-[rgba(27,56,40,0.1)] dark:bg-[rgba(45,90,69,0.1)] flex items-center justify-center">
+                        <span className="text-xs font-normal text-[#1b3828] dark:text-[#2d5a45]">
                           {user.displayName?.charAt(0).toUpperCase()}
                         </span>
                       </div>
                       <div>
-                        <p className="text-sm font-medium">{user.displayName}</p>
-                        <p className="text-xs text-muted-foreground">{user.email}</p>
+                        <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed]">{user.displayName}</p>
+                        <p className="text-xs text-[#6f6f73] dark:text-[#9a9a9d] font-normal">{user.email}</p>
                       </div>
                     </div>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal">
                       {new Date(user.createdAt).toLocaleDateString('fr-FR')}
                     </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">Aucun utilisateur récent</p>
+              <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal">Aucun utilisateur récent</p>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Recent Items */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+        <div className="bg-white dark:bg-[#141416] border border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] rounded-lg shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] p-6">
+          <div className="flex flex-row items-center justify-between mb-6">
             <div>
-              <CardTitle>Objets récents</CardTitle>
-              <CardDescription>Derniers publiés</CardDescription>
+              <h3 className="text-base font-normal text-[#1e1e20] dark:text-[#ececed] mb-1">Objets récents</h3>
+              <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal">Derniers publiés</p>
             </div>
             <Button variant="ghost" size="sm" asChild>
               <Link href={`/${ADMIN_BASE_PATH}/items`}>Voir tout</Link>
             </Button>
-          </CardHeader>
-          <CardContent>
+          </div>
+          <div>
             {recentItems?.items?.length > 0 ? (
               <div className="space-y-3">
                 {recentItems.items.map((item: any) => (
-                  <div key={item.id} className="flex items-center justify-between">
+                  <div key={item.id} className="flex items-center justify-between pb-3 border-b border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] last:border-0 last:pb-0">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded bg-muted flex items-center justify-center">
-                        <Package className="w-4 h-4 text-muted-foreground" />
+                      <div className="w-8 h-8 rounded bg-[#f7f7f8] dark:bg-[#1a1a1c] flex items-center justify-center">
+                        <Package className="w-4 h-4 text-[#6f6f73] dark:text-[#9a9a9d]" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium line-clamp-1">{item.title}</p>
-                        <p className="text-xs text-muted-foreground">{item.category}</p>
+                        <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] line-clamp-1">{item.title}</p>
+                        <p className="text-xs text-[#6f6f73] dark:text-[#9a9a9d] font-normal">{item.category}</p>
                       </div>
                     </div>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal">
                       {new Date(item.createdAt).toLocaleDateString('fr-FR')}
                     </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">Aucun objet récent</p>
+              <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal">Aucun objet récent</p>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* Top Categories */}
       {analytics?.topCategories && analytics.topCategories.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Top catégories</CardTitle>
-            <CardDescription>Les catégories les plus populaires</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              {analytics.topCategories.slice(0, 5).map((cat: any) => (
-                <div key={cat.category} className="text-center">
-                  <p className="text-2xl font-bold">{cat.count}</p>
-                  <p className="text-sm text-muted-foreground">{cat.category}</p>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="bg-white dark:bg-[#141416] border border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] rounded-lg shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] p-6">
+          <div className="mb-6">
+            <h3 className="text-base font-normal text-[#1e1e20] dark:text-[#ececed] mb-1">Top catégories</h3>
+            <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal">Les catégories les plus populaires</p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {analytics.topCategories.slice(0, 5).map((cat: any) => (
+              <div key={cat.category} className="text-center">
+                <p className="text-2xl font-normal text-[#1e1e20] dark:text-[#ececed]">{cat.count}</p>
+                <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal">{cat.category}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

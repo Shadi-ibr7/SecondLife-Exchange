@@ -91,8 +91,8 @@ export default function AdminCommunityPage() {
     <div className="space-y-6 lg:space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-medium mb-1">Gestion de la communauté</h1>
-        <p className="text-muted-foreground">Gérer les threads et posts de la communauté</p>
+        <h1 className="admin-page-title">Gestion de la communauté</h1>
+        <p className="admin-page-description">Gérer les threads et posts de la communauté</p>
       </div>
 
       {/* Stats */}

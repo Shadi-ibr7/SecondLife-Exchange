@@ -84,7 +84,7 @@ export default function AdminReportsPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Gestion des signalements</h1>
+          <h1 className="admin-page-title">Gestion des signalements</h1>
           <p className="text-muted-foreground">Chargement...</p>
         </div>
       </div>
@@ -95,8 +95,8 @@ export default function AdminReportsPage() {
     <div className="space-y-6 lg:space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-medium mb-1">Gestion des signalements</h1>
-        <p className="text-muted-foreground">Gérer les signalements des utilisateurs</p>
+        <h1 className="admin-page-title">Gestion des signalements</h1>
+        <p className="admin-page-description">Gérer les signalements des utilisateurs</p>
       </div>
 
       {/* Stats */}

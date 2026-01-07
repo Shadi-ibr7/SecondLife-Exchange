@@ -96,7 +96,7 @@ export default function ReportDetailPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Détails signalement</h1>
+          <h1 className="admin-page-title">Détails signalement</h1>
           <p className="text-muted-foreground">Chargement...</p>
         </div>
       </div>
@@ -107,7 +107,7 @@ export default function ReportDetailPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-medium mb-1">Signalement non trouvé</h1>
+          <h1 className="admin-page-title">Signalement non trouvé</h1>
           <p className="text-muted-foreground">Le signalement demandé n'existe pas</p>
           <Button onClick={() => router.push(`/${ADMIN_BASE_PATH}/reports`)} className="mt-4">
             Retour à la liste
@@ -127,7 +127,7 @@ export default function ReportDetailPage() {
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-medium mb-1">Détails signalement</h1>
+              <h1 className="admin-page-title">Détails signalement</h1>
               {report.resolved ? (
                 <Badge variant="secondary" className="flex items-center gap-1">
                   <CheckCircle className="w-3 h-3" />

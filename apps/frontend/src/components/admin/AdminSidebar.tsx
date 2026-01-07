@@ -3,6 +3,7 @@
  *
  * DESCRIPTION:
  * Sidebar de navigation pour l'admin dashboard.
+ * Design aligné avec Figma.
  */
 
 'use client';
@@ -43,17 +44,17 @@ export function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden lg:fixed lg:left-0 lg:top-0 lg:h-screen lg:w-60 lg:flex lg:flex-col bg-sidebar border-r border-sidebar-border">
+    <aside className="hidden lg:fixed lg:left-0 lg:top-0 lg:h-screen lg:w-60 lg:flex lg:flex-col bg-white dark:bg-[#141416] border-r border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)]">
       <div className="flex flex-col h-full">
         {/* Logo */}
-        <div className="px-6 py-6 border-b border-sidebar-border">
+        <div className="px-6 py-6 border-b border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)]">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center">
-              <Leaf className="w-5 h-5 text-primary-foreground" strokeWidth={1.5} />
+            <div className="w-8 h-8 rounded-lg bg-[#1b3828] dark:bg-[#2d5a45] flex items-center justify-center">
+              <span className="text-white text-sm font-medium">SL</span>
             </div>
             <div>
-              <h1 className="text-sm tracking-tight text-foreground">SecondLife Exchange</h1>
-              <p className="text-xs text-muted-foreground">Admin</p>
+              <h1 className="text-sm font-medium tracking-tight text-[#1e1e20] dark:text-[#ececed]">SecondLife Exchange</h1>
+              <p className="text-xs text-[#6f6f73] dark:text-[#9a9a9d]">Admin</p>
             </div>
           </div>
         </div>
@@ -70,10 +71,10 @@ export function AdminSidebar() {
                   <Link
                     href={item.href}
                     className={cn(
-                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors text-sm',
+                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm',
                       isActive
-                        ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                        : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                        ? 'bg-[#1b3828] dark:bg-[#2d5a45] text-white'
+                        : 'text-[#6f6f73] dark:text-[#9a9a9d] hover:bg-[rgba(0,0,0,0.04)] dark:hover:bg-[rgba(255,255,255,0.04)]'
                     )}
                   >
                     <Icon className="w-4 h-4" strokeWidth={1.5} />
@@ -86,8 +87,8 @@ export function AdminSidebar() {
         </nav>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-sidebar-border">
-          <p className="text-xs text-muted-foreground">v1.0.0</p>
+        <div className="px-6 py-4 border-t border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)]">
+          <p className="text-xs text-[#6f6f73] dark:text-[#9a9a9d]">v1.0.0</p>
         </div>
       </div>
     </aside>

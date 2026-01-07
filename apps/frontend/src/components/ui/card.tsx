@@ -9,7 +9,7 @@ const Card = React.forwardRef<
     ref={ref}
     data-slot="card"
     className={cn(
-      'flex flex-col gap-6 rounded-xl border bg-card text-card-foreground',
+      'flex flex-col gap-6 rounded-lg border border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] bg-white dark:bg-[#141416] text-[#1e1e20] dark:text-[#ececed] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]',
       className
     )}
     {...props}
@@ -40,7 +40,7 @@ const CardTitle = React.forwardRef<
   <h4
     ref={ref}
     data-slot="card-title"
-    className={cn('leading-none', className)}
+    className={cn('leading-none text-[#1e1e20] dark:text-[#ececed] font-medium', className)}
     {...props}
   />
 ));
@@ -53,7 +53,7 @@ const CardDescription = React.forwardRef<
   <p
     ref={ref}
     data-slot="card-description"
-    className={cn('text-muted-foreground', className)}
+    className={cn('text-[#6f6f73] dark:text-[#9a9a9d]', className)}
     {...props}
   />
 ));

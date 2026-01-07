@@ -156,8 +156,8 @@ export default function AdminAdminsPage() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-medium mb-1">Gestion des administrateurs</h1>
-            <p className="text-muted-foreground">
+            <h1 className="admin-page-title">Gestion des administrateurs</h1>
+            <p className="admin-page-description">
               Gérer les comptes administrateurs et leurs permissions
             </p>
           </div>
