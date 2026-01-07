@@ -46,11 +46,11 @@ export default function MatchingPage() {
   // Données mock pour les items (à remplacer par l'API)
   const items = recommendationsData?.recommendations?.map((rec) => ({
     id: rec.item.id,
-    image: rec.item.photos?.[0] || '/placeholder-item.jpg',
+    image: rec.item.photos?.[0]?.url || '/placeholder-item.jpg',
     title: rec.item.title,
     category: rec.item.category,
     condition: rec.item.condition,
-    location: rec.item.location || 'Paris, France',
+    location: 'Paris, France', // Location non disponible dans l'API
     compatibilityScore: rec.score,
   })) || [];
 

@@ -235,6 +235,108 @@ export class AdminController {
     );
   }
 
+  // Exchanges
+  @Get('exchanges')
+  @ApiOperation({ summary: 'Liste des échanges' })
+  async getExchanges(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('status') status?: string,
+    @Query('requesterId') requesterId?: string,
+    @Query('responderId') responderId?: string,
+  ) {
+    return this.adminService.getExchanges(
+      page ? parseInt(page) : 1,
+      limit ? parseInt(limit) : 20,
+      { status, requesterId, responderId },
+    );
+  }
+
+  @Get('exchanges/:id')
+  @ApiOperation({ summary: "Détails d'un échange" })
+  async getExchangeById(@Param('id') id: string) {
+    return this.adminService.getExchangeById(id);
+  }
+
+  @Delete('exchanges/:id')
+  @ApiOperation({ summary: 'Supprimer un échange' })
+  async deleteExchange(@Param('id') id: string, @Request() req: any) {
+    return this.adminService.deleteExchange(id, req.user.id);
+  }
+
+  // Community Management
+  @Get('community/threads')
+  @ApiOperation({ summary: 'Liste des threads' })
+  async getThreads(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('scope') scope?: string,
+  ) {
+    return this.adminService.getThreads(
+      page ? parseInt(page) : 1,
+      limit ? parseInt(limit) : 20,
+      scope,
+    );
+  }
+
+  @Delete('community/threads/:id')
+  @ApiOperation({ summary: 'Supprimer un thread' })
+  async deleteThread(@Param('id') id: string, @Request() req: any) {
+    return this.adminService.deleteThread(id, req.user.id);
+  }
+
+  @Get('community/posts')
+  @ApiOperation({ summary: 'Liste des posts' })
+  async getPosts(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('threadId') threadId?: string,
+    @Query('authorId') authorId?: string,
+  ) {
+    return this.adminService.getPosts(
+      page ? parseInt(page) : 1,
+      limit ? parseInt(limit) : 20,
+      { threadId, authorId },
+    );
+  }
+
+  @Delete('community/posts/:id')
+  @ApiOperation({ summary: 'Supprimer un post' })
+  async deletePost(@Param('id') id: string, @Request() req: any) {
+    return this.adminService.deletePost(id, req.user.id);
+  }
+
+  // Analytics
+  @Get('analytics/overview')
+  @ApiOperation({ summary: 'Statistiques avancées de la plateforme' })
+  async getAnalyticsOverview(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.adminService.getAnalyticsOverview(
+      startDate ? new Date(startDate) : undefined,
+      endDate ? new Date(endDate) : undefined,
+    );
+  }
+
+  @Get('analytics/users')
+  @ApiOperation({ summary: 'Statistiques utilisateurs' })
+  async getUserAnalytics() {
+    return this.adminService.getUserAnalytics();
+  }
+
+  @Get('analytics/items')
+  @ApiOperation({ summary: 'Statistiques objets' })
+  async getItemAnalytics() {
+    return this.adminService.getItemAnalytics();
+  }
+
+  @Get('analytics/exchanges')
+  @ApiOperation({ summary: 'Statistiques échanges' })
+  async getExchangeAnalytics() {
+    return this.adminService.getExchangeAnalytics();
+  }
+
   // Logs
   @Get('logs')
   @ApiOperation({ summary: 'Logs des actions admin' })

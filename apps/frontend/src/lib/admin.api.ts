@@ -382,6 +382,129 @@ export const adminApi = {
     return response.data;
   },
 
+  // Exchanges
+  getExchanges: async (
+    page = 1,
+    limit = 20,
+    filters?: { status?: string; requesterId?: string; responderId?: string }
+  ) => {
+    const adminBasePath =
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.requesterId) params.append('requesterId', filters.requesterId);
+    if (filters?.responderId) params.append('responderId', filters.responderId);
+    const response = await adminApiClient.get(
+      `/${adminBasePath}/exchanges?${params.toString()}`
+    );
+    return response.data;
+  },
+
+  getExchangeById: async (id: string) => {
+    const adminBasePath =
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.get(`/${adminBasePath}/exchanges/${id}`);
+    return response.data;
+  },
+
+  deleteExchange: async (id: string) => {
+    const adminBasePath =
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.delete(
+      `/${adminBasePath}/exchanges/${id}`
+    );
+    return response.data;
+  },
+
+  // Community
+  getThreads: async (page = 1, limit = 20, scope?: string) => {
+    const adminBasePath =
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+    if (scope) params.append('scope', scope);
+    const response = await adminApiClient.get(
+      `/${adminBasePath}/community/threads?${params.toString()}`
+    );
+    return response.data;
+  },
+
+  deleteThread: async (id: string) => {
+    const adminBasePath =
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.delete(
+      `/${adminBasePath}/community/threads/${id}`
+    );
+    return response.data;
+  },
+
+  getPosts: async (
+    page = 1,
+    limit = 20,
+    filters?: { threadId?: string; authorId?: string }
+  ) => {
+    const adminBasePath =
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+    if (filters?.threadId) params.append('threadId', filters.threadId);
+    if (filters?.authorId) params.append('authorId', filters.authorId);
+    const response = await adminApiClient.get(
+      `/${adminBasePath}/community/posts?${params.toString()}`
+    );
+    return response.data;
+  },
+
+  deletePost: async (id: string) => {
+    const adminBasePath =
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.delete(
+      `/${adminBasePath}/community/posts/${id}`
+    );
+    return response.data;
+  },
+
+  // Analytics
+  getAnalyticsOverview: async (startDate?: string, endDate?: string) => {
+    const adminBasePath =
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    const response = await adminApiClient.get(
+      `/${adminBasePath}/analytics/overview?${params.toString()}`
+    );
+    return response.data;
+  },
+
+  getUserAnalytics: async () => {
+    const adminBasePath =
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.get(`/${adminBasePath}/analytics/users`);
+    return response.data;
+  },
+
+  getItemAnalytics: async () => {
+    const adminBasePath =
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.get(`/${adminBasePath}/analytics/items`);
+    return response.data;
+  },
+
+  getExchangeAnalytics: async () => {
+    const adminBasePath =
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.get(`/${adminBasePath}/analytics/exchanges`);
+    return response.data;
+  },
+
   // Logs
   getLogs: async (page = 1, limit = 50, adminId?: string) => {
     const adminBasePath =

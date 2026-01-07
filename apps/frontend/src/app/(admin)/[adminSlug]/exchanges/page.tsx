@@ -8,9 +8,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Search, ArrowLeftRight, Filter } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Search, ArrowLeftRight, Filter, Eye, Trash2, MessageSquare } from 'lucide-react';
 import { adminApi } from '@/lib/admin.api';
+import { toast } from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,20 +31,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export default function AdminExchangesPage() {
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  // Note: Cette page nécessiterait un endpoint spécifique pour les échanges
-  // Pour l'instant, on affiche une page de base
   const { data, isLoading } = useQuery({
     queryKey: ['admin-exchanges', page, statusFilter],
-    queryFn: async () => {
-      // TODO: Créer l'endpoint admin pour les échanges
-      return { exchanges: [], total: 0, page: 1, limit: 20, totalPages: 0 };
-    },
+    queryFn: () =>
+      adminApi.getExchanges(page, 20, {
+        status: statusFilter === 'all' ? undefined : statusFilter,
+      }),
   });
+
+  const handleDelete = async (exchangeId: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cet échange ?')) return;
+    try {
+      await adminApi.deleteExchange(exchangeId);
+      toast.success('Échange supprimé avec succès');
+      queryClient.invalidateQueries({ queryKey: ['admin-exchanges'] });
+    } catch (error: any) {
+      toast.error(error.message || 'Erreur lors de la suppression');
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: 'default' | 'secondary' | 'destructive'; label: string }> = {
@@ -87,13 +99,17 @@ export default function AdminExchangesPage() {
         <Card>
           <CardHeader className="pb-3">
             <CardDescription>En attente</CardDescription>
-            <CardTitle className="text-2xl">-</CardTitle>
+            <CardTitle className="text-2xl">
+              {data?.exchanges?.filter((e: any) => e.status === 'PENDING').length || 0}
+            </CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="pb-3">
             <CardDescription>Complétés</CardDescription>
-            <CardTitle className="text-2xl">-</CardTitle>
+            <CardTitle className="text-2xl">
+              {data?.exchanges?.filter((e: any) => e.status === 'COMPLETED').length || 0}
+            </CardTitle>
           </CardHeader>
         </Card>
         <Card>
@@ -138,37 +154,136 @@ export default function AdminExchangesPage() {
             <div className="text-center py-8 text-muted-foreground">
               <ArrowLeftRight className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>Aucun échange trouvé</p>
-              <p className="text-sm mt-2">
-                Cette fonctionnalité nécessite l'implémentation de l'endpoint admin pour les échanges
-              </p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Demandeur</TableHead>
-                  <TableHead>Objet demandé</TableHead>
-                  <TableHead>Répondeur</TableHead>
-                  <TableHead>Objet offert</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data?.exchanges?.map((exchange: any) => (
-                  <TableRow key={exchange.id}>
-                    <TableCell>{exchange.requester?.displayName || '-'}</TableCell>
-                    <TableCell>{exchange.requestedItemTitle}</TableCell>
-                    <TableCell>{exchange.responder?.displayName || '-'}</TableCell>
-                    <TableCell>{exchange.offeredItemTitle}</TableCell>
-                    <TableCell>{getStatusBadge(exchange.status)}</TableCell>
-                    <TableCell>
-                      {new Date(exchange.createdAt).toLocaleDateString('fr-FR')}
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Demandeur</TableHead>
+                    <TableHead>Objet demandé</TableHead>
+                    <TableHead>Répondeur</TableHead>
+                    <TableHead>Objet offert</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Messages</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {data?.exchanges?.map((exchange: any) => (
+                    <TableRow key={exchange.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={exchange.requester?.avatarUrl || undefined} />
+                            <AvatarFallback>
+                              {exchange.requester?.displayName?.charAt(0).toUpperCase() || 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium text-sm">
+                              {exchange.requester?.displayName || '-'}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {exchange.requester?.email}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium">{exchange.requestedItemTitle}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={exchange.responder?.avatarUrl || undefined} />
+                            <AvatarFallback>
+                              {exchange.responder?.displayName?.charAt(0).toUpperCase() || 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium text-sm">
+                              {exchange.responder?.displayName || '-'}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {exchange.responder?.email}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium">{exchange.offeredItemTitle}</div>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(exchange.status)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <MessageSquare className="w-4 h-4" />
+                          {exchange._count?.messages || 0}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {new Date(exchange.createdAt).toLocaleDateString('fr-FR')}
+                        </div>
+                        {exchange.completedAt && (
+                          <div className="text-xs text-muted-foreground">
+                            Complété: {new Date(exchange.completedAt).toLocaleDateString('fr-FR')}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              // TODO: Voir les détails
+                            }}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(exchange.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {/* Pagination */}
+              {data && data.totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4">
+                  <p className="text-sm text-muted-foreground">
+                    Page {page} sur {data.totalPages}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                    >
+                      Précédent
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))}
+                      disabled={page === data.totalPages}
+                    >
+                      Suivant
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

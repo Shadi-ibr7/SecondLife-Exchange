@@ -19,20 +19,23 @@ import {
   Leaf,
   FileText,
   Settings,
+  MessageCircle,
+  BarChart3,
 } from 'lucide-react';
 import { ADMIN_BASE_PATH } from '@/lib/admin.config';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: `/${ADMIN_BASE_PATH}/dashboard` },
+  { id: 'analytics', label: 'Analytics', icon: BarChart3, href: `/${ADMIN_BASE_PATH}/analytics` },
   { id: 'users', label: 'Utilisateurs', icon: Users, href: `/${ADMIN_BASE_PATH}/users` },
   { id: 'objects', label: 'Objets', icon: Package, href: `/${ADMIN_BASE_PATH}/items` },
   { id: 'exchanges', label: 'Échanges', icon: ArrowLeftRight, href: `/${ADMIN_BASE_PATH}/exchanges` },
+  { id: 'community', label: 'Communauté', icon: MessageCircle, href: `/${ADMIN_BASE_PATH}/community` },
   { id: 'reports', label: 'Signalements', icon: Flag, href: `/${ADMIN_BASE_PATH}/reports` },
   { id: 'ai-themes', label: 'Thèmes IA', icon: Sparkles, href: `/${ADMIN_BASE_PATH}/themes` },
   { id: 'eco-content', label: 'Contenu Écologique', icon: Leaf, href: `/${ADMIN_BASE_PATH}/eco` },
   { id: 'logs', label: 'Logs', icon: FileText, href: `/${ADMIN_BASE_PATH}/logs` },
-  { id: 'settings', label: 'Paramètres', icon: Settings, href: `/${ADMIN_BASE_PATH}/settings` },
 ];
 
 export function AdminSidebar() {
