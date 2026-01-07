@@ -57,24 +57,28 @@ function StatsCard({
 }
 
 export default function AdminDashboardPage() {
-  const { data: stats, isLoading: statsLoading } = useQuery({
+  const { data: stats, isLoading: statsLoading, error: statsError } = useQuery({
     queryKey: ['admin-dashboard-stats'],
     queryFn: () => adminApi.getDashboardStats(),
+    retry: 1,
   });
 
-  const { data: analytics, isLoading: analyticsLoading } = useQuery({
+  const { data: analytics, isLoading: analyticsLoading, error: analyticsError } = useQuery({
     queryKey: ['admin-analytics-overview'],
     queryFn: () => adminApi.getAnalyticsOverview(),
+    retry: 1,
   });
 
-  const { data: recentUsers } = useQuery({
+  const { data: recentUsers, error: usersError } = useQuery({
     queryKey: ['admin-recent-users'],
     queryFn: () => adminApi.getUsers(1, 5),
+    retry: 1,
   });
 
-  const { data: recentItems } = useQuery({
+  const { data: recentItems, error: itemsError } = useQuery({
     queryKey: ['admin-recent-items'],
     queryFn: () => adminApi.getItems(1, 5),
+    retry: 1,
   });
 
   if (statsLoading || analyticsLoading) {
@@ -83,6 +87,51 @@ export default function AdminDashboardPage() {
         <div>
           <h1 className="text-2xl font-medium mb-1">Dashboard</h1>
           <p className="text-muted-foreground">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Afficher les erreurs si elles existent
+  const hasError = statsError || analyticsError || usersError || itemsError;
+  if (hasError) {
+    const error = statsError || analyticsError || usersError || itemsError;
+    const errorMessage = error?.message || 'Une erreur est survenue';
+    const isNetworkError = 
+      errorMessage.includes('Network Error') || 
+      errorMessage.includes('ECONNREFUSED') ||
+      errorMessage.includes('fetch failed');
+    
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-medium mb-1">Dashboard</h1>
+          <p className="text-muted-foreground">Erreur lors du chargement des données</p>
+        </div>
+        <div className="rounded-lg border border-destructive bg-destructive/10 p-4">
+          <h3 className="font-semibold text-destructive mb-2">
+            {isNetworkError ? '⚠️ Backend non accessible' : 'Erreur de connexion'}
+          </h3>
+          <p className="text-sm text-muted-foreground mb-4">{errorMessage}</p>
+          {isNetworkError && (
+            <div className="text-sm text-muted-foreground space-y-2 mt-4 p-3 bg-background rounded border">
+              <p className="font-semibold">Solution :</p>
+              <ol className="list-decimal list-inside space-y-1 ml-2">
+                <li>Ouvrez un terminal dans le dossier <code className="bg-muted px-1 rounded">apps/backend</code></li>
+                <li>Exécutez <code className="bg-muted px-1 rounded">pnpm dev</code> pour démarrer le backend</li>
+                <li>Attendez que le message "Nest application successfully started" apparaisse</li>
+                <li>Rechargez cette page</li>
+              </ol>
+            </div>
+          )}
+          <div className="text-sm text-muted-foreground space-y-1 mt-4">
+            <p className="font-semibold">Vérifiez aussi que :</p>
+            <ul className="list-disc list-inside space-y-1 ml-4">
+              <li>Le backend est démarré sur <code className="bg-muted px-1 rounded">http://localhost:4000</code></li>
+              <li>Les variables <code className="bg-muted px-1 rounded">NEXT_PUBLIC_API_URL</code> et <code className="bg-muted px-1 rounded">NEXT_PUBLIC_ADMIN_BASE_PATH</code> sont définies dans <code className="bg-muted px-1 rounded">apps/frontend/.env.local</code></li>
+              <li>Vous êtes bien connecté en tant qu'administrateur</li>
+            </ul>
+          </div>
         </div>
       </div>
     );
