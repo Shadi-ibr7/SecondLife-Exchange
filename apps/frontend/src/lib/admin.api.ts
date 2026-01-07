@@ -607,4 +607,11 @@ export const adminApi = {
     );
     return response.data;
   },
+
+  getLogById: async (id: string) => {
+    const adminBasePath =
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.get(`/${adminBasePath}/logs/${id}`);
+    return response.data;
+  },
 };

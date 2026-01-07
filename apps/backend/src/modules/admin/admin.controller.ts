@@ -405,5 +405,11 @@ export class AdminController {
       adminId,
     );
   }
+
+  @Get('logs/:id')
+  @ApiOperation({ summary: "Détails d'un log" })
+  async getLogById(@Param('id') id: string) {
+    return this.adminService.getLogById(id);
+  }
 }
 

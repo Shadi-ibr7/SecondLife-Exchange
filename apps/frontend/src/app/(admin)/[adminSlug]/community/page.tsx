@@ -372,8 +372,10 @@ export default function AdminCommunityPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <Button variant="ghost" size="icon">
-                                <Eye className="w-4 h-4" />
+                              <Button variant="ghost" size="icon" asChild>
+                                <Link href={`/${ADMIN_BASE_PATH}/community/posts/${post.id}`}>
+                                  <Eye className="w-4 h-4" />
+                                </Link>
                               </Button>
                               <Button
                                 variant="ghost"

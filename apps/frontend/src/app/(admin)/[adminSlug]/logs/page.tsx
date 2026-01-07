@@ -7,10 +7,12 @@
 
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Filter } from 'lucide-react';
+import { Search, Filter, Eye } from 'lucide-react';
 import { adminApi } from '@/lib/admin.api';
+import { ADMIN_BASE_PATH } from '@/lib/admin.config';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -119,6 +121,7 @@ export default function AdminLogsPage() {
                 <TableHead>Admin</TableHead>
                 <TableHead>Métadonnées</TableHead>
                 <TableHead>Date</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -154,6 +157,13 @@ export default function AdminLogsPage() {
                   </TableCell>
                   <TableCell>
                     {new Date(log.createdAt).toLocaleString('fr-FR')}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" asChild>
+                      <Link href={`/${ADMIN_BASE_PATH}/logs/${log.id}`}>
+                        <Eye className="w-4 h-4" />
+                      </Link>
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}

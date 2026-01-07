@@ -667,6 +667,29 @@ export class AdminService {
     };
   }
 
+  async getLogById(id: string) {
+    const log = await this.prisma.adminLog.findUnique({
+      where: { id },
+      include: {
+        admin: {
+          select: {
+            id: true,
+            email: true,
+            displayName: true,
+            avatarUrl: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    if (!log) {
+      throw new NotFoundException('Log non trouvé');
+    }
+
+    return log;
+  }
+
   // Exchanges Management
   async getExchanges(
     page = 1,
