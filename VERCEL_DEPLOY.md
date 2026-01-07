@@ -55,13 +55,24 @@ Le PWA peut cacher les anciennes versions. Pour tester :
    - Scroll down to "Build & Development Settings"
    - Cliquez sur "Clear Build Cache"
 
-## Solution 5 : Vérifier la configuration de build
+## Solution 5 : Configurer rootDirectory dans Vercel
+
+**IMPORTANT** : Pour un monorepo, vous devez configurer `rootDirectory` dans l'interface Vercel :
+
+1. **Allez sur Vercel Dashboard** → Votre projet → **Settings** → **General**
+2. **Scroll down** jusqu'à "Build & Development Settings"
+3. **Définissez "Root Directory"** à : `apps/frontend`
+4. **Sauvegardez**
+
+Cette configuration dans l'interface Vercel est nécessaire car `rootDirectory` ne peut pas être défini dans `vercel.json`.
+
+## Solution 6 : Vérifier la configuration de build
 
 Assurez-vous que `vercel.json` est correct :
 
 ```json
 {
-  "buildCommand": "cd apps/frontend && pnpm build",
+  "buildCommand": "pnpm --filter @secondlife/frontend build",
   "outputDirectory": "apps/frontend/.next",
   "installCommand": "pnpm install --frozen-lockfile",
   "framework": "nextjs",
@@ -71,6 +82,16 @@ Assurez-vous que `vercel.json` est correct :
       "destination": "/$1"
     }
   ]
+}
+```
+
+**Note** : Si vous avez configuré `rootDirectory` dans l'interface Vercel, vous pouvez simplifier :
+```json
+{
+  "buildCommand": "pnpm build",
+  "outputDirectory": ".next",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "framework": "nextjs"
 }
 ```
 
