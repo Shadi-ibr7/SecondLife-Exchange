@@ -7,10 +7,12 @@
 
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, CheckCircle, Ban, Filter } from 'lucide-react';
+import { Search, CheckCircle, Ban, Filter, Eye } from 'lucide-react';
 import { adminApi } from '@/lib/admin.api';
+import { ADMIN_BASE_PATH } from '@/lib/admin.config';
 import { toast } from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -194,15 +196,22 @@ export default function AdminReportsPage() {
                     {new Date(report.createdAt).toLocaleDateString('fr-FR')}
                   </TableCell>
                   <TableCell className="text-right">
-                    {!report.resolved && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleResolve(report)}
-                      >
-                        <CheckCircle className="w-4 h-4" />
+                    <div className="flex items-center justify-end gap-2">
+                      <Button variant="ghost" size="icon" asChild>
+                        <Link href={`/${ADMIN_BASE_PATH}/reports/${report.id}`}>
+                          <Eye className="w-4 h-4" />
+                        </Link>
                       </Button>
-                    )}
+                      {!report.resolved && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleResolve(report)}
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

@@ -128,6 +128,12 @@ export class AdminController {
     );
   }
 
+  @Get('reports/:id')
+  @ApiOperation({ summary: "Détails d'un signalement" })
+  async getReportById(@Param('id') id: string) {
+    return this.adminService.getReportById(id);
+  }
+
   @Patch('reports/:id/resolve')
   @ApiOperation({ summary: 'Résoudre un signalement' })
   async resolveReport(
@@ -136,6 +142,12 @@ export class AdminController {
     @Request() req: any,
   ) {
     return this.adminService.resolveReport(id, req.user.id, resolveDto.banUser);
+  }
+
+  @Delete('reports/:id')
+  @ApiOperation({ summary: 'Supprimer un signalement' })
+  async deleteReport(@Param('id') id: string, @Request() req: any) {
+    return this.adminService.deleteReport(id, req.user.id);
   }
 
   // Themes

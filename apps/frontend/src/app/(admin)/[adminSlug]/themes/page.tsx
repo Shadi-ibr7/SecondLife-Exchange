@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -14,6 +15,7 @@ import {
 import { toast } from 'react-hot-toast';
 
 import { adminApi } from '@/lib/admin.api';
+import { ADMIN_BASE_PATH } from '@/lib/admin.config';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -439,11 +441,13 @@ export default function AdminThemesPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => openDetailsDialog(theme)}
+                      asChild
                       aria-label="Voir détails"
                       title="Voir les détails"
                     >
-                      <Eye className="w-4 h-4" />
+                      <Link href={`/${ADMIN_BASE_PATH}/themes/${theme.id}`}>
+                        <Eye className="w-4 h-4" />
+                      </Link>
                     </Button>
                     <Button
                       variant="ghost"

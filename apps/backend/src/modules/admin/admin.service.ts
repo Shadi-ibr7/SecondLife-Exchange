@@ -278,12 +278,127 @@ export class AdminService {
       this.prisma.report.count({ where }),
     ]);
 
+    // Récupérer les données liées pour chaque rapport
+    const enrichedReports = await Promise.all(
+      reports.map(async (report) => {
+        let reporter = null;
+        let targetUser = null;
+        let targetItem = null;
+
+        if (report.reporterId) {
+          reporter = await this.prisma.user.findUnique({
+            where: { id: report.reporterId },
+            select: {
+              id: true,
+              email: true,
+              displayName: true,
+              avatarUrl: true,
+            },
+          });
+        }
+
+        if (report.targetUserId) {
+          targetUser = await this.prisma.user.findUnique({
+            where: { id: report.targetUserId },
+            select: {
+              id: true,
+              email: true,
+              displayName: true,
+              avatarUrl: true,
+            },
+          });
+        }
+
+        if (report.targetItemId) {
+          targetItem = await this.prisma.item.findUnique({
+            where: { id: report.targetItemId },
+            select: {
+              id: true,
+              title: true,
+              photos: { take: 1 },
+            },
+          });
+        }
+
+        return {
+          ...report,
+          reporter,
+          targetUser,
+          targetItem,
+        };
+      })
+    );
+
     return {
-      reports,
+      reports: enrichedReports,
       total,
       page,
       limit,
       totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async getReportById(id: string) {
+    const report = await this.prisma.report.findUnique({
+      where: { id },
+    });
+
+    if (!report) {
+      throw new NotFoundException('Signalement non trouvé');
+    }
+
+    // Récupérer les données liées manuellement car pas de relations définies
+    let reporter = null;
+    let targetUser = null;
+    let targetItem = null;
+
+    if (report.reporterId) {
+      reporter = await this.prisma.user.findUnique({
+        where: { id: report.reporterId },
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          avatarUrl: true,
+          createdAt: true,
+        },
+      });
+    }
+
+    if (report.targetUserId) {
+      targetUser = await this.prisma.user.findUnique({
+        where: { id: report.targetUserId },
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          avatarUrl: true,
+          createdAt: true,
+          ban: true,
+        },
+      });
+    }
+
+    if (report.targetItemId) {
+      targetItem = await this.prisma.item.findUnique({
+        where: { id: report.targetItemId },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          category: true,
+          condition: true,
+          status: true,
+          photos: true,
+        },
+      });
+    }
+
+    return {
+      ...report,
+      reporter,
+      targetUser,
+      targetItem,
     };
   }
 
@@ -307,6 +422,17 @@ export class AdminService {
     }
 
     await this.logAction(adminId, 'RESOLVE_REPORT', 'Report', reportId, { banUser });
+    return { success: true };
+  }
+
+  async deleteReport(reportId: string, adminId: string) {
+    const report = await this.prisma.report.findUnique({ where: { id: reportId } });
+    if (!report) {
+      throw new NotFoundException('Signalement non trouvé');
+    }
+
+    await this.prisma.report.delete({ where: { id: reportId } });
+    await this.logAction(adminId, 'DELETE_REPORT', 'Report', reportId);
     return { success: true };
   }
 

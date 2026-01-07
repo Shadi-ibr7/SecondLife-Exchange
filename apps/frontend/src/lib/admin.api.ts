@@ -212,6 +212,13 @@ export const adminApi = {
     return response.data;
   },
 
+  getReportById: async (id: string) => {
+    const adminBasePath =
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.get(`/${adminBasePath}/reports/${id}`);
+    return response.data;
+  },
+
   resolveReport: async (id: string, banUser = false) => {
     const adminBasePath =
       process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
@@ -219,6 +226,13 @@ export const adminApi = {
       `/${adminBasePath}/reports/${id}/resolve`,
       { banUser }
     );
+    return response.data;
+  },
+
+  deleteReport: async (id: string) => {
+    const adminBasePath =
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+    const response = await adminApiClient.delete(`/${adminBasePath}/reports/${id}`);
     return response.data;
   },
 
