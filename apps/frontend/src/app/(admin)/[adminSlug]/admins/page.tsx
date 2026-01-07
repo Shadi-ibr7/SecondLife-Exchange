@@ -22,6 +22,7 @@ import {
   UserCheck,
   UserX,
   Key,
+  Eye,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { adminApi } from '@/lib/admin.api';
@@ -285,6 +286,11 @@ export default function AdminAdminsPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
+                      <Button variant="ghost" size="icon" asChild>
+                        <Link href={`/${ADMIN_BASE_PATH}/admins/${admin.id}`}>
+                          <Eye className="w-4 h-4" />
+                        </Link>
+                      </Button>
                       <Button variant="ghost" size="icon" asChild>
                         <Link href={`/${ADMIN_BASE_PATH}/users/${admin.id}`}>
                           <Edit className="w-4 h-4" />
