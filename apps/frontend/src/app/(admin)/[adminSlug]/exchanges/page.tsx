@@ -7,10 +7,12 @@
 
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search, ArrowLeftRight, Filter, Eye, Trash2, MessageSquare } from 'lucide-react';
 import { adminApi } from '@/lib/admin.api';
+import { ADMIN_BASE_PATH } from '@/lib/admin.config';
 import { toast } from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -237,11 +239,11 @@ export default function AdminExchangesPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => {
-                              // TODO: Voir les détails
-                            }}
+                            asChild
                           >
-                            <Eye className="w-4 h-4" />
+                            <Link href={`/${ADMIN_BASE_PATH}/exchanges/${exchange.id}`}>
+                              <Eye className="w-4 h-4" />
+                            </Link>
                           </Button>
                           <Button
                             variant="ghost"

@@ -216,6 +216,37 @@ export class AdminService {
     };
   }
 
+  async getItemById(id: string) {
+    const item = await this.prisma.item.findUnique({
+      where: { id },
+      include: {
+        owner: {
+          select: {
+            id: true,
+            email: true,
+            displayName: true,
+            avatarUrl: true,
+            createdAt: true,
+          },
+        },
+        photos: {
+          orderBy: { createdAt: 'asc' },
+        },
+        _count: {
+          select: {
+            // Si vous avez des relations de recommandations ou likes
+          },
+        },
+      },
+    });
+
+    if (!item) {
+      throw new NotFoundException('Objet non trouvé');
+    }
+
+    return item;
+  }
+
   async archiveItem(itemId: string, adminId: string) {
     await this.prisma.item.update({
       where: { id: itemId },

@@ -7,10 +7,12 @@
 
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search, Archive, Trash2, Eye } from 'lucide-react';
 import { adminApi } from '@/lib/admin.api';
+import { ADMIN_BASE_PATH } from '@/lib/admin.config';
 import { toast } from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -239,8 +241,10 @@ export default function AdminItemsPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="icon">
-                        <Eye className="w-4 h-4" />
+                      <Button variant="ghost" size="icon" asChild>
+                        <Link href={`/${ADMIN_BASE_PATH}/items/${item.id}`}>
+                          <Eye className="w-4 h-4" />
+                        </Link>
                       </Button>
                       {item.status !== 'ARCHIVED' && (
                         <Button

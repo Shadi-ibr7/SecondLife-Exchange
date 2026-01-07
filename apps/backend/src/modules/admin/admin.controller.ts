@@ -95,6 +95,12 @@ export class AdminController {
     );
   }
 
+  @Get('items/:id')
+  @ApiOperation({ summary: "Détails d'un objet" })
+  async getItemById(@Param('id') id: string) {
+    return this.adminService.getItemById(id);
+  }
+
   @Patch('items/:id/archive')
   @ApiOperation({ summary: 'Archiver un objet' })
   async archiveItem(@Param('id') id: string, @Request() req: any) {
