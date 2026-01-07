@@ -1,8 +1,7 @@
 {
-  "buildCommand": "pnpm build",
-  "outputDirectory": ".next",
+  "buildCommand": "pnpm --filter @secondlife/frontend build",
+  "outputDirectory": "apps/frontend/.next",
   "installCommand": "pnpm install --frozen-lockfile",
-  "rootDirectory": "apps/frontend",
   "framework": "nextjs",
   "rewrites": [
     {
