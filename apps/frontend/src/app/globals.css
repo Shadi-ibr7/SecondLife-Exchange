@@ -4,24 +4,24 @@
 
 @layer base {
   :root {
-    /* Light mode colors - SecondLife Exchange Design */
-    --background: 0 0% 98%; /* #FAFAFA */
-    --foreground: 240 5% 5%; /* #0B0B0D */
+    /* Light mode colors - SecondLife Exchange Design (Figma) */
+    --background: 0 0% 97%; /* #f7f7f8 */
+    --foreground: 0 0% 12%; /* #1e1e20 */
     --card: 0 0% 100%; /* #FFFFFF */
-    --card-foreground: 240 5% 5%; /* #0B0B0D */
+    --card-foreground: 0 0% 12%; /* #1e1e20 */
     --popover: 0 0% 100%; /* #FFFFFF */
     --popover-foreground: 240 5% 5%; /* #0B0B0D */
     --primary: 158 64% 52%; /* #10B981 - Green primary */
     --primary-foreground: 0 0% 100%; /* #FFFFFF */
     --secondary: 158 64% 95%; /* #F0FDF4 - Light green */
     --secondary-foreground: 158 64% 52%; /* #10B981 */
-    --muted: 0 0% 96%; /* #F5F5F7 */
-    --muted-foreground: 240 5% 45%; /* #71717A */
+    --muted: 0 0% 97%; /* #f7f7f8 */
+    --muted-foreground: 0 0% 44%; /* #6f6f73 */
     --accent: 158 64% 52%; /* #10B981 */
     --accent-foreground: 0 0% 100%; /* #FFFFFF */
     --destructive: 0 84% 60%; /* #EF4444 */
     --destructive-foreground: 0 0% 100%; /* #FFFFFF */
-    --border: 240 6% 90%; /* #E4E4E7 */
+    --border: 0 0% 94%; /* rgba(0,0,0,0.06) equivalent */
     --input: 0 0% 96%; /* #F5F5F7 */
     --input-background: 0 0% 96%; /* #F5F5F7 */
     --switch-background: 240 6% 90%; /* #E4E4E7 */
@@ -47,24 +47,24 @@
   }
 
   .dark {
-    /* Dark mode colors - SecondLife Exchange Design */
-    --background: 240 5% 4%; /* #0B0B0D */
-    --foreground: 240 5% 93%; /* #EDEDEE */
-    --card: 240 5% 7%; /* #121216 */
-    --card-foreground: 240 5% 93%; /* #EDEDEE */
+    /* Dark mode colors - SecondLife Exchange Design (Figma) */
+    --background: 240 5% 4%; /* #0a0a0b / #1a1a1c */
+    --foreground: 240 5% 93%; /* #ececed */
+    --card: 240 5% 8%; /* #141416 */
+    --card-foreground: 240 5% 93%; /* #ececed */
     --popover: 240 5% 10%; /* #1A1A1F */
     --popover-foreground: 240 5% 93%; /* #EDEDEE */
     --primary: 158 64% 52%; /* #10B981 - Same green */
     --primary-foreground: 0 0% 100%; /* #FFFFFF */
     --secondary: 240 5% 10%; /* #1A1A1F */
     --secondary-foreground: 240 5% 93%; /* #EDEDEE */
-    --muted: 240 5% 10%; /* #1A1A1F */
-    --muted-foreground: 240 5% 65%; /* #A1A1AA */
+    --muted: 240 5% 10%; /* #1a1a1c */
+    --muted-foreground: 240 5% 60%; /* #9a9a9d */
     --accent: 158 64% 52%; /* #10B981 */
     --accent-foreground: 0 0% 100%; /* #FFFFFF */
     --destructive: 0 84% 60%; /* #EF4444 */
     --destructive-foreground: 0 0% 100%; /* #FFFFFF */
-    --border: 240 5% 16%; /* #27272A */
+    --border: 0 0% 100% / 0.08; /* rgba(255,255,255,0.08) */
     --input: 240 5% 10%; /* #1A1A1F */
     --ring: 158 64% 52%; /* #10B981 */
 

@@ -56,19 +56,25 @@ function StatusCard({
   const config = statusConfig[status];
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
+    <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+      <CardHeader className="p-0 mb-6">
         <div className="flex items-center justify-between">
-          <CardDescription>{title}</CardDescription>
+          <CardDescription className="text-sm text-muted-foreground font-normal">{title}</CardDescription>
           <div className={config.color}>{icon}</div>
         </div>
         <div className="flex items-end justify-between">
-          <CardTitle className="text-3xl tracking-tight">
+          <CardTitle className="text-3xl tracking-tight text-foreground">
             {value}
             {unit && <span className="text-lg text-muted-foreground ml-1">{unit}</span>}
           </CardTitle>
           <Badge
-            variant={status === 'healthy' ? 'default' : status === 'warning' ? 'secondary' : 'destructive'}
+            className={
+              status === 'healthy'
+                ? 'bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45]'
+                : status === 'warning'
+                  ? 'bg-[rgba(234,179,8,0.1)] text-[#eab308] dark:bg-[rgba(234,179,8,0.1)] dark:text-[#eab308]'
+                  : 'bg-[rgba(239,68,68,0.1)] text-[#ef4444] dark:bg-[rgba(239,68,68,0.1)] dark:text-[#ef4444]'
+            }
           >
             {config.label}
           </Badge>
@@ -156,7 +162,7 @@ export default function SystemMonitoringPage() {
             </p>
           </div>
         </div>
-        <Button variant="outline">
+        <Button variant="outline" className="border-border">
           <RefreshCw className="w-4 h-4 mr-2" />
           Actualiser
         </Button>
@@ -164,7 +170,7 @@ export default function SystemMonitoringPage() {
 
       {/* System Status Overview */}
       <div>
-        <h2 className="text-lg font-medium mb-4">État du système</h2>
+        <h2 className="text-base font-normal text-foreground mb-4">État du système</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <StatusCard
             title="Serveur"
@@ -195,15 +201,15 @@ export default function SystemMonitoringPage() {
       {/* Detailed Metrics */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Memory Usage */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+          <CardHeader className="p-0 mb-6">
+            <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
               <HardDrive className="w-5 h-5" />
               Mémoire
             </CardTitle>
-            <CardDescription>Utilisation de la mémoire système</CardDescription>
+            <CardDescription className="text-sm text-muted-foreground font-normal">Utilisation de la mémoire système</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="p-0 space-y-4">
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-muted-foreground">Utilisée</span>
@@ -216,12 +222,18 @@ export default function SystemMonitoringPage() {
                 <span className="text-xs text-muted-foreground">
                   {systemStatus.memory.percentage.toFixed(1)}% utilisé
                 </span>
-                <Badge variant={systemStatus.memory.percentage > 80 ? 'destructive' : 'secondary'}>
+                <Badge
+                  className={
+                    systemStatus.memory.percentage > 80
+                      ? 'bg-[rgba(239,68,68,0.1)] text-[#ef4444] dark:bg-[rgba(239,68,68,0.1)] dark:text-[#ef4444]'
+                      : 'bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]'
+                  }
+                >
                   {systemStatus.memory.percentage > 80 ? 'Élevé' : 'Normal'}
                 </Badge>
               </div>
             </div>
-            <Separator />
+            <Separator className="bg-border" />
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <div className="text-muted-foreground">Disponible</div>
@@ -238,15 +250,15 @@ export default function SystemMonitoringPage() {
         </Card>
 
         {/* Disk Usage */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+          <CardHeader className="p-0 mb-6">
+            <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
               <HardDrive className="w-5 h-5" />
               Stockage
             </CardTitle>
-            <CardDescription>Utilisation de l'espace disque</CardDescription>
+            <CardDescription className="text-sm text-muted-foreground font-normal">Utilisation de l'espace disque</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="p-0 space-y-4">
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-muted-foreground">Utilisé</span>
@@ -259,12 +271,18 @@ export default function SystemMonitoringPage() {
                 <span className="text-xs text-muted-foreground">
                   {systemStatus.disk.percentage}% utilisé
                 </span>
-                <Badge variant={systemStatus.disk.percentage > 80 ? 'destructive' : 'secondary'}>
+                <Badge
+                  className={
+                    systemStatus.disk.percentage > 80
+                      ? 'bg-[rgba(239,68,68,0.1)] text-[#ef4444] dark:bg-[rgba(239,68,68,0.1)] dark:text-[#ef4444]'
+                      : 'bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]'
+                  }
+                >
                   {systemStatus.disk.percentage > 80 ? 'Élevé' : 'Normal'}
                 </Badge>
               </div>
             </div>
-            <Separator />
+            <Separator className="bg-border" />
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <div className="text-muted-foreground">Disponible</div>
@@ -283,12 +301,12 @@ export default function SystemMonitoringPage() {
 
       {/* Performance Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Performance serveur</CardDescription>
-            <CardTitle className="text-2xl">{systemStatus.server.responseTime}</CardTitle>
+        <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+          <CardHeader className="p-0 mb-6">
+            <CardDescription className="text-sm text-muted-foreground font-normal">Performance serveur</CardDescription>
+            <CardTitle className="text-2xl text-foreground">{systemStatus.server.responseTime}</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             <div className="text-sm text-muted-foreground">
               Temps de réponse moyen
             </div>
@@ -298,12 +316,12 @@ export default function SystemMonitoringPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Performance base de données</CardDescription>
-            <CardTitle className="text-2xl">{systemStatus.database.queryTime}</CardTitle>
+        <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+          <CardHeader className="p-0 mb-6">
+            <CardDescription className="text-sm text-muted-foreground font-normal">Performance base de données</CardDescription>
+            <CardTitle className="text-2xl text-foreground">{systemStatus.database.queryTime}</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             <div className="text-sm text-muted-foreground">
               Temps de requête moyen
             </div>
@@ -313,12 +331,12 @@ export default function SystemMonitoringPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Réseau</CardDescription>
-            <CardTitle className="text-2xl">{systemStatus.network.latency}</CardTitle>
+        <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+          <CardHeader className="p-0 mb-6">
+            <CardDescription className="text-sm text-muted-foreground font-normal">Réseau</CardDescription>
+            <CardTitle className="text-2xl text-foreground">{systemStatus.network.latency}</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             <div className="text-sm text-muted-foreground">Latence moyenne</div>
             <div className="text-xs text-muted-foreground mt-1">
               ↓ {systemStatus.network.incoming} ↑ {systemStatus.network.outgoing}
@@ -328,23 +346,23 @@ export default function SystemMonitoringPage() {
       </div>
 
       {/* CPU Details */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+        <CardHeader className="p-0 mb-6">
+          <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
             <Cpu className="w-5 h-5" />
             Utilisation CPU
           </CardTitle>
-          <CardDescription>Charge processeur en temps réel</CardDescription>
+          <CardDescription className="text-sm text-muted-foreground font-normal">Charge processeur en temps réel</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="p-0 space-y-4">
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-muted-foreground">Utilisation</span>
-              <span className="text-sm font-medium">{systemStatus.cpu.usage}%</span>
+              <span className="text-sm font-medium text-foreground">{systemStatus.cpu.usage}%</span>
             </div>
             <Progress value={systemStatus.cpu.usage} className="h-2" />
           </div>
-          <Separator />
+          <Separator className="bg-border" />
           <div className="grid grid-cols-3 gap-4 text-sm">
             <div>
               <div className="text-muted-foreground">Cœurs</div>
@@ -364,15 +382,15 @@ export default function SystemMonitoringPage() {
 
       {/* Recent Errors */}
       {recentErrors.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+          <CardHeader className="p-0 mb-6">
+            <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
               <AlertCircle className="w-5 h-5 text-destructive" />
               Erreurs récentes
             </CardTitle>
-            <CardDescription>Dernières erreurs système détectées</CardDescription>
+            <CardDescription className="text-sm text-muted-foreground font-normal">Dernières erreurs système détectées</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Attention</AlertTitle>
@@ -386,19 +404,19 @@ export default function SystemMonitoringPage() {
       )}
 
       {/* System Health Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+        <CardHeader className="p-0 mb-6">
+          <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
             <CheckCircle className="w-5 h-5 text-green-500" />
             Résumé de santé
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex items-center gap-3">
               <CheckCircle className="w-5 h-5 text-green-500" />
               <div>
-                <div className="font-medium">Serveur opérationnel</div>
+                <div className="font-medium text-foreground">Serveur opérationnel</div>
                 <div className="text-sm text-muted-foreground">
                   Uptime: {systemStatus.server.uptime}
                 </div>
@@ -407,7 +425,7 @@ export default function SystemMonitoringPage() {
             <div className="flex items-center gap-3">
               <CheckCircle className="w-5 h-5 text-green-500" />
               <div>
-                <div className="font-medium">Base de données connectée</div>
+                <div className="font-medium text-foreground">Base de données connectée</div>
                 <div className="text-sm text-muted-foreground">
                   {systemStatus.database.connections} connexions actives
                 </div>
@@ -420,7 +438,7 @@ export default function SystemMonitoringPage() {
                 <CheckCircle className="w-5 h-5 text-green-500" />
               )}
               <div>
-                <div className="font-medium">CPU</div>
+                <div className="font-medium text-foreground">CPU</div>
                 <div className="text-sm text-muted-foreground">
                   {systemStatus.cpu.usage}% utilisé
                 </div>

@@ -106,9 +106,19 @@ export default function AdminDetailPage() {
 
   const getRoleBadge = (role: string) => {
     if (role === 'SUPER_ADMIN') {
-      return <Badge variant="destructive">Super Admin</Badge>;
+      return (
+        <Badge className="flex items-center gap-1 w-fit bg-[rgba(217,160,85,0.1)] text-[#d9a055] dark:bg-[rgba(217,160,85,0.1)] dark:text-[#d9a055]">
+          <Shield className="w-3 h-3" />
+          Super Admin
+        </Badge>
+      );
     }
-    return <Badge variant="default">Admin</Badge>;
+    return (
+      <Badge className="flex items-center gap-1 w-fit bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45]">
+        <Shield className="w-3 h-3" />
+        Admin
+      </Badge>
+    );
   };
 
   const getActionLabel = (action: string) => {
@@ -162,15 +172,17 @@ export default function AdminDetailPage() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Admin Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                 <Shield className="w-5 h-5" />
                 Informations
               </CardTitle>
-              <CardDescription>Détails du compte administrateur</CardDescription>
+              <CardDescription className="text-sm text-muted-foreground font-normal">
+                Détails du compte administrateur
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="p-0 space-y-6">
               <div className="flex items-center gap-4">
                 <Avatar className="h-20 w-20">
                   <AvatarImage src={admin.avatarUrl || undefined} />
@@ -179,7 +191,7 @@ export default function AdminDetailPage() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                  <h3 className="text-xl font-semibold">{admin.displayName}</h3>
+                  <h3 className="text-xl font-semibold text-foreground">{admin.displayName}</h3>
                   <div className="flex items-center gap-2 mt-1">
                     <Mail className="w-4 h-4 text-muted-foreground" />
                     <span className="text-muted-foreground">{admin.email}</span>
@@ -187,22 +199,22 @@ export default function AdminDetailPage() {
                 </div>
               </div>
 
-              <Separator />
+              <Separator className="bg-border" />
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="text-sm font-medium mb-2">Rôle</h4>
+                  <h4 className="text-sm font-medium text-foreground mb-2">Rôle</h4>
                   {getRoleBadge(admin.role)}
                 </div>
                 <div>
-                  <h4 className="text-sm font-medium mb-2">Statut</h4>
+                  <h4 className="text-sm font-medium text-foreground mb-2">Statut</h4>
                   {admin.isActive ? (
-                    <Badge variant="default" className="flex items-center gap-1 w-fit">
+                    <Badge className="flex items-center gap-1 w-fit bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45]">
                       <UserCheck className="w-3 h-3" />
                       Actif
                     </Badge>
                   ) : (
-                    <Badge variant="secondary" className="flex items-center gap-1 w-fit">
+                    <Badge className="flex items-center gap-1 w-fit bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]">
                       <UserX className="w-3 h-3" />
                       Inactif
                     </Badge>
@@ -213,15 +225,17 @@ export default function AdminDetailPage() {
           </Card>
 
           {/* Activity */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                 <Activity className="w-5 h-5" />
                 Activité récente
               </CardTitle>
-              <CardDescription>Dernières actions effectuées par cet administrateur</CardDescription>
+              <CardDescription className="text-sm text-muted-foreground font-normal">
+                Dernières actions effectuées par cet administrateur
+              </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               {admin.recentActions && admin.recentActions.length > 0 ? (
                 <Table>
                   <TableHeader>
@@ -236,7 +250,9 @@ export default function AdminDetailPage() {
                     {admin.recentActions.map((action: any, index: number) => (
                       <TableRow key={index}>
                         <TableCell>
-                          <Badge variant="secondary">{getActionLabel(action.action)}</Badge>
+                          <Badge className="bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]">
+                            {getActionLabel(action.action)}
+                          </Badge>
                         </TableCell>
                         <TableCell>{action.resource}</TableCell>
                         <TableCell>
@@ -257,7 +273,7 @@ export default function AdminDetailPage() {
                 </p>
               )}
               <div className="mt-4">
-                <Button variant="outline" className="w-full" asChild>
+                <Button variant="outline" className="w-full border-border" asChild>
                   <Link href={`/${ADMIN_BASE_PATH}/logs?adminId=${admin.id}`}>
                     <FileText className="w-4 h-4 mr-2" />
                     Voir tous les logs
@@ -271,58 +287,70 @@ export default function AdminDetailPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Stats */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Statistiques</CardTitle>
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="text-base font-normal text-foreground">Statistiques</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-0 space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Actions totales</span>
-                <Badge variant="secondary">{admin.actionsCount.toLocaleString()}</Badge>
+                <Badge className="bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]">
+                  {admin.actionsCount.toLocaleString()}
+                </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Statut</span>
                 {admin.isActive ? (
-                  <Badge variant="default">Actif</Badge>
+                  <Badge className="bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45]">
+                    Actif
+                  </Badge>
                 ) : (
-                  <Badge variant="secondary">Inactif</Badge>
+                  <Badge className="bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]">
+                    Inactif
+                  </Badge>
                 )}
               </div>
             </CardContent>
           </Card>
 
           {/* Metadata */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Informations</CardTitle>
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="text-base font-normal text-foreground">Informations</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="p-0 space-y-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">ID</span>
-                <span className="font-mono text-xs">{admin.id}</span>
+                <span className="font-mono text-xs text-foreground">{admin.id}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Créé le</span>
-                <span>{format(admin.createdAt, 'PP', { locale: fr })}</span>
+                <span className="text-foreground">{format(admin.createdAt, 'PP', { locale: fr })}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Dernière connexion</span>
-                <span>{format(admin.lastLogin, 'PPp', { locale: fr })}</span>
+                <span className="text-foreground">
+                  {format(admin.lastLogin, 'PPp', { locale: fr })}
+                </span>
               </div>
             </CardContent>
           </Card>
 
           {/* Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Actions</CardTitle>
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="text-base font-normal text-foreground">Actions</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full" onClick={() => setResetPasswordDialogOpen(true)}>
+            <CardContent className="p-0 space-y-2">
+              <Button
+                variant="outline"
+                className="w-full border-border"
+                onClick={() => setResetPasswordDialogOpen(true)}
+              >
                 <Key className="w-4 h-4 mr-2" />
                 Réinitialiser le mot de passe
               </Button>
-              <Button variant="outline" className="w-full" asChild>
+              <Button variant="outline" className="w-full border-border" asChild>
                 <Link href={`/${ADMIN_BASE_PATH}/users/${admin.id}`}>
                   <Edit className="w-4 h-4 mr-2" />
                   Voir le profil utilisateur

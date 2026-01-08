@@ -10,7 +10,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, Eye, Ban, Mail, UserCheck } from 'lucide-react';
+import { Search, Eye, Ban, Mail, UserCheck, Filter } from 'lucide-react';
 import { adminApi } from '@/lib/admin.api';
 import { ADMIN_BASE_PATH } from '@/lib/admin.config';
 import { toast } from 'react-hot-toast';
@@ -51,6 +51,12 @@ export default function AdminUsersPage() {
     queryFn: () => adminApi.getUsers(page, 20, search || undefined),
   });
 
+  const { data: userAnalytics } = useQuery({
+    queryKey: ['admin-user-analytics'],
+    queryFn: () => adminApi.getUserAnalytics(),
+    retry: 1,
+  });
+
   const handleBan = async (user: any) => {
     setSelectedUser(user);
     setBanDialogOpen(true);
@@ -83,13 +89,14 @@ export default function AdminUsersPage() {
   const getStatusBadge = (user: any) => {
     if (user.ban) {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[rgba(220,38,38,0.1)] dark:bg-[rgba(239,68,68,0.1)] text-[#dc2626] dark:text-[#ef4444]">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[rgba(217,160,85,0.2)] dark:bg-[rgba(217,160,85,0.2)] text-[#d9a055] dark:text-[#d9a055]">
           Banni
         </span>
       );
     }
+    // TODO: Ajouter logique pour "En attente" si nécessaire
     return (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[rgba(27,56,40,0.1)] dark:bg-[rgba(45,90,69,0.1)] text-[#1b3828] dark:text-[#2d5a45]">
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[#1a1a1c] dark:bg-[#1a1a1c] text-[#9a9a9d] dark:text-[#9a9a9d]">
         Actif
       </span>
     );
@@ -108,130 +115,224 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-medium text-[#1e1e20] dark:text-[#ececed]">Gestion des utilisateurs</h1>
-        <p className="text-base text-[#6f6f73] dark:text-[#9a9a9d]">Gérer les utilisateurs de la plateforme</p>
+      {/* Header - selon Figma */}
+      <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-1">
+          <h1 className="admin-page-title">Gestion des utilisateurs</h1>
+          <p className="admin-page-description">Gérer les utilisateurs de la plateforme</p>
+        </div>
+        <Button className="bg-[#1a1a1c] dark:bg-[#1a1a1c] hover:bg-[#1a1a1c]/80 text-[#ececed] border-0 h-[40px] px-4 rounded-md">
+          <Mail className="w-4 h-4 mr-2" />
+          Envoyer un email
+        </Button>
       </div>
 
-      {/* Stats */}
+      {/* Stats Cards - 4 cartes selon Figma (hauteur 90px) */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-[#141416] border border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] rounded-lg shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] p-6">
-          <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal mb-1">Total utilisateurs</p>
-          <p className="text-2xl font-normal text-[#1e1e20] dark:text-[#ececed]">{data?.total || 0}</p>
-        </div>
-        <div className="bg-white dark:bg-[#141416] border border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] rounded-lg shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] p-6">
-          <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal mb-1">Utilisateurs bannis</p>
-          <p className="text-2xl font-normal text-[#1e1e20] dark:text-[#ececed]">
-            {data?.users?.filter((u: any) => u.ban).length || 0}
-          </p>
-        </div>
-        <div className="bg-white dark:bg-[#141416] border border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] rounded-lg shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] p-6">
-          <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal mb-1">Page actuelle</p>
-          <p className="text-2xl font-normal text-[#1e1e20] dark:text-[#ececed]">{page}</p>
-        </div>
-        <div className="bg-white dark:bg-[#141416] border border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] rounded-lg shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] p-6">
-          <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal mb-1">Total pages</p>
-          <p className="text-2xl font-normal text-[#1e1e20] dark:text-[#ececed]">{data?.totalPages || 0}</p>
-        </div>
+        <Card className="h-[90px]">
+          <CardContent className="pt-[17px] px-[17px] pb-[1px] h-full flex flex-col gap-1">
+            <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal leading-5">
+              Total utilisateurs
+            </p>
+            <p className="text-2xl font-normal text-[#1e1e20] dark:text-[#ececed] leading-8">
+              {userAnalytics?.total?.toLocaleString() || data?.total?.toLocaleString() || '0'}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="h-[90px]">
+          <CardContent className="pt-[17px] px-[17px] pb-[1px] h-full flex flex-col gap-1">
+            <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal leading-5">
+              Actifs ce mois
+            </p>
+            <p className="text-2xl font-normal text-[#1e1e20] dark:text-[#ececed] leading-8">
+              {userAnalytics?.active?.toLocaleString() || '0'}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="h-[90px]">
+          <CardContent className="pt-[17px] px-[17px] pb-[1px] h-full flex flex-col gap-1">
+            <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal leading-5">
+              Nouveaux (30j)
+            </p>
+            <p className="text-2xl font-normal text-[#1e1e20] dark:text-[#ececed] leading-8">
+              {(() => {
+                // Calculer les nouveaux utilisateurs des 30 derniers jours
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                return (
+                  data?.users?.filter(
+                    (u: any) => new Date(u.createdAt) >= thirtyDaysAgo
+                  ).length || 0
+                );
+              })()}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="h-[90px]">
+          <CardContent className="pt-[17px] px-[17px] pb-[1px] h-full flex flex-col gap-1">
+            <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal leading-5">Bannis</p>
+            <p className="text-2xl font-normal text-[#1e1e20] dark:text-[#ececed] leading-8">
+              {userAnalytics?.banned?.toLocaleString() ||
+                data?.users?.filter((u: any) => u.ban).length ||
+                0}
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Search */}
-      <div className="bg-white dark:bg-[#141416] border border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] rounded-lg shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] p-6">
-        <div className="flex items-center gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6f6f73] dark:text-[#9a9a9d]" />
-            <Input
-              placeholder="Rechercher par nom ou email..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              className="pl-10 bg-white dark:bg-[#1a1a1c] border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] text-[#1e1e20] dark:text-[#ececed]"
-            />
+      {/* Search Bar - selon Figma avec bouton Filtrer */}
+      <Card>
+        <CardContent className="pt-[25px] px-[25px] pb-[1px]">
+          <div className="flex items-center gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6f6f73] dark:text-[#9a9a9d]" />
+              <Input
+                placeholder="Rechercher par nom ou email..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                className="pl-10 bg-[#1a1a1c] dark:bg-[#1a1a1c] border-[rgba(255,255,255,0.08)] dark:border-[rgba(255,255,255,0.08)] text-[#1e1e20] dark:text-[#ececed] h-[40px] rounded-md"
+              />
+            </div>
+            <Button
+              variant="outline"
+              className="bg-[#1a1a1c] dark:bg-[#1a1a1c] hover:bg-[#1a1a1c]/80 border-[rgba(255,255,255,0.08)] dark:border-[rgba(255,255,255,0.08)] text-[#ececed] h-[40px] px-4 rounded-md"
+            >
+              <Filter className="w-4 h-4 mr-2" />
+              Filtrer
+            </Button>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      {/* Users Table */}
-      <div className="bg-white dark:bg-[#141416] border border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] rounded-lg shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] p-6">
-        <div className="mb-6">
-          <h3 className="text-base font-normal text-[#1e1e20] dark:text-[#ececed] mb-1">Liste des utilisateurs</h3>
-          <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal">
-            {data?.total || 0} utilisateur{data?.total !== 1 ? 's' : ''} au total
-          </p>
-        </div>
-        <div>
+      {/* Users Table - selon Figma */}
+      <Card>
+        <CardContent className="pt-[25px] px-[25px] pb-[1px]">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)]">
-                  <th className="text-left py-3 px-4 text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d]">Utilisateur</th>
-                  <th className="text-left py-3 px-4 text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d]">Email</th>
-                  <th className="text-left py-3 px-4 text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d]">Statut</th>
-                  <th className="text-left py-3 px-4 text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d]">Objets</th>
-                  <th className="text-left py-3 px-4 text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d]">Échanges</th>
-                  <th className="text-left py-3 px-4 text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d]">Date d'inscription</th>
-                  <th className="text-right py-3 px-4 text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d]">Actions</th>
+                <tr className="border-b border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] h-[44.5px]">
+                  <th className="text-left px-4 py-3">
+                    <p className="text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
+                      Utilisateur
+                    </p>
+                  </th>
+                  <th className="text-left px-4 py-3">
+                    <p className="text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d] leading-5">Email</p>
+                  </th>
+                  <th className="text-left px-4 py-3">
+                    <p className="text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d] leading-5">Statut</p>
+                  </th>
+                  <th className="text-left px-4 py-3">
+                    <p className="text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d] leading-5">Objets</p>
+                  </th>
+                  <th className="text-left px-4 py-3">
+                    <p className="text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d] leading-5">Échanges</p>
+                  </th>
+                  <th className="text-left px-4 py-3">
+                    <p className="text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
+                      Inscription
+                    </p>
+                  </th>
+                  <th className="text-right px-4 py-3">
+                    <p className="text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d] leading-5">Actions</p>
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {data?.users?.map((user: any) => (
-                  <tr key={user.id} className="border-b border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] last:border-0">
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarImage src={user.avatarUrl || undefined} />
-                          <AvatarFallback>
-                            {user.displayName?.charAt(0).toUpperCase() || 'U'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed]">{user.displayName}</span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 text-sm font-normal text-[#1e1e20] dark:text-[#ececed]">{user.email}</td>
-                    <td className="py-4 px-4">{getStatusBadge(user)}</td>
-                    <td className="py-4 px-4 text-sm font-normal text-[#1e1e20] dark:text-[#ececed]">{user._count?.items || 0}</td>
-                    <td className="py-4 px-4 text-sm font-normal text-[#1e1e20] dark:text-[#ececed]">
-                      {(user._count?.exchangesRequested || 0) +
-                        (user._count?.exchangesResponded || 0)}
-                    </td>
-                    <td className="py-4 px-4 text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d]">
-                      {new Date(user.createdAt).toLocaleDateString('fr-FR')}
-                    </td>
-                    <td className="py-4 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          asChild
-                        >
-                          <Link href={`/${ADMIN_BASE_PATH}/users/${user.id}`}>
-                            <Eye className="w-4 h-4" />
-                          </Link>
-                        </Button>
-                        {user.ban ? (
+                {data?.users?.map((user: any, index: number) => {
+                  const isLast = index === (data?.users?.length || 0) - 1;
+                  return (
+                    <tr
+                      key={user.id}
+                      className={`${
+                        !isLast
+                          ? 'border-b border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)]'
+                          : ''
+                      } h-[65px]`}
+                    >
+                      <td className="px-4">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-8 h-8 bg-[#1a1a1c] dark:bg-[#1a1a1c]">
+                            <AvatarImage src={user.avatarUrl || undefined} />
+                            <AvatarFallback className="text-[#9a9a9d] text-xs">
+                              {user.displayName
+                                ?.split(' ')
+                                .map((n: string) => n[0])
+                                .join('')
+                                .toUpperCase()
+                                .slice(0, 2) || 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5">
+                            {user.displayName}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="px-4">
+                        <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
+                          {user.email}
+                        </p>
+                      </td>
+                      <td className="px-4">{getStatusBadge(user)}</td>
+                      <td className="px-4">
+                        <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5">
+                          {user._count?.items || 0}
+                        </p>
+                      </td>
+                      <td className="px-4">
+                        <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5">
+                          {(user._count?.exchangesRequested || 0) +
+                            (user._count?.exchangesResponded || 0)}
+                        </p>
+                      </td>
+                      <td className="px-4">
+                        <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
+                          {new Date(user.createdAt).toLocaleDateString('fr-FR', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </p>
+                      </td>
+                      <td className="px-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleUnban(user.id)}
+                            className="h-8 w-8 rounded-md"
+                            asChild
                           >
-                            <UserCheck className="w-4 h-4" />
+                            <Link href={`/${ADMIN_BASE_PATH}/users/${user.id}`}>
+                              <Eye className="w-4 h-4" />
+                            </Link>
                           </Button>
-                        ) : (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleBan(user)}
-                          >
-                            <Ban className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          {user.ban ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-md"
+                              onClick={() => handleUnban(user.id)}
+                            >
+                              <UserCheck className="w-4 h-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-md"
+                              onClick={() => handleBan(user)}
+                            >
+                              <Ban className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -264,8 +365,8 @@ export default function AdminUsersPage() {
               </div>
             </div>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Ban Dialog */}
       <Dialog open={banDialogOpen} onOpenChange={setBanDialogOpen}>

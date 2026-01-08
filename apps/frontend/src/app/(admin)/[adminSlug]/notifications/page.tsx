@@ -176,8 +176,8 @@ export default function AdminNotificationsPage() {
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
+      <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+        <CardContent className="p-0 pt-6">
           <div className="flex items-center gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -216,14 +216,16 @@ export default function AdminNotificationsPage() {
         </TabsList>
 
         <TabsContent value="all" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Liste des notifications</CardTitle>
-              <CardDescription>
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="text-base font-normal text-foreground">
+                Liste des notifications
+              </CardTitle>
+              <CardDescription className="text-sm text-muted-foreground font-normal">
                 {filteredNotifications.length} notification{filteredNotifications.length !== 1 ? 's' : ''} trouvée{filteredNotifications.length !== 1 ? 's' : ''}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               {filteredNotifications.length > 0 ? (
                 <div className="space-y-2">
                   {filteredNotifications.map((notif) => {
@@ -255,9 +257,11 @@ export default function AdminNotificationsPage() {
                             <div className="flex items-start justify-between">
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <h4 className="font-medium">{notif.title}</h4>
+                                  <h4 className="font-medium text-foreground">{notif.title}</h4>
                                   {!notif.read && (
-                                    <Badge variant="default" className="text-xs">Nouveau</Badge>
+                                    <Badge className="text-xs bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45]">
+                                      Nouveau
+                                    </Badge>
                                   )}
                                 </div>
                                 <p className="text-sm text-muted-foreground mt-1">
@@ -310,14 +314,16 @@ export default function AdminNotificationsPage() {
         </TabsContent>
 
         <TabsContent value="unread" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notifications non lues</CardTitle>
-              <CardDescription>
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="text-base font-normal text-foreground">
+                Notifications non lues
+              </CardTitle>
+              <CardDescription className="text-sm text-muted-foreground font-normal">
                 {filteredNotifications.filter((n) => !n.read).length} notification{filteredNotifications.filter((n) => !n.read).length !== 1 ? 's' : ''} non lue{filteredNotifications.filter((n) => !n.read).length !== 1 ? 's' : ''}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               {filteredNotifications.filter((n) => !n.read).length > 0 ? (
                 <div className="space-y-2">
                   {filteredNotifications
@@ -349,8 +355,10 @@ export default function AdminNotificationsPage() {
                               <div className="flex items-start justify-between">
                                 <div>
                                   <div className="flex items-center gap-2">
-                                    <h4 className="font-medium">{notif.title}</h4>
-                                    <Badge variant="default" className="text-xs">Nouveau</Badge>
+                                    <h4 className="font-medium text-foreground">{notif.title}</h4>
+                                    <Badge className="text-xs bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45]">
+                                      Nouveau
+                                    </Badge>
                                   </div>
                                   <p className="text-sm text-muted-foreground mt-1">
                                     {notif.message}

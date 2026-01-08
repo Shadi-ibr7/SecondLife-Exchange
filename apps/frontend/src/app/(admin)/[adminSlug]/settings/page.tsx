@@ -3,6 +3,7 @@
  *
  * DESCRIPTION:
  * Page de configuration et paramètres pour l'admin.
+ * Design Figma: node-id 29-6968
  */
 
 'use client';
@@ -14,74 +15,111 @@ import {
   Bell,
   Database,
   Key,
-  AlertTriangle,
   Save,
+  Palette,
+  Gavel,
+  Download,
+  Upload,
   RefreshCw,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
   // Settings state
-  const [generalSettings, setGeneralSettings] = useState({
+  const [platformSettings, setPlatformSettings] = useState({
     siteName: 'SecondLife Exchange',
-    siteDescription: 'Plateforme d\'échange d\'objets écoresponsables',
+    adminEmail: 'admin@secondlife-exchange.com',
     maintenanceMode: false,
-    registrationEnabled: true,
   });
 
   const [notificationSettings, setNotificationSettings] = useState({
     emailNotifications: true,
-    pushNotifications: true,
-    adminAlerts: true,
-    reportAlerts: true,
-    userAlerts: true,
+    newUsers: true,
+    reports: true,
+    systemAlerts: true,
+    weeklyReport: true,
   });
 
   const [securitySettings, setSecuritySettings] = useState({
-    sessionTimeout: '24',
+    twoFactorEnabled: true,
+    sessionTimeout: '30',
     maxLoginAttempts: '5',
-    requireEmailVerification: false,
-    twoFactorEnabled: false,
+    passwordExpiration: '90',
   });
 
-  const [apiSettings, setApiSettings] = useState({
-    geminiApiKey: '••••••••••••••••',
-    unsplashApiKey: '••••••••••••••••',
-    apiRateLimit: '100',
+  const [moderationSettings, setModerationSettings] = useState({
+    autoModeration: true,
+    itemApproval: false,
+    minAge: '18',
   });
 
-  const handleSave = async (section: string) => {
+  const [dataSettings, setDataSettings] = useState({
+    dataRetention: '365',
+    backupFrequency: 'hourly',
+  });
+
+  const handleSaveAll = async () => {
     setLoading(true);
     try {
-      // Simuler une sauvegarde
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success(`${section} sauvegardé avec succès`);
+      toast.success('Toutes les modifications ont été enregistrées');
     } catch (error: any) {
-      toast.error(`Erreur lors de la sauvegarde de ${section}`);
+      toast.error('Erreur lors de l\'enregistrement');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResetCache = async () => {
+  const handleBackup = async () => {
     setLoading(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success('Cache réinitialisé avec succès');
+      toast.success('Sauvegarde créée avec succès');
     } catch (error: any) {
-      toast.error('Erreur lors de la réinitialisation du cache');
+      toast.error('Erreur lors de la création de la sauvegarde');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExport = async () => {
+    setLoading(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      toast.success('Export des données réussi');
+    } catch (error: any) {
+      toast.error('Erreur lors de l\'export');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegenerateKeys = async () => {
+    setLoading(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      toast.success('Clés API régénérées avec succès');
+    } catch (error: any) {
+      toast.error('Erreur lors de la régénération');
     } finally {
       setLoading(false);
     }
@@ -90,449 +128,508 @@ export default function AdminSettingsPage() {
   return (
     <div className="space-y-6 lg:space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="admin-page-title">Paramètres</h1>
-        <p className="admin-page-description">Configuration de la plateforme SecondLife Exchange</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="admin-page-title">Paramètres</h1>
+          <p className="admin-page-description">Configuration et gestion de la plateforme</p>
+        </div>
+        <Button onClick={handleSaveAll} disabled={loading}>
+          <Save className="w-4 h-4 mr-2" />
+          Enregistrer les modifications
+        </Button>
       </div>
 
-      {/* Warning Alert */}
-      <Alert>
-        <AlertTriangle className="h-4 w-4" />
-        <AlertTitle>Attention</AlertTitle>
-        <AlertDescription>
-          Les modifications des paramètres peuvent affecter le fonctionnement de la plateforme.
-          Assurez-vous de comprendre l'impact de chaque changement avant de sauvegarder.
-        </AlertDescription>
-      </Alert>
-
-      {/* Tabs */}
-      <Tabs defaultValue="general" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="general">
-            <Settings className="w-4 h-4 mr-2" />
-            Général
-          </TabsTrigger>
-          <TabsTrigger value="security">
-            <Shield className="w-4 h-4 mr-2" />
-            Sécurité
-          </TabsTrigger>
-          <TabsTrigger value="notifications">
-            <Bell className="w-4 h-4 mr-2" />
-            Notifications
-          </TabsTrigger>
-          <TabsTrigger value="api">
-            <Key className="w-4 h-4 mr-2" />
-            API
-          </TabsTrigger>
-          <TabsTrigger value="system">
-            <Database className="w-4 h-4 mr-2" />
-            Système
-          </TabsTrigger>
-        </TabsList>
-
-        {/* General Tab */}
-        <TabsContent value="general" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Paramètres généraux</CardTitle>
-              <CardDescription>Configuration de base de la plateforme</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="siteName">Nom du site</Label>
-                <Input
-                  id="siteName"
-                  value={generalSettings.siteName}
-                  onChange={(e) =>
-                    setGeneralSettings({ ...generalSettings, siteName: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="siteDescription">Description du site</Label>
-                <Textarea
-                  id="siteDescription"
-                  value={generalSettings.siteDescription}
-                  onChange={(e) =>
-                    setGeneralSettings({ ...generalSettings, siteDescription: e.target.value })
-                  }
-                  rows={3}
-                />
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="maintenance">Mode maintenance</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Active le mode maintenance pour tous les utilisateurs
-                  </p>
+      {/* Platform Configuration */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="bg-[#1a1a1c] rounded-lg p-2">
+            <Settings className="w-5 h-5 text-foreground" />
+          </div>
+          <div>
+            <h2 className="text-base font-normal text-foreground">Configuration de la plateforme</h2>
+            <p className="text-sm text-muted-foreground">Paramètres généraux de l'application</p>
+          </div>
+        </div>
+        <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+          <CardContent className="p-0 space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="siteName" className="text-sm font-medium text-foreground">
+                Nom de la plateforme
+              </Label>
+              <Input
+                id="siteName"
+                value={platformSettings.siteName}
+                onChange={(e) =>
+                  setPlatformSettings({ ...platformSettings, siteName: e.target.value })
+                }
+                className="bg-[#1a1a1c] border-border"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="adminEmail" className="text-sm font-medium text-foreground">
+                Email administrateur
+              </Label>
+              <Input
+                id="adminEmail"
+                type="email"
+                value={platformSettings.adminEmail}
+                onChange={(e) =>
+                  setPlatformSettings({ ...platformSettings, adminEmail: e.target.value })
+                }
+                className="bg-[#1a1a1c] border-border"
+              />
+            </div>
+            <Separator className="bg-border" />
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Settings className="w-4 h-4 text-foreground" />
+                  <Label htmlFor="maintenance" className="text-sm font-medium text-foreground">
+                    Mode maintenance
+                  </Label>
                 </div>
-                <Switch
-                  id="maintenance"
-                  checked={generalSettings.maintenanceMode}
-                  onCheckedChange={(checked) =>
-                    setGeneralSettings({ ...generalSettings, maintenanceMode: checked })
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="registration">Inscriptions ouvertes</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Autorise les nouvelles inscriptions
-                  </p>
-                </div>
-                <Switch
-                  id="registration"
-                  checked={generalSettings.registrationEnabled}
-                  onCheckedChange={(checked) =>
-                    setGeneralSettings({ ...generalSettings, registrationEnabled: checked })
-                  }
-                />
-              </div>
-
-              <div className="flex justify-end">
-                <Button onClick={() => handleSave('Paramètres généraux')} disabled={loading}>
-                  <Save className="w-4 h-4 mr-2" />
-                  Sauvegarder
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Security Tab */}
-        <TabsContent value="security" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Paramètres de sécurité</CardTitle>
-              <CardDescription>Configuration de la sécurité et authentification</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="sessionTimeout">Délai d'expiration de session (heures)</Label>
-                <Input
-                  id="sessionTimeout"
-                  type="number"
-                  value={securitySettings.sessionTimeout}
-                  onChange={(e) =>
-                    setSecuritySettings({ ...securitySettings, sessionTimeout: e.target.value })
-                  }
-                />
-                <p className="text-xs text-muted-foreground">
-                  Durée avant expiration automatique de la session
+                <p className="text-sm text-muted-foreground">
+                  Désactiver temporairement l'accès à la plateforme
                 </p>
               </div>
+              <Switch
+                id="maintenance"
+                checked={platformSettings.maintenanceMode}
+                onCheckedChange={(checked) =>
+                  setPlatformSettings({ ...platformSettings, maintenanceMode: checked })
+                }
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="maxAttempts">Nombre max de tentatives de connexion</Label>
-                <Input
-                  id="maxAttempts"
-                  type="number"
-                  value={securitySettings.maxLoginAttempts}
-                  onChange={(e) =>
-                    setSecuritySettings({ ...securitySettings, maxLoginAttempts: e.target.value })
-                  }
-                />
-                <p className="text-xs text-muted-foreground">
-                  Nombre maximum de tentatives avant blocage temporaire
+      {/* Appearance */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="bg-[#1a1a1c] rounded-lg p-2">
+            <Palette className="w-5 h-5 text-foreground" />
+          </div>
+          <div>
+            <h2 className="text-base font-normal text-foreground">Apparence</h2>
+            <p className="text-sm text-muted-foreground">Personnaliser l'interface de l'administration</p>
+          </div>
+        </div>
+        <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+          <CardContent className="p-0 space-y-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-foreground">Thème de l'interface</Label>
+              <p className="text-sm text-muted-foreground">
+                Choisissez le thème pour l'interface d'administration
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => setTheme('light')}
+                className={`relative p-4 border-2 rounded-lg transition-all ${
+                  theme === 'light'
+                    ? 'border-[#e5e7eb] bg-gradient-to-br from-white to-gray-100'
+                    : 'border-border bg-[#141416] hover:border-border/80'
+                }`}
+              >
+                <div className="flex items-center justify-center h-20 bg-gradient-to-br from-white to-gray-100 rounded-md border border-[#e5e7eb] mb-2">
+                  <span className="text-xs text-[#4a5565]">Aa</span>
+                </div>
+                <p className="text-sm text-center text-foreground">Mode clair</p>
+              </button>
+              <button
+                onClick={() => setTheme('dark')}
+                className={`relative p-4 border-2 rounded-lg transition-all ${
+                  theme === 'dark'
+                    ? 'border-[#2d5a45] bg-[rgba(45,90,69,0.05)]'
+                    : 'border-border bg-[#141416] hover:border-border/80'
+                }`}
+              >
+                {theme === 'dark' && (
+                  <div className="absolute top-2 right-2 bg-[#2d5a45] rounded-full p-1">
+                    <div className="w-3 h-3 bg-white rounded-full" />
+                  </div>
+                )}
+                <div className="flex items-center justify-center h-20 bg-gradient-to-br from-[#101828] to-[#1e2939] rounded-md border border-[#364153] mb-2">
+                  <span className="text-xs text-[#d1d5dc]">Aa</span>
+                </div>
+                <p className="text-sm text-center text-foreground">Mode sombre</p>
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Notifications */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="bg-[#1a1a1c] rounded-lg p-2">
+            <Bell className="w-5 h-5 text-foreground" />
+          </div>
+          <div>
+            <h2 className="text-base font-normal text-foreground">Notifications</h2>
+            <p className="text-sm text-muted-foreground">Gérer les alertes et notifications système</p>
+          </div>
+        </div>
+        <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+          <CardContent className="p-0 space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Bell className="w-4 h-4 text-foreground" />
+                  <Label htmlFor="emailNotif" className="text-sm font-medium text-foreground">
+                    Notifications par email
+                  </Label>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Recevoir les alertes importantes par email
                 </p>
               </div>
+              <Switch
+                id="emailNotif"
+                checked={notificationSettings.emailNotifications}
+                onCheckedChange={(checked) =>
+                  setNotificationSettings({ ...notificationSettings, emailNotifications: checked })
+                }
+              />
+            </div>
+            <Separator className="bg-border" />
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label htmlFor="newUsers" className="text-sm font-medium text-foreground">
+                  Nouveaux utilisateurs
+                </Label>
+                <p className="text-sm text-muted-foreground">Alertes lors de nouvelles inscriptions</p>
+              </div>
+              <Switch
+                id="newUsers"
+                checked={notificationSettings.newUsers}
+                onCheckedChange={(checked) =>
+                  setNotificationSettings({ ...notificationSettings, newUsers: checked })
+                }
+              />
+            </div>
+            <Separator className="bg-border" />
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label htmlFor="reports" className="text-sm font-medium text-foreground">
+                  Signalements
+                </Label>
+                <p className="text-sm text-muted-foreground">Alertes lors de nouveaux signalements</p>
+              </div>
+              <Switch
+                id="reports"
+                checked={notificationSettings.reports}
+                onCheckedChange={(checked) =>
+                  setNotificationSettings({ ...notificationSettings, reports: checked })
+                }
+              />
+            </div>
+            <Separator className="bg-border" />
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label htmlFor="systemAlerts" className="text-sm font-medium text-foreground">
+                  Alertes système
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Notifications d'erreurs et problèmes techniques
+                </p>
+              </div>
+              <Switch
+                id="systemAlerts"
+                checked={notificationSettings.systemAlerts}
+                onCheckedChange={(checked) =>
+                  setNotificationSettings({ ...notificationSettings, systemAlerts: checked })
+                }
+              />
+            </div>
+            <Separator className="bg-border" />
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label htmlFor="weeklyReport" className="text-sm font-medium text-foreground">
+                  Rapport hebdomadaire
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Recevoir un résumé des activités chaque semaine
+                </p>
+              </div>
+              <Switch
+                id="weeklyReport"
+                checked={notificationSettings.weeklyReport}
+                onCheckedChange={(checked) =>
+                  setNotificationSettings({ ...notificationSettings, weeklyReport: checked })
+                }
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="emailVerification">Vérification email requise</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Les utilisateurs doivent vérifier leur email pour s'inscrire
-                  </p>
+      {/* Security */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="bg-[#1a1a1c] rounded-lg p-2">
+            <Shield className="w-5 h-5 text-foreground" />
+          </div>
+          <div>
+            <h2 className="text-base font-normal text-foreground">Sécurité</h2>
+            <p className="text-sm text-muted-foreground">Paramètres de sécurité et authentification</p>
+          </div>
+        </div>
+        <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+          <CardContent className="p-0 space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-foreground" />
+                  <Label htmlFor="twoFactor" className="text-sm font-medium text-foreground">
+                    Authentification à deux facteurs
+                  </Label>
                 </div>
-                <Switch
-                  id="emailVerification"
-                  checked={securitySettings.requireEmailVerification}
-                  onCheckedChange={(checked) =>
-                    setSecuritySettings({ ...securitySettings, requireEmailVerification: checked })
-                  }
-                />
+                <p className="text-sm text-muted-foreground">
+                  Sécuriser l'accès administrateur avec 2FA
+                </p>
               </div>
+              <Switch
+                id="twoFactor"
+                checked={securitySettings.twoFactorEnabled}
+                onCheckedChange={(checked) =>
+                  setSecuritySettings({ ...securitySettings, twoFactorEnabled: checked })
+                }
+              />
+            </div>
+            <Separator className="bg-border" />
+            <div className="space-y-2">
+              <Label htmlFor="sessionTimeout" className="text-sm font-medium text-foreground">
+                Expiration de session (minutes)
+              </Label>
+              <Input
+                id="sessionTimeout"
+                type="number"
+                value={securitySettings.sessionTimeout}
+                onChange={(e) =>
+                  setSecuritySettings({ ...securitySettings, sessionTimeout: e.target.value })
+                }
+                className="bg-[#1a1a1c] border-border"
+              />
+              <p className="text-sm text-muted-foreground">
+                Durée avant déconnexion automatique
+              </p>
+            </div>
+            <Separator className="bg-border" />
+            <div className="space-y-2">
+              <Label htmlFor="maxAttempts" className="text-sm font-medium text-foreground">
+                Tentatives de connexion max
+              </Label>
+              <Input
+                id="maxAttempts"
+                type="number"
+                value={securitySettings.maxLoginAttempts}
+                onChange={(e) =>
+                  setSecuritySettings({ ...securitySettings, maxLoginAttempts: e.target.value })
+                }
+                className="bg-[#1a1a1c] border-border"
+              />
+              <p className="text-sm text-muted-foreground">
+                Nombre de tentatives avant blocage du compte
+              </p>
+            </div>
+            <Separator className="bg-border" />
+            <div className="space-y-2">
+              <Label htmlFor="passwordExpiration" className="text-sm font-medium text-foreground">
+                Expiration mot de passe (jours)
+              </Label>
+              <Input
+                id="passwordExpiration"
+                type="number"
+                value={securitySettings.passwordExpiration}
+                onChange={(e) =>
+                  setSecuritySettings({ ...securitySettings, passwordExpiration: e.target.value })
+                }
+                className="bg-[#1a1a1c] border-border"
+              />
+              <p className="text-sm text-muted-foreground">
+                Forcer le changement de mot de passe après cette période
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="twoFactor">Authentification à deux facteurs</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Active l'authentification à deux facteurs pour les admins
-                  </p>
-                </div>
-                <Switch
-                  id="twoFactor"
-                  checked={securitySettings.twoFactorEnabled}
-                  onCheckedChange={(checked) =>
-                    setSecuritySettings({ ...securitySettings, twoFactorEnabled: checked })
-                  }
-                />
+      {/* Moderation */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="bg-[#1a1a1c] rounded-lg p-2">
+            <Gavel className="w-5 h-5 text-foreground" />
+          </div>
+          <div>
+            <h2 className="text-base font-normal text-foreground">Modération</h2>
+            <p className="text-sm text-muted-foreground">Contrôle du contenu et des utilisateurs</p>
+          </div>
+        </div>
+        <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+          <CardContent className="p-0 space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label htmlFor="autoModeration" className="text-sm font-medium text-foreground">
+                  Modération automatique
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Utiliser l'IA pour détecter le contenu inapproprié
+                </p>
               </div>
-
-              <div className="flex justify-end">
-                <Button onClick={() => handleSave('Paramètres de sécurité')} disabled={loading}>
-                  <Save className="w-4 h-4 mr-2" />
-                  Sauvegarder
-                </Button>
+              <Switch
+                id="autoModeration"
+                checked={moderationSettings.autoModeration}
+                onCheckedChange={(checked) =>
+                  setModerationSettings({ ...moderationSettings, autoModeration: checked })
+                }
+              />
+            </div>
+            <Separator className="bg-border" />
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label htmlFor="itemApproval" className="text-sm font-medium text-foreground">
+                  Approbation des objets
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Les objets doivent être validés avant publication
+                </p>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+              <Switch
+                id="itemApproval"
+                checked={moderationSettings.itemApproval}
+                onCheckedChange={(checked) =>
+                  setModerationSettings({ ...moderationSettings, itemApproval: checked })
+                }
+              />
+            </div>
+            <Separator className="bg-border" />
+            <div className="space-y-2">
+              <Label htmlFor="minAge" className="text-sm font-medium text-foreground">
+                Âge minimum des utilisateurs
+              </Label>
+              <Input
+                id="minAge"
+                type="number"
+                value={moderationSettings.minAge}
+                onChange={(e) =>
+                  setModerationSettings({ ...moderationSettings, minAge: e.target.value })
+                }
+                className="bg-[#1a1a1c] border-border"
+              />
+              <p className="text-sm text-muted-foreground">Âge minimum requis pour s'inscrire</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-        {/* Notifications Tab */}
-        <TabsContent value="notifications" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Paramètres de notifications</CardTitle>
-              <CardDescription>Configuration des notifications pour les administrateurs</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="emailNotif">Notifications par email</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Recevoir les notifications importantes par email
-                  </p>
-                </div>
-                <Switch
-                  id="emailNotif"
-                  checked={notificationSettings.emailNotifications}
-                  onCheckedChange={(checked) =>
-                    setNotificationSettings({ ...notificationSettings, emailNotifications: checked })
-                  }
-                />
+      {/* Data Management */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="bg-[#1a1a1c] rounded-lg p-2">
+            <Database className="w-5 h-5 text-foreground" />
+          </div>
+          <div>
+            <h2 className="text-base font-normal text-foreground">Gestion des données</h2>
+            <p className="text-sm text-muted-foreground">
+              Rétention, sauvegarde et export des données
+            </p>
+          </div>
+        </div>
+        <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+          <CardContent className="p-0 space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="dataRetention" className="text-sm font-medium text-foreground">
+                Rétention des données (jours)
+              </Label>
+              <Input
+                id="dataRetention"
+                type="number"
+                value={dataSettings.dataRetention}
+                onChange={(e) =>
+                  setDataSettings({ ...dataSettings, dataRetention: e.target.value })
+                }
+                className="bg-[#1a1a1c] border-border"
+              />
+              <p className="text-sm text-muted-foreground">
+                Durée de conservation des données supprimées
+              </p>
+            </div>
+            <Separator className="bg-border" />
+            <div className="space-y-2">
+              <Label htmlFor="backupFrequency" className="text-sm font-medium text-foreground">
+                Fréquence des sauvegardes
+              </Label>
+              <Select
+                value={dataSettings.backupFrequency}
+                onValueChange={(value) =>
+                  setDataSettings({ ...dataSettings, backupFrequency: value })
+                }
+              >
+                <SelectTrigger className="bg-[#0a0a0b] border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hourly">Toutes les heures</SelectItem>
+                  <SelectItem value="daily">Quotidienne</SelectItem>
+                  <SelectItem value="weekly">Hebdomadaire</SelectItem>
+                  <SelectItem value="monthly">Mensuelle</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground">
+                Fréquence des sauvegardes automatiques
+              </p>
+            </div>
+            <Separator className="bg-border" />
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-foreground">Actions rapides</Label>
+                <p className="text-sm text-muted-foreground">
+                  Opérations de maintenance et gestion des données
+                </p>
               </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="pushNotif">Notifications push</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Recevoir les notifications push dans le navigateur
-                  </p>
-                </div>
-                <Switch
-                  id="pushNotif"
-                  checked={notificationSettings.pushNotifications}
-                  onCheckedChange={(checked) =>
-                    setNotificationSettings({ ...notificationSettings, pushNotifications: checked })
-                  }
-                />
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="adminAlerts">Alertes admin</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Notifications pour les actions administratives importantes
-                  </p>
-                </div>
-                <Switch
-                  id="adminAlerts"
-                  checked={notificationSettings.adminAlerts}
-                  onCheckedChange={(checked) =>
-                    setNotificationSettings({ ...notificationSettings, adminAlerts: checked })
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="reportAlerts">Alertes signalements</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Notifications pour les nouveaux signalements
-                  </p>
-                </div>
-                <Switch
-                  id="reportAlerts"
-                  checked={notificationSettings.reportAlerts}
-                  onCheckedChange={(checked) =>
-                    setNotificationSettings({ ...notificationSettings, reportAlerts: checked })
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="userAlerts">Alertes utilisateurs</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Notifications pour les activités utilisateurs importantes
-                  </p>
-                </div>
-                <Switch
-                  id="userAlerts"
-                  checked={notificationSettings.userAlerts}
-                  onCheckedChange={(checked) =>
-                    setNotificationSettings({ ...notificationSettings, userAlerts: checked })
-                  }
-                />
-              </div>
-
-              <div className="flex justify-end">
+              <div className="flex gap-4">
                 <Button
-                  onClick={() => handleSave('Paramètres de notifications')}
+                  variant="outline"
+                  className="border-border"
+                  onClick={handleBackup}
                   disabled={loading}
                 >
-                  <Save className="w-4 h-4 mr-2" />
-                  Sauvegarder
+                  <Download className="w-4 h-4 mr-2" />
+                  Créer une sauvegarde
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-border"
+                  onClick={handleExport}
+                  disabled={loading}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Exporter les données
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-border"
+                  onClick={handleRegenerateKeys}
+                  disabled={loading}
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Régénérer les clés API
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-        {/* API Tab */}
-        <TabsContent value="api" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Configuration API</CardTitle>
-              <CardDescription>Gestion des clés API et limites</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <Alert>
-                <Key className="h-4 w-4" />
-                <AlertTitle>Clés API sensibles</AlertTitle>
-                <AlertDescription>
-                  Les clés API sont masquées pour des raisons de sécurité. Modifiez uniquement si
-                  nécessaire.
-                </AlertDescription>
-              </Alert>
-
-              <div className="space-y-2">
-                <Label htmlFor="geminiKey">Clé API Gemini</Label>
-                <Input
-                  id="geminiKey"
-                  type="password"
-                  value={apiSettings.geminiApiKey}
-                  onChange={(e) =>
-                    setApiSettings({ ...apiSettings, geminiApiKey: e.target.value })
-                  }
-                  placeholder="Entrez la clé API Gemini"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Utilisée pour la génération de thèmes et suggestions IA
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="unsplashKey">Clé API Unsplash</Label>
-                <Input
-                  id="unsplashKey"
-                  type="password"
-                  value={apiSettings.unsplashApiKey}
-                  onChange={(e) =>
-                    setApiSettings({ ...apiSettings, unsplashApiKey: e.target.value })
-                  }
-                  placeholder="Entrez la clé API Unsplash"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Utilisée pour récupérer les images des thèmes
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="rateLimit">Limite de débit API (requêtes/heure)</Label>
-                <Input
-                  id="rateLimit"
-                  type="number"
-                  value={apiSettings.apiRateLimit}
-                  onChange={(e) =>
-                    setApiSettings({ ...apiSettings, apiRateLimit: e.target.value })
-                  }
-                />
-                <p className="text-xs text-muted-foreground">
-                  Limite globale de requêtes par heure
-                </p>
-              </div>
-
-              <div className="flex justify-end">
-                <Button onClick={() => handleSave('Configuration API')} disabled={loading}>
-                  <Save className="w-4 h-4 mr-2" />
-                  Sauvegarder
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* System Tab */}
-        <TabsContent value="system" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Gestion du système</CardTitle>
-              <CardDescription>Outils de maintenance et diagnostic</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-medium">Réinitialiser le cache</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Vide tous les caches de l'application
-                    </p>
-                  </div>
-                  <Button variant="outline" onClick={handleResetCache} disabled={loading}>
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Réinitialiser
-                  </Button>
-                </div>
-
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-medium">Statut de la base de données</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Vérifie la connexion et l'état de la base de données
-                    </p>
-                  </div>
-                  <Badge variant="default" className="bg-green-500">
-                    Connecté
-                  </Badge>
-                </div>
-
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-medium">Version de l'application</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Version actuelle de SecondLife Exchange
-                    </p>
-                  </div>
-                  <Badge variant="secondary">v1.0.0</Badge>
-                </div>
-
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-medium">Statut des services</h4>
-                    <p className="text-sm text-muted-foreground">
-                      État de tous les services externes
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Badge variant="default" className="bg-green-500">
-                      API
-                    </Badge>
-                    <Badge variant="default" className="bg-green-500">
-                      Database
-                    </Badge>
-                    <Badge variant="default" className="bg-green-500">
-                      Gemini
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      {/* Save All Button */}
+      <div className="flex justify-end">
+        <Button onClick={handleSaveAll} disabled={loading} size="lg">
+          <Save className="w-4 h-4 mr-2" />
+          Enregistrer toutes les modifications
+        </Button>
+      </div>
     </div>
   );
 }
-

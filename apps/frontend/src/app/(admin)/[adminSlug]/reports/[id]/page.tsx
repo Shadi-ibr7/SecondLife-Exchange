@@ -129,18 +129,18 @@ export default function ReportDetailPage() {
             <div className="flex items-center gap-3">
               <h1 className="admin-page-title">Détails signalement</h1>
               {report.resolved ? (
-                <Badge variant="secondary" className="flex items-center gap-1">
+                <Badge className="flex items-center gap-1 w-fit bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45]">
                   <CheckCircle className="w-3 h-3" />
                   Résolu
                 </Badge>
               ) : (
-                <Badge variant="destructive" className="flex items-center gap-1">
+                <Badge className="flex items-center gap-1 w-fit bg-[rgba(239,68,68,0.1)] text-[#ef4444] dark:bg-[rgba(239,68,68,0.1)] dark:text-[#ef4444]">
                   <AlertTriangle className="w-3 h-3" />
                   Non résolu
                 </Badge>
               )}
             </div>
-            <p className="text-muted-foreground">
+            <p className="admin-page-description">
               Signalé le {format(new Date(report.createdAt), 'PPpp', { locale: fr })}
             </p>
           </div>
@@ -175,40 +175,42 @@ export default function ReportDetailPage() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Report Details */}
-          <Card>
-            <CardHeader>
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                   <Flag className="w-5 h-5" />
                   Détails du signalement
                 </CardTitle>
-                <Badge variant="secondary">
+                <Badge className="bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]">
                   {REPORT_TYPE_LABELS[report.type] || report.type}
                 </Badge>
               </div>
-              <CardDescription>Informations sur le signalement</CardDescription>
+              <CardDescription className="text-sm text-muted-foreground font-normal">
+                Informations sur le signalement
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="p-0 space-y-6">
               {/* Message */}
               <div>
-                <h3 className="text-sm font-medium mb-2">Message du signalement</h3>
+                <h3 className="text-sm font-medium text-foreground mb-2">Message du signalement</h3>
                 <div className="p-4 bg-muted rounded-lg">
-                  <p className="text-sm whitespace-pre-wrap">{report.message}</p>
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{report.message}</p>
                 </div>
               </div>
 
-              <Separator />
+              <Separator className="bg-border" />
 
               {/* Timeline */}
               <div className="space-y-4">
-                <h3 className="text-sm font-medium">Historique</h3>
+                <h3 className="text-sm font-medium text-foreground">Historique</h3>
                 <div className="flex items-start gap-4">
                   <div className="flex flex-col items-center">
                     <div className="w-2 h-2 rounded-full bg-primary mt-1" />
                     <div className="w-px h-full bg-border min-h-[40px]" />
                   </div>
                   <div className="flex-1">
-                    <div className="font-medium">Signalement créé</div>
+                    <div className="font-medium text-foreground">Signalement créé</div>
                     <div className="text-sm text-muted-foreground">
                       {format(new Date(report.createdAt), 'PPpp', { locale: fr })}
                     </div>
@@ -221,7 +223,7 @@ export default function ReportDetailPage() {
                       <div className="w-2 h-2 rounded-full bg-green-500 mt-1" />
                     </div>
                     <div className="flex-1">
-                      <div className="font-medium">Signalement résolu</div>
+                      <div className="font-medium text-foreground">Signalement résolu</div>
                       <div className="text-sm text-muted-foreground">
                         {format(new Date(report.resolvedAt), 'PPpp', { locale: fr })}
                       </div>
@@ -234,15 +236,17 @@ export default function ReportDetailPage() {
 
           {/* Target Item (if exists) */}
           {report.targetItem && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardHeader className="p-0 mb-6">
+                <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                   <Package className="w-5 h-5" />
                   Objet signalé
                 </CardTitle>
-                <CardDescription>L'objet concerné par ce signalement</CardDescription>
+                <CardDescription className="text-sm text-muted-foreground font-normal">
+                  L'objet concerné par ce signalement
+                </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 <div className="flex gap-4">
                   {report.targetItem.photos?.[0] && (
                     <div className="relative w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
@@ -255,20 +259,28 @@ export default function ReportDetailPage() {
                     </div>
                   )}
                   <div className="flex-1 space-y-2">
-                    <h4 className="font-medium">{report.targetItem.title}</h4>
+                    <h4 className="font-medium text-foreground">{report.targetItem.title}</h4>
                     <p className="text-sm text-muted-foreground line-clamp-2">
                       {report.targetItem.description}
                     </p>
                     <div className="flex gap-2">
-                      <Badge variant="secondary">{report.targetItem.category}</Badge>
-                      <Badge variant="outline">{report.targetItem.condition}</Badge>
+                      <Badge className="bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]">
+                        {report.targetItem.category}
+                      </Badge>
+                      <Badge variant="outline" className="border-border text-muted-foreground">
+                        {report.targetItem.condition}
+                      </Badge>
                       <Badge
-                        variant={report.targetItem.status === 'AVAILABLE' ? 'default' : 'secondary'}
+                        className={
+                          report.targetItem.status === 'AVAILABLE'
+                            ? 'bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45]'
+                            : 'bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]'
+                        }
                       >
                         {report.targetItem.status}
                       </Badge>
                     </div>
-                    <Button variant="outline" size="sm" asChild>
+                    <Button variant="outline" size="sm" className="border-border" asChild>
                       <Link href={`/${ADMIN_BASE_PATH}/items/${report.targetItem.id}`}>
                         Voir l'objet
                       </Link>
@@ -283,12 +295,14 @@ export default function ReportDetailPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Reporter */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Signalé par</CardTitle>
-              <CardDescription>Utilisateur qui a fait le signalement</CardDescription>
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="text-base font-normal text-foreground">Signalé par</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground font-normal">
+                Utilisateur qui a fait le signalement
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-0 space-y-4">
               {report.reporter ? (
                 <>
                   <div className="flex items-center gap-3">
@@ -299,11 +313,11 @@ export default function ReportDetailPage() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
-                      <div className="font-medium">{report.reporter.displayName}</div>
+                      <div className="font-medium text-foreground">{report.reporter.displayName}</div>
                       <div className="text-sm text-muted-foreground">{report.reporter.email}</div>
                     </div>
                   </div>
-                  <Button variant="outline" className="w-full" asChild>
+                  <Button variant="outline" className="w-full border-border" asChild>
                     <Link href={`/${ADMIN_BASE_PATH}/users/${report.reporter.id}`}>
                       <User className="w-4 h-4 mr-2" />
                       Voir le profil
@@ -318,12 +332,16 @@ export default function ReportDetailPage() {
 
           {/* Target User */}
           {report.targetUser && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Utilisateur signalé</CardTitle>
-                <CardDescription>Utilisateur concerné par le signalement</CardDescription>
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardHeader className="p-0 mb-6">
+                <CardTitle className="text-base font-normal text-foreground">
+                  Utilisateur signalé
+                </CardTitle>
+                <CardDescription className="text-sm text-muted-foreground font-normal">
+                  Utilisateur concerné par le signalement
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="p-0 space-y-4">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-12 w-12">
                     <AvatarImage src={report.targetUser.avatarUrl || undefined} />
@@ -333,10 +351,12 @@ export default function ReportDetailPage() {
                   </Avatar>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{report.targetUser.displayName}</span>
+                      <span className="font-medium text-foreground">
+                        {report.targetUser.displayName}
+                      </span>
                       {report.targetUser.ban && (
-                        <Badge variant="destructive" className="text-xs">
-                          <Ban className="w-3 h-3 mr-1" />
+                        <Badge className="text-xs bg-[rgba(239,68,68,0.1)] text-[#ef4444] dark:bg-[rgba(239,68,68,0.1)] dark:text-[#ef4444] flex items-center gap-1 w-fit">
+                          <Ban className="w-3 h-3" />
                           Banni
                         </Badge>
                       )}
@@ -344,7 +364,7 @@ export default function ReportDetailPage() {
                     <div className="text-sm text-muted-foreground">{report.targetUser.email}</div>
                   </div>
                 </div>
-                <Button variant="outline" className="w-full" asChild>
+                <Button variant="outline" className="w-full border-border" asChild>
                   <Link href={`/${ADMIN_BASE_PATH}/users/${report.targetUser.id}`}>
                     <User className="w-4 h-4 mr-2" />
                     Voir le profil
@@ -355,27 +375,33 @@ export default function ReportDetailPage() {
           )}
 
           {/* Metadata */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Informations</CardTitle>
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="text-base font-normal text-foreground">Informations</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="p-0 space-y-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">ID</span>
-                <span className="font-mono text-xs">{report.id}</span>
+                <span className="font-mono text-xs text-foreground">{report.id}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Type</span>
-                <Badge variant="secondary">{REPORT_TYPE_LABELS[report.type] || report.type}</Badge>
+                <Badge className="bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]">
+                  {REPORT_TYPE_LABELS[report.type] || report.type}
+                </Badge>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Date de création</span>
-                <span>{format(new Date(report.createdAt), 'PP', { locale: fr })}</span>
+                <span className="text-foreground">
+                  {format(new Date(report.createdAt), 'PP', { locale: fr })}
+                </span>
               </div>
               {report.resolvedAt && (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Date de résolution</span>
-                  <span>{format(new Date(report.resolvedAt), 'PP', { locale: fr })}</span>
+                  <span className="text-foreground">
+                    {format(new Date(report.resolvedAt), 'PP', { locale: fr })}
+                  </span>
                 </div>
               )}
             </CardContent>
@@ -383,11 +409,11 @@ export default function ReportDetailPage() {
 
           {/* Actions */}
           {!report.resolved && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Actions</CardTitle>
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardHeader className="p-0 mb-6">
+                <CardTitle className="text-base font-normal text-foreground">Actions</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
+              <CardContent className="p-0 space-y-2">
                 <Button className="w-full" onClick={() => setResolveDialogOpen(true)}>
                   <CheckCircle className="w-4 h-4 mr-2" />
                   Résoudre le signalement

@@ -88,7 +88,7 @@ export default function ThreadDetailPage() {
     const config = SCOPE_LABELS[scope] || { label: scope, icon: Globe };
     const Icon = config.icon;
     return (
-      <Badge variant="secondary" className="flex items-center gap-1">
+      <Badge className="flex items-center gap-1 w-fit bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]">
         <Icon className="w-3 h-3" />
         {config.label}
       </Badge>
@@ -133,7 +133,7 @@ export default function ThreadDetailPage() {
               <h1 className="admin-page-title">Détails du thread</h1>
               {getScopeBadge(thread.scope)}
             </div>
-            <p className="text-muted-foreground">
+            <p className="admin-page-description">
               Créé le {format(new Date(thread.createdAt), 'PPpp', { locale: fr })}
             </p>
           </div>
@@ -148,49 +148,55 @@ export default function ThreadDetailPage() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Thread Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                 <MessageCircle className="w-5 h-5" />
                 {thread.title}
               </CardTitle>
-              <CardDescription>Informations sur le thread</CardDescription>
+              <CardDescription className="text-sm text-muted-foreground font-normal">
+                Informations sur le thread
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-0 space-y-4">
               {thread.description && (
                 <div>
-                  <h3 className="text-sm font-medium mb-2">Description</h3>
+                  <h3 className="text-sm font-medium text-foreground mb-2">Description</h3>
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                     {thread.description}
                   </p>
                 </div>
               )}
 
-              <Separator />
+              <Separator className="bg-border" />
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h3 className="text-sm font-medium mb-2">Type</h3>
+                  <h3 className="text-sm font-medium text-foreground mb-2">Type</h3>
                   {getScopeBadge(thread.scope)}
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium mb-2">Nombre de posts</h3>
-                  <Badge variant="outline">{thread._count?.posts || 0} posts</Badge>
+                  <h3 className="text-sm font-medium text-foreground mb-2">Nombre de posts</h3>
+                  <Badge variant="outline" className="border-border text-muted-foreground">
+                    {thread._count?.posts || 0} posts
+                  </Badge>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Posts */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                 <MessageSquare className="w-5 h-5" />
                 Posts ({thread.posts?.length || 0})
               </CardTitle>
-              <CardDescription>Liste des posts dans ce thread</CardDescription>
+              <CardDescription className="text-sm text-muted-foreground font-normal">
+                Liste des posts dans ce thread
+              </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               {thread.posts && thread.posts.length > 0 ? (
                 <div className="space-y-4">
                   {thread.posts.map((post: any) => (
@@ -204,14 +210,14 @@ export default function ThreadDetailPage() {
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <div className="font-medium">{post.author?.displayName}</div>
+                            <div className="font-medium text-foreground">{post.author?.displayName}</div>
                             <div className="text-xs text-muted-foreground">
                               {format(new Date(post.createdAt), 'PPp', { locale: fr })}
                             </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-xs border-border text-muted-foreground">
                             {post._count?.replies || 0} réponses
                           </Badge>
                           <Button
@@ -243,11 +249,11 @@ export default function ThreadDetailPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Author */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Auteur du thread</CardTitle>
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="text-base font-normal text-foreground">Auteur du thread</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-0 space-y-4">
               <div className="flex items-center gap-3">
                 <Avatar className="h-12 w-12">
                   <AvatarImage src={thread.author?.avatarUrl || undefined} />
@@ -256,11 +262,11 @@ export default function ThreadDetailPage() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                  <div className="font-medium">{thread.author?.displayName}</div>
+                  <div className="font-medium text-foreground">{thread.author?.displayName}</div>
                   <div className="text-sm text-muted-foreground">{thread.author?.email}</div>
                 </div>
               </div>
-              <Button variant="outline" className="w-full" asChild>
+              <Button variant="outline" className="w-full border-border" asChild>
                 <Link href={`/${ADMIN_BASE_PATH}/users/${thread.author?.id}`}>
                   <User className="w-4 h-4 mr-2" />
                   Voir le profil
@@ -270,14 +276,14 @@ export default function ThreadDetailPage() {
           </Card>
 
           {/* Metadata */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Informations</CardTitle>
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="text-base font-normal text-foreground">Informations</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="p-0 space-y-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">ID</span>
-                <span className="font-mono text-xs">{thread.id}</span>
+                <span className="font-mono text-xs text-foreground">{thread.id}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Scope</span>
@@ -285,21 +291,25 @@ export default function ThreadDetailPage() {
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Date de création</span>
-                <span>{format(new Date(thread.createdAt), 'PP', { locale: fr })}</span>
+                <span className="text-foreground">
+                  {format(new Date(thread.createdAt), 'PP', { locale: fr })}
+                </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Nombre de posts</span>
-                <Badge variant="secondary">{thread._count?.posts || 0}</Badge>
+                <Badge className="bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]">
+                  {thread._count?.posts || 0}
+                </Badge>
               </div>
             </CardContent>
           </Card>
 
           {/* Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Actions</CardTitle>
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="text-base font-normal text-foreground">Actions</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               <Button
                 variant="destructive"
                 className="w-full"

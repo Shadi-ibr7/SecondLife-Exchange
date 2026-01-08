@@ -153,40 +153,40 @@ export default function MaintenancePage() {
         {/* Backup Tab */}
         <TabsContent value="backup" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardHeader className="p-0 mb-6">
+                <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                   <Database className="w-5 h-5" />
                   Sauvegardes
                 </CardTitle>
-                <CardDescription>Gestion des sauvegardes de la base de données</CardDescription>
+                <CardDescription className="text-sm text-muted-foreground font-normal">Gestion des sauvegardes de la base de données</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="p-0 space-y-4">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Dernière sauvegarde</span>
-                    <Badge variant="outline">
+                    <Badge className="border-border text-foreground">
                       {format(lastBackup, 'PP', { locale: fr })}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Prochaine sauvegarde</span>
-                    <Badge variant="secondary">
+                    <Badge className="bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]">
                       {format(nextBackup, 'PP', { locale: fr })}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Taille totale</span>
-                    <span className="text-sm font-medium">2.4 GB</span>
+                    <span className="text-sm font-medium text-foreground">2.4 GB</span>
                   </div>
                 </div>
-                <Separator />
+                <Separator className="bg-border" />
                 <div className="flex flex-col gap-2">
                   <Button onClick={() => setBackupDialogOpen(true)}>
                     <Download className="w-4 h-4 mr-2" />
                     Créer une sauvegarde
                   </Button>
-                  <Button variant="outline" onClick={() => setRestoreDialogOpen(true)}>
+                  <Button variant="outline" className="border-border" onClick={() => setRestoreDialogOpen(true)}>
                     <Upload className="w-4 h-4 mr-2" />
                     Restaurer une sauvegarde
                   </Button>
@@ -194,27 +194,27 @@ export default function MaintenancePage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Historique des sauvegardes</CardTitle>
-                <CardDescription>Liste des sauvegardes disponibles</CardDescription>
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardHeader className="p-0 mb-6">
+                <CardTitle className="text-base font-normal text-foreground">Historique des sauvegardes</CardTitle>
+                <CardDescription className="text-sm text-muted-foreground font-normal">Liste des sauvegardes disponibles</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 <div className="space-y-3">
                   {[
                     { date: lastBackup, size: '2.4 GB', type: 'Complète' },
                     { date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), size: '2.3 GB', type: 'Complète' },
                     { date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), size: '2.2 GB', type: 'Complète' },
                   ].map((backup, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div key={index} className="flex items-center justify-between p-3 border border-border rounded-lg">
                       <div>
-                        <div className="font-medium text-sm">
+                        <div className="font-medium text-sm text-foreground">
                           {format(backup.date, 'PPp', { locale: fr })}
                         </div>
                         <div className="text-xs text-muted-foreground">{backup.type}</div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline">{backup.size}</Badge>
+                        <Badge className="border-border text-foreground">{backup.size}</Badge>
                         <Button variant="ghost" size="icon">
                           <Download className="w-4 h-4" />
                         </Button>
@@ -229,15 +229,15 @@ export default function MaintenancePage() {
 
         {/* Cache Tab */}
         <TabsContent value="cache" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                 <RefreshCw className="w-5 h-5" />
                 Gestion du cache
               </CardTitle>
-              <CardDescription>Vider et régénérer le cache système</CardDescription>
+              <CardDescription className="text-sm text-muted-foreground font-normal">Vider et régénérer le cache système</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-0 space-y-4">
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Attention</AlertTitle>
@@ -248,42 +248,42 @@ export default function MaintenancePage() {
               </Alert>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardDescription>Cache utilisateurs</CardDescription>
-                    <CardTitle className="text-2xl">45 MB</CardTitle>
+                <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+                  <CardHeader className="p-0 mb-6">
+                    <CardDescription className="text-sm text-muted-foreground font-normal">Cache utilisateurs</CardDescription>
+                    <CardTitle className="text-2xl text-foreground">45 MB</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <Button variant="outline" size="sm" className="w-full">
+                  <CardContent className="p-0">
+                    <Button variant="outline" size="sm" className="w-full border-border">
                       Vider
                     </Button>
                   </CardContent>
                 </Card>
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardDescription>Cache objets</CardDescription>
-                    <CardTitle className="text-2xl">128 MB</CardTitle>
+                <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+                  <CardHeader className="p-0 mb-6">
+                    <CardDescription className="text-sm text-muted-foreground font-normal">Cache objets</CardDescription>
+                    <CardTitle className="text-2xl text-foreground">128 MB</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <Button variant="outline" size="sm" className="w-full">
+                  <CardContent className="p-0">
+                    <Button variant="outline" size="sm" className="w-full border-border">
                       Vider
                     </Button>
                   </CardContent>
                 </Card>
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardDescription>Cache API</CardDescription>
-                    <CardTitle className="text-2xl">67 MB</CardTitle>
+                <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+                  <CardHeader className="p-0 mb-6">
+                    <CardDescription className="text-sm text-muted-foreground font-normal">Cache API</CardDescription>
+                    <CardTitle className="text-2xl text-foreground">67 MB</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <Button variant="outline" size="sm" className="w-full">
+                  <CardContent className="p-0">
+                    <Button variant="outline" size="sm" className="w-full border-border">
                       Vider
                     </Button>
                   </CardContent>
                 </Card>
               </div>
 
-              <Separator />
+              <Separator className="bg-border" />
 
               <div className="flex justify-end">
                 <Button variant="destructive" onClick={() => setClearCacheDialogOpen(true)}>
@@ -298,32 +298,38 @@ export default function MaintenancePage() {
         {/* System Tab */}
         <TabsContent value="system" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardHeader className="p-0 mb-6">
+                <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                   <Settings className="w-5 h-5" />
                   Configuration système
                 </CardTitle>
-                <CardDescription>Paramètres généraux</CardDescription>
+                <CardDescription className="text-sm text-muted-foreground font-normal">Paramètres généraux</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="p-0 space-y-4">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Mode maintenance</span>
-                    <Badge variant={maintenanceMode ? 'destructive' : 'secondary'}>
+                    <span className="text-sm text-foreground">Mode maintenance</span>
+                    <Badge
+                      className={
+                        maintenanceMode
+                          ? 'bg-[rgba(239,68,68,0.1)] text-[#ef4444] dark:bg-[rgba(239,68,68,0.1)] dark:text-[#ef4444]'
+                          : 'bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]'
+                      }
+                    >
                       {maintenanceMode ? 'Activé' : 'Désactivé'}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Version</span>
-                    <Badge variant="outline">v1.0.0</Badge>
+                    <span className="text-sm text-foreground">Version</span>
+                    <Badge className="border-border text-foreground">v1.0.0</Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Environnement</span>
-                    <Badge variant="outline">Production</Badge>
+                    <span className="text-sm text-foreground">Environnement</span>
+                    <Badge className="border-border text-foreground">Production</Badge>
                   </div>
                 </div>
-                <Separator />
+                <Separator className="bg-border" />
                 <Button
                   variant={maintenanceMode ? 'default' : 'destructive'}
                   className="w-full"
@@ -344,31 +350,37 @@ export default function MaintenancePage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardHeader className="p-0 mb-6">
+                <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                   <Shield className="w-5 h-5" />
                   Sécurité
                 </CardTitle>
-                <CardDescription>Paramètres de sécurité</CardDescription>
+                <CardDescription className="text-sm text-muted-foreground font-normal">Paramètres de sécurité</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="p-0 space-y-4">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Authentification</span>
-                    <Badge variant="default">Active</Badge>
+                    <span className="text-sm text-foreground">Authentification</span>
+                    <Badge className="bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45]">
+                      Active
+                    </Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">HTTPS</span>
-                    <Badge variant="default">Activé</Badge>
+                    <span className="text-sm text-foreground">HTTPS</span>
+                    <Badge className="bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45]">
+                      Activé
+                    </Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Rate limiting</span>
-                    <Badge variant="default">Activé</Badge>
+                    <span className="text-sm text-foreground">Rate limiting</span>
+                    <Badge className="bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45]">
+                      Activé
+                    </Badge>
                   </div>
                 </div>
-                <Separator />
-                <Button variant="outline" className="w-full">
+                <Separator className="bg-border" />
+                <Button variant="outline" className="w-full border-border">
                   <Settings className="w-4 h-4 mr-2" />
                   Configurer la sécurité
                 </Button>
@@ -379,38 +391,38 @@ export default function MaintenancePage() {
 
         {/* Logs Tab */}
         <TabsContent value="logs" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                 <Clock className="w-5 h-5" />
                 Logs système
               </CardTitle>
-              <CardDescription>Consultation et gestion des logs système</CardDescription>
+              <CardDescription className="text-sm text-muted-foreground font-normal">Consultation et gestion des logs système</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center justify-between p-3 border border-border rounded-lg">
                   <div>
-                    <div className="font-medium text-sm">Logs d'application</div>
+                    <div className="font-medium text-sm text-foreground">Logs d'application</div>
                     <div className="text-xs text-muted-foreground">Dernière mise à jour: Il y a 5 min</div>
                   </div>
-                  <Button variant="outline" size="sm" asChild>
+                  <Button variant="outline" size="sm" className="border-border" asChild>
                     <a href={`/${ADMIN_BASE_PATH}/logs`}>Voir les logs</a>
                   </Button>
                 </div>
-                <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center justify-between p-3 border border-border rounded-lg">
                   <div>
-                    <div className="font-medium text-sm">Logs d'erreur</div>
+                    <div className="font-medium text-sm text-foreground">Logs d'erreur</div>
                     <div className="text-xs text-muted-foreground">12 erreurs dans les dernières 24h</div>
                   </div>
-                  <Button variant="outline" size="sm">Voir les erreurs</Button>
+                  <Button variant="outline" size="sm" className="border-border">Voir les erreurs</Button>
                 </div>
-                <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center justify-between p-3 border border-border rounded-lg">
                   <div>
-                    <div className="font-medium text-sm">Logs d'accès</div>
+                    <div className="font-medium text-sm text-foreground">Logs d'accès</div>
                     <div className="text-xs text-muted-foreground">1250 accès aujourd'hui</div>
                   </div>
-                  <Button variant="outline" size="sm">Voir les accès</Button>
+                  <Button variant="outline" size="sm" className="border-border">Voir les accès</Button>
                 </div>
               </div>
             </CardContent>

@@ -28,12 +28,12 @@ function StatsCard({
   icon: React.ReactNode;
 }) {
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardHeader>
+    <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px] hover:shadow-md transition-shadow">
+      <CardHeader className="p-0 mb-6">
         <div className="flex items-start justify-between">
           <div className="space-y-2">
-            <CardDescription>{title}</CardDescription>
-            <CardTitle className="text-3xl tracking-tight">{value}</CardTitle>
+            <CardDescription className="text-sm text-muted-foreground font-normal">{title}</CardDescription>
+            <CardTitle className="text-3xl tracking-tight text-foreground">{value}</CardTitle>
             {change && (
               <p
                 className={`text-xs flex items-center gap-1 ${
@@ -100,7 +100,7 @@ export default function AdminAnalyticsPage() {
 
       {/* Vue d'ensemble */}
       <div>
-        <h2 className="text-lg font-medium mb-4">Vue d'ensemble</h2>
+        <h2 className="text-base font-normal text-foreground mb-4">Vue d'ensemble</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           <StatsCard
             title="Utilisateurs totaux"
@@ -169,26 +169,26 @@ export default function AdminAnalyticsPage() {
         {/* Users Tab */}
         <TabsContent value="users" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader>
-                <CardDescription>Total utilisateurs</CardDescription>
-                <CardTitle className="text-2xl">
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardHeader className="p-0 mb-6">
+                <CardDescription className="text-sm text-muted-foreground font-normal">Total utilisateurs</CardDescription>
+                <CardTitle className="text-2xl text-foreground">
                   {userAnalytics?.total?.toLocaleString() || '0'}
                 </CardTitle>
               </CardHeader>
             </Card>
-            <Card>
-              <CardHeader>
-                <CardDescription>Utilisateurs actifs</CardDescription>
-                <CardTitle className="text-2xl">
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardHeader className="p-0 mb-6">
+                <CardDescription className="text-sm text-muted-foreground font-normal">Utilisateurs actifs</CardDescription>
+                <CardTitle className="text-2xl text-foreground">
                   {userAnalytics?.active?.toLocaleString() || '0'}
                 </CardTitle>
               </CardHeader>
             </Card>
-            <Card>
-              <CardHeader>
-                <CardDescription>Utilisateurs bannis</CardDescription>
-                <CardTitle className="text-2xl">
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardHeader className="p-0 mb-6">
+                <CardDescription className="text-sm text-muted-foreground font-normal">Utilisateurs bannis</CardDescription>
+                <CardTitle className="text-2xl text-foreground">
                   {userAnalytics?.banned?.toLocaleString() || '0'}
                 </CardTitle>
               </CardHeader>
@@ -196,12 +196,12 @@ export default function AdminAnalyticsPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Engagement utilisateurs</CardTitle>
-                <CardDescription>Statistiques d'activité</CardDescription>
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardHeader className="p-0 mb-6">
+                <CardTitle className="text-base font-normal text-foreground">Engagement utilisateurs</CardTitle>
+                <CardDescription className="text-sm text-muted-foreground font-normal">Statistiques d'activité</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="p-0 space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Avec objets publiés</span>
                   <span className="font-medium">
@@ -231,12 +231,12 @@ export default function AdminAnalyticsPage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Croissance mensuelle</CardTitle>
-                <CardDescription>Derniers 12 mois</CardDescription>
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardHeader className="p-0 mb-6">
+                <CardTitle className="text-base font-normal text-foreground">Croissance mensuelle</CardTitle>
+                <CardDescription className="text-sm text-muted-foreground font-normal">Derniers 12 mois</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 {userAnalytics?.byMonth && userAnalytics.byMonth.length > 0 ? (
                   <div className="space-y-2">
                     {userAnalytics.byMonth.slice(0, 6).map((item: any, index: number) => (
@@ -247,7 +247,9 @@ export default function AdminAnalyticsPage() {
                             year: 'numeric',
                           })}
                         </span>
-                        <Badge variant="secondary">{item.count} nouveaux</Badge>
+                        <Badge className="bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]">
+                          {item.count} nouveaux
+                        </Badge>
                       </div>
                     ))}
                   </div>
@@ -262,48 +264,48 @@ export default function AdminAnalyticsPage() {
         {/* Items Tab */}
         <TabsContent value="items" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
-              <CardHeader>
-                <CardDescription>Total objets</CardDescription>
-                <CardTitle className="text-2xl">
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardHeader className="p-0 mb-6">
+                <CardDescription className="text-sm text-muted-foreground font-normal">Total objets</CardDescription>
+                <CardTitle className="text-2xl text-foreground">
                   {itemAnalytics?.total?.toLocaleString() || '0'}
                 </CardTitle>
               </CardHeader>
             </Card>
             {itemAnalytics?.byStatus?.map((item: any) => (
-              <Card key={item.status}>
-                <CardHeader>
-                  <CardDescription>{item.status}</CardDescription>
-                  <CardTitle className="text-2xl">{item.count.toLocaleString()}</CardTitle>
+              <Card key={item.status} className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+                <CardHeader className="p-0 mb-6">
+                  <CardDescription className="text-sm text-muted-foreground font-normal">{item.status}</CardDescription>
+                  <CardTitle className="text-2xl text-foreground">{item.count.toLocaleString()}</CardTitle>
                 </CardHeader>
               </Card>
             ))}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Par condition</CardTitle>
-                <CardDescription>Distribution des états</CardDescription>
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardHeader className="p-0 mb-6">
+                <CardTitle className="text-base font-normal text-foreground">Par condition</CardTitle>
+                <CardDescription className="text-sm text-muted-foreground font-normal">Distribution des états</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 <div className="space-y-2">
                   {itemAnalytics?.byCondition?.map((item: any) => (
                     <div key={item.condition} className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">{item.condition}</span>
-                      <Badge variant="secondary">{item.count}</Badge>
+                      <Badge className="bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]">{item.count}</Badge>
                     </div>
                   ))}
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Moyennes</CardTitle>
-                <CardDescription>Statistiques globales</CardDescription>
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardHeader className="p-0 mb-6">
+                <CardTitle className="text-base font-normal text-foreground">Moyennes</CardTitle>
+                <CardDescription className="text-sm text-muted-foreground font-normal">Statistiques globales</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="p-0 space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Objets par utilisateur</span>
                   <span className="font-medium">
@@ -318,44 +320,44 @@ export default function AdminAnalyticsPage() {
         {/* Exchanges Tab */}
         <TabsContent value="exchanges" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader>
-                <CardDescription>Total échanges</CardDescription>
-                <CardTitle className="text-2xl">
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardHeader className="p-0 mb-6">
+                <CardDescription className="text-sm text-muted-foreground font-normal">Total échanges</CardDescription>
+                <CardTitle className="text-2xl text-foreground">
                   {exchangeAnalytics?.total?.toLocaleString() || '0'}
                 </CardTitle>
               </CardHeader>
             </Card>
-            <Card>
-              <CardHeader>
-                <CardDescription>Taux de succès</CardDescription>
-                <CardTitle className="text-2xl">
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardHeader className="p-0 mb-6">
+                <CardDescription className="text-sm text-muted-foreground font-normal">Taux de succès</CardDescription>
+                <CardTitle className="text-2xl text-foreground">
                   {exchangeAnalytics?.successRate?.toFixed(1) || '0'}%
                 </CardTitle>
               </CardHeader>
             </Card>
-            <Card>
-              <CardHeader>
-                <CardDescription>Temps moyen (jours)</CardDescription>
-                <CardTitle className="text-2xl">
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardHeader className="p-0 mb-6">
+                <CardDescription className="text-sm text-muted-foreground font-normal">Temps moyen (jours)</CardDescription>
+                <CardTitle className="text-2xl text-foreground">
                   {exchangeAnalytics?.averageCompletionDays?.toFixed(1) || '0'}
                 </CardTitle>
               </CardHeader>
             </Card>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Par statut</CardTitle>
-              <CardDescription>Distribution des échanges</CardDescription>
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="text-base font-normal text-foreground">Par statut</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground font-normal">Distribution des échanges</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               <div className="space-y-2">
                 {exchangeAnalytics?.byStatus?.map((item: any) => (
                   <div key={item.status} className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">{item.status}</span>
                     <div className="flex items-center gap-2">
-                      <Badge variant="secondary">{item.count}</Badge>
+                      <Badge className="bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]">{item.count}</Badge>
                       <span className="text-xs text-muted-foreground">
                         (
                         {exchangeAnalytics.total
@@ -373,20 +375,22 @@ export default function AdminAnalyticsPage() {
 
         {/* Categories Tab */}
         <TabsContent value="categories" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Top catégories</CardTitle>
-              <CardDescription>Les catégories les plus populaires</CardDescription>
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="text-base font-normal text-foreground">Top catégories</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground font-normal">Les catégories les plus populaires</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               <div className="space-y-3">
                 {overview?.topCategories?.slice(0, 10).map((item: any, index: number) => (
                   <div key={item.category} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <span className="font-medium text-muted-foreground">#{index + 1}</span>
-                      <span className="font-medium">{item.category}</span>
+                      <span className="font-medium text-foreground">{item.category}</span>
                     </div>
-                    <Badge variant="default">{item.count} objets</Badge>
+                    <Badge className="bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45]">
+                      {item.count} objets
+                    </Badge>
                   </div>
                 ))}
               </div>

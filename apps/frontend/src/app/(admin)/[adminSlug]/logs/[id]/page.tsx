@@ -106,9 +106,19 @@ export default function LogDetailPage() {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="admin-page-title">Détails du log</h1>
-              <Badge variant={actionConfig.variant}>{actionConfig.label}</Badge>
+              <Badge
+                className={
+                  actionConfig.variant === 'destructive'
+                    ? 'bg-[rgba(239,68,68,0.1)] text-[#ef4444] dark:bg-[rgba(239,68,68,0.1)] dark:text-[#ef4444]'
+                    : actionConfig.variant === 'default'
+                      ? 'bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45]'
+                      : 'bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]'
+                }
+              >
+                {actionConfig.label}
+              </Badge>
             </div>
-            <p className="text-muted-foreground">
+            <p className="admin-page-description">
               {format(new Date(log.createdAt), 'PPpp', { locale: fr })}
             </p>
           </div>
@@ -119,25 +129,35 @@ export default function LogDetailPage() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Action Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                 <Activity className="w-5 h-5" />
                 Action effectuée
               </CardTitle>
-              <CardDescription>Détails de l'action administrateur</CardDescription>
+              <CardDescription className="text-sm text-muted-foreground font-normal">
+                Détails de l'action administrateur
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="p-0 space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h3 className="text-sm font-medium mb-2">Action</h3>
-                  <Badge variant={actionConfig.variant} className="text-base px-3 py-1">
+                  <h3 className="text-sm font-medium text-foreground mb-2">Action</h3>
+                  <Badge
+                    className={`text-base px-3 py-1 ${
+                      actionConfig.variant === 'destructive'
+                        ? 'bg-[rgba(239,68,68,0.1)] text-[#ef4444] dark:bg-[rgba(239,68,68,0.1)] dark:text-[#ef4444]'
+                        : actionConfig.variant === 'default'
+                          ? 'bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45]'
+                          : 'bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]'
+                    }`}
+                  >
                     {actionConfig.label}
                   </Badge>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium mb-2">Type de ressource</h3>
-                  <Badge variant="outline" className="text-base px-3 py-1">
+                  <h3 className="text-sm font-medium text-foreground mb-2">Type de ressource</h3>
+                  <Badge variant="outline" className="text-base px-3 py-1 border-border text-muted-foreground">
                     {log.resourceType || 'N/A'}
                   </Badge>
                 </div>
@@ -145,9 +165,9 @@ export default function LogDetailPage() {
 
               {log.resourceId && (
                 <>
-                  <Separator />
+                  <Separator className="bg-border" />
                   <div>
-                    <h3 className="text-sm font-medium mb-2">ID de la ressource</h3>
+                    <h3 className="text-sm font-medium text-foreground mb-2">ID de la ressource</h3>
                     <div className="flex items-center gap-2">
                       <code className="text-sm bg-muted px-3 py-2 rounded-md font-mono">
                         {log.resourceId}
@@ -159,9 +179,9 @@ export default function LogDetailPage() {
 
               {log.meta && Object.keys(log.meta).length > 0 && (
                 <>
-                  <Separator />
+                  <Separator className="bg-border" />
                   <div>
-                    <h3 className="text-sm font-medium mb-2">Métadonnées</h3>
+                    <h3 className="text-sm font-medium text-foreground mb-2">Métadonnées</h3>
                     <div className="bg-muted rounded-lg p-4">
                       <pre className="text-sm overflow-x-auto">
                         {JSON.stringify(log.meta, null, 2)}
@@ -174,15 +194,17 @@ export default function LogDetailPage() {
           </Card>
 
           {/* Technical Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                 <Monitor className="w-5 h-5" />
                 Informations techniques
               </CardTitle>
-              <CardDescription>Détails de la requête et de l'environnement</CardDescription>
+              <CardDescription className="text-sm text-muted-foreground font-normal">
+                Détails de la requête et de l'environnement
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-0 space-y-4">
               {log.ip && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground flex items-center gap-2">
@@ -195,9 +217,9 @@ export default function LogDetailPage() {
 
               {log.userAgent && (
                 <>
-                  <Separator />
+                  <Separator className="bg-border" />
                   <div>
-                    <h3 className="text-sm font-medium mb-2">User Agent</h3>
+                    <h3 className="text-sm font-medium text-foreground mb-2">User Agent</h3>
                     <p className="text-xs text-muted-foreground font-mono break-all">
                       {log.userAgent}
                     </p>
@@ -211,15 +233,17 @@ export default function LogDetailPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Admin */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                 <Shield className="w-5 h-5" />
                 Administrateur
               </CardTitle>
-              <CardDescription>Utilisateur qui a effectué l'action</CardDescription>
+              <CardDescription className="text-sm text-muted-foreground font-normal">
+                Utilisateur qui a effectué l'action
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-0 space-y-4">
               {log.admin ? (
                 <>
                   <div className="flex items-center gap-3">
@@ -230,11 +254,11 @@ export default function LogDetailPage() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
-                      <div className="font-medium">{log.admin.displayName}</div>
+                      <div className="font-medium text-foreground">{log.admin.displayName}</div>
                       <div className="text-sm text-muted-foreground">{log.admin.email}</div>
                     </div>
                   </div>
-                  <Button variant="outline" className="w-full" asChild>
+                  <Button variant="outline" className="w-full border-border" asChild>
                     <Link href={`/${ADMIN_BASE_PATH}/users/${log.admin.id}`}>
                       <User className="w-4 h-4 mr-2" />
                       Voir le profil
@@ -248,26 +272,32 @@ export default function LogDetailPage() {
           </Card>
 
           {/* Metadata */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Informations</CardTitle>
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="text-base font-normal text-foreground">Informations</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="p-0 space-y-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">ID</span>
-                <span className="font-mono text-xs">{log.id}</span>
+                <span className="font-mono text-xs text-foreground">{log.id}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Date</span>
-                <span>{format(new Date(log.createdAt), 'PP', { locale: fr })}</span>
+                <span className="text-foreground">
+                  {format(new Date(log.createdAt), 'PP', { locale: fr })}
+                </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Heure</span>
-                <span>{format(new Date(log.createdAt), 'HH:mm:ss', { locale: fr })}</span>
+                <span className="text-foreground">
+                  {format(new Date(log.createdAt), 'HH:mm:ss', { locale: fr })}
+                </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Type</span>
-                <Badge variant="outline">{log.resourceType || 'N/A'}</Badge>
+                <Badge variant="outline" className="border-border text-muted-foreground">
+                  {log.resourceType || 'N/A'}
+                </Badge>
               </div>
             </CardContent>
           </Card>

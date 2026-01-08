@@ -193,18 +193,18 @@ export default function ThemeDetailPage() {
             <div className="flex items-center gap-3">
               <h1 className="admin-page-title">{theme.title}</h1>
               {theme.isActive ? (
-                <Badge variant="default" className="flex items-center gap-1">
+                <Badge className="flex items-center gap-1 w-fit bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45]">
                   <CheckCircle className="w-3 h-3" />
                   Actif
                 </Badge>
               ) : (
-                <Badge variant="secondary" className="flex items-center gap-1">
+                <Badge className="flex items-center gap-1 w-fit bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]">
                   <Clock className="w-3 h-3" />
                   Inactif
                 </Badge>
               )}
             </div>
-            <p className="text-muted-foreground">
+            <p className="admin-page-description">
               Semaine du {format(weekStart, 'PP', { locale: fr })} au{' '}
               {format(weekEnd, 'PP', { locale: fr })}
             </p>
@@ -258,43 +258,49 @@ export default function ThemeDetailPage() {
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-6">
               {/* Theme Details */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+              <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+                <CardHeader className="p-0 mb-6">
+                  <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                     <Sparkles className="w-5 h-5" />
                     Informations du thème
                   </CardTitle>
-                  <CardDescription>Détails et contenu du thème</CardDescription>
+                  <CardDescription className="text-sm text-muted-foreground font-normal">
+                    Détails et contenu du thème
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="p-0 space-y-6">
                   <div>
-                    <h3 className="text-sm font-medium mb-2">Titre</h3>
-                    <p className="text-lg font-semibold">{theme.title}</p>
+                    <h3 className="text-sm font-medium text-foreground mb-2">Titre</h3>
+                    <p className="text-lg font-semibold text-foreground">{theme.title}</p>
                   </div>
 
                   <div>
-                    <h3 className="text-sm font-medium mb-2">Slug</h3>
-                    <Badge variant="outline" className="font-mono">
+                    <h3 className="text-sm font-medium text-foreground mb-2">Slug</h3>
+                    <Badge variant="outline" className="font-mono border-border text-muted-foreground">
                       {theme.slug}
                     </Badge>
                   </div>
 
-                  <Separator />
+                  <Separator className="bg-border" />
 
                   {theme.description && (
                     <div>
-                      <h3 className="text-sm font-medium mb-2">Description</h3>
+                      <h3 className="text-sm font-medium text-foreground mb-2">Description</h3>
                       <div className="p-4 bg-muted rounded-lg">
-                        <p className="text-sm whitespace-pre-wrap">{theme.description}</p>
+                        <p className="text-sm text-foreground whitespace-pre-wrap">
+                          {theme.description}
+                        </p>
                       </div>
                     </div>
                   )}
 
                   {theme.impactText && (
                     <div>
-                      <h3 className="text-sm font-medium mb-2">Texte d'impact</h3>
+                      <h3 className="text-sm font-medium text-foreground mb-2">Texte d'impact</h3>
                       <div className="p-4 bg-muted rounded-lg">
-                        <p className="text-sm whitespace-pre-wrap">{theme.impactText}</p>
+                        <p className="text-sm text-foreground whitespace-pre-wrap">
+                          {theme.impactText}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -316,15 +322,17 @@ export default function ThemeDetailPage() {
               </Card>
 
               {/* Period */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+              <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+                <CardHeader className="p-0 mb-6">
+                  <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                     <Calendar className="w-5 h-5" />
                     Période
                   </CardTitle>
-                  <CardDescription>Dates de validité du thème</CardDescription>
+                  <CardDescription className="text-sm text-muted-foreground font-normal">
+                    Dates de validité du thème
+                  </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-0">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-4 bg-muted rounded-lg text-center">
                       <div className="text-sm text-muted-foreground">Début</div>
@@ -344,55 +352,65 @@ export default function ThemeDetailPage() {
             {/* Sidebar */}
             <div className="space-y-6">
               {/* Stats */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Statistiques</CardTitle>
+              <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+                <CardHeader className="p-0 mb-6">
+                  <CardTitle className="text-base font-normal text-foreground">Statistiques</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="p-0 space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Suggestions générées</span>
-                    <Badge variant="secondary">{theme._count?.suggestions || 0}</Badge>
+                    <Badge className="bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]">
+                      {theme._count?.suggestions || 0}
+                    </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Statut</span>
                     {theme.isActive ? (
-                      <Badge variant="default">Actif</Badge>
+                      <Badge className="bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45]">
+                        Actif
+                      </Badge>
                     ) : (
-                      <Badge variant="secondary">Inactif</Badge>
+                      <Badge className="bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]">
+                        Inactif
+                      </Badge>
                     )}
                   </div>
                 </CardContent>
               </Card>
 
               {/* Metadata */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Informations</CardTitle>
+              <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+                <CardHeader className="p-0 mb-6">
+                  <CardTitle className="text-base font-normal text-foreground">Informations</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="p-0 space-y-3">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">ID</span>
-                    <span className="font-mono text-xs">{theme.id}</span>
+                    <span className="font-mono text-xs text-foreground">{theme.id}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Créé le</span>
-                    <span>{format(new Date(theme.createdAt), 'PP', { locale: fr })}</span>
+                    <span className="text-foreground">
+                      {format(new Date(theme.createdAt), 'PP', { locale: fr })}
+                    </span>
                   </div>
                   {theme.updatedAt && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Mis à jour</span>
-                      <span>{format(new Date(theme.updatedAt), 'PP', { locale: fr })}</span>
+                      <span className="text-foreground">
+                        {format(new Date(theme.updatedAt), 'PP', { locale: fr })}
+                      </span>
                     </div>
                   )}
                 </CardContent>
               </Card>
 
               {/* Quick Actions */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Actions rapides</CardTitle>
+              <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+                <CardHeader className="p-0 mb-6">
+                  <CardTitle className="text-base font-normal text-foreground">Actions rapides</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
+                <CardContent className="p-0 space-y-2">
                   {!theme.isActive && (
                     <Button
                       className="w-full"
@@ -407,13 +425,13 @@ export default function ThemeDetailPage() {
                       Activer ce thème
                     </Button>
                   )}
-                  <Button variant="outline" className="w-full" onClick={openEditDialog}>
+                  <Button variant="outline" className="w-full border-border" onClick={openEditDialog}>
                     <Edit className="w-4 h-4 mr-2" />
                     Modifier
                   </Button>
                   <Button
                     variant="outline"
-                    className="w-full"
+                    className="w-full border-border"
                     onClick={() => setSuggestionsDialogOpen(true)}
                   >
                     <MessageSquare className="w-4 h-4 mr-2" />
@@ -426,15 +444,15 @@ export default function ThemeDetailPage() {
         </TabsContent>
 
         <TabsContent value="suggestions" className="mt-6">
-          <Card>
-            <CardHeader>
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                     <MessageSquare className="w-5 h-5" />
                     Suggestions IA
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-sm text-muted-foreground font-normal">
                     Suggestions d'objets générées par l'IA pour ce thème
                   </CardDescription>
                 </div>
@@ -459,7 +477,7 @@ export default function ThemeDetailPage() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               {suggestionsLoading ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="w-6 h-6 animate-spin" />
@@ -471,18 +489,23 @@ export default function ThemeDetailPage() {
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <Globe className="w-4 h-4" />
-                          <Badge variant="outline">{suggestion.locale}</Badge>
+                          <Badge variant="outline" className="border-border text-muted-foreground">
+                            {suggestion.locale}
+                          </Badge>
                         </div>
                         <span className="text-xs text-muted-foreground">
                           {format(new Date(suggestion.createdAt), 'PPp', { locale: fr })}
                         </span>
                       </div>
-                      <h4 className="font-medium mb-1">{suggestion.title}</h4>
+                      <h4 className="font-medium text-foreground mb-1">{suggestion.title}</h4>
                       <p className="text-sm text-muted-foreground">{suggestion.description}</p>
                       {suggestion.examples && suggestion.examples.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1">
                           {suggestion.examples.map((ex: string, idx: number) => (
-                            <Badge key={idx} variant="secondary" className="text-xs">
+                            <Badge
+                              key={idx}
+                              className="text-xs bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]"
+                            >
                               {ex}
                             </Badge>
                           ))}

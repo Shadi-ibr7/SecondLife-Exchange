@@ -98,7 +98,7 @@ export default function PostDetailPage() {
           </Button>
           <div>
             <h1 className="admin-page-title">Détails du post</h1>
-            <p className="text-muted-foreground">
+            <p className="admin-page-description">
               Créé le {format(new Date(post.createdAt), 'PPpp', { locale: fr })}
             </p>
           </div>
@@ -113,20 +113,22 @@ export default function PostDetailPage() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Post Content */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                 <MessageSquare className="w-5 h-5" />
                 Contenu du post
               </CardTitle>
-              <CardDescription>Message publié par l'utilisateur</CardDescription>
+              <CardDescription className="text-sm text-muted-foreground font-normal">
+                Message publié par l'utilisateur
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="p-0 space-y-6">
               <div className="p-4 bg-muted rounded-lg">
-                <p className="text-sm whitespace-pre-wrap">{post.content}</p>
+                <p className="text-sm text-foreground whitespace-pre-wrap">{post.content}</p>
               </div>
 
-              <Separator />
+              <Separator className="bg-border" />
 
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
@@ -143,23 +145,25 @@ export default function PostDetailPage() {
 
           {/* Thread Link */}
           {post.thread && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardHeader className="p-0 mb-6">
+                <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                   <MessageCircle className="w-5 h-5" />
                   Thread parent
                 </CardTitle>
-                <CardDescription>Thread auquel ce post appartient</CardDescription>
+                <CardDescription className="text-sm text-muted-foreground font-normal">
+                  Thread auquel ce post appartient
+                </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="font-medium">{post.thread.title}</h4>
-                    <Badge variant="secondary" className="mt-2">
+                    <h4 className="font-medium text-foreground">{post.thread.title}</h4>
+                    <Badge className="mt-2 bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]">
                       {post.thread.scope}
                     </Badge>
                   </div>
-                  <Button variant="outline" asChild>
+                  <Button variant="outline" className="border-border" asChild>
                     <Link href={`/${ADMIN_BASE_PATH}/community/threads/${post.thread.id}`}>
                       <LinkIcon className="w-4 h-4 mr-2" />
                       Voir le thread
@@ -172,15 +176,17 @@ export default function PostDetailPage() {
 
           {/* Replies */}
           {post.replies && post.replies.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardHeader className="p-0 mb-6">
+                <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                   <Reply className="w-5 h-5" />
                   Réponses ({post.replies.length})
                 </CardTitle>
-                <CardDescription>Réponses à ce post</CardDescription>
+                <CardDescription className="text-sm text-muted-foreground font-normal">
+                  Réponses à ce post
+                </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 <div className="space-y-4">
                   {post.replies.map((reply: any) => (
                     <div key={reply.id} className="p-4 border rounded-lg">
@@ -192,13 +198,15 @@ export default function PostDetailPage() {
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
-                          <div className="font-medium text-sm">{reply.author?.displayName}</div>
+                          <div className="font-medium text-sm text-foreground">
+                            {reply.author?.displayName}
+                          </div>
                           <div className="text-xs text-muted-foreground">
                             {format(new Date(reply.createdAt), 'PPp', { locale: fr })}
                           </div>
                         </div>
                       </div>
-                      <p className="text-sm whitespace-pre-wrap">{reply.content}</p>
+                      <p className="text-sm text-foreground whitespace-pre-wrap">{reply.content}</p>
                     </div>
                   ))}
                 </div>
@@ -210,11 +218,11 @@ export default function PostDetailPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Author */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Auteur du post</CardTitle>
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="text-base font-normal text-foreground">Auteur du post</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-0 space-y-4">
               {post.author ? (
                 <>
                   <div className="flex items-center gap-3">
@@ -225,11 +233,11 @@ export default function PostDetailPage() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
-                      <div className="font-medium">{post.author.displayName}</div>
+                      <div className="font-medium text-foreground">{post.author.displayName}</div>
                       <div className="text-sm text-muted-foreground">{post.author.email}</div>
                     </div>
                   </div>
-                  <Button variant="outline" className="w-full" asChild>
+                  <Button variant="outline" className="w-full border-border" asChild>
                     <Link href={`/${ADMIN_BASE_PATH}/users/${post.author.id}`}>
                       <User className="w-4 h-4 mr-2" />
                       Voir le profil
@@ -243,38 +251,44 @@ export default function PostDetailPage() {
           </Card>
 
           {/* Metadata */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Informations</CardTitle>
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="text-base font-normal text-foreground">Informations</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="p-0 space-y-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">ID</span>
-                <span className="font-mono text-xs">{post.id}</span>
+                <span className="font-mono text-xs text-foreground">{post.id}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Date de création</span>
-                <span>{format(new Date(post.createdAt), 'PP', { locale: fr })}</span>
+                <span className="text-foreground">
+                  {format(new Date(post.createdAt), 'PP', { locale: fr })}
+                </span>
               </div>
               {post.updatedAt && (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Dernière mise à jour</span>
-                  <span>{format(new Date(post.updatedAt), 'PP', { locale: fr })}</span>
+                  <span className="text-foreground">
+                    {format(new Date(post.updatedAt), 'PP', { locale: fr })}
+                  </span>
                 </div>
               )}
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Nombre de réponses</span>
-                <Badge variant="secondary">{post._count?.replies || 0}</Badge>
+                <Badge className="bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]">
+                  {post._count?.replies || 0}
+                </Badge>
               </div>
             </CardContent>
           </Card>
 
           {/* Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Actions</CardTitle>
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="text-base font-normal text-foreground">Actions</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               <Button
                 variant="destructive"
                 className="w-full"

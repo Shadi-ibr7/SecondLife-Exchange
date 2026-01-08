@@ -173,18 +173,18 @@ export default function EcoContentDetailPage() {
             <div className="flex items-center gap-3">
               <h1 className="admin-page-title">{content.title}</h1>
               {isPublished ? (
-                <Badge variant="default" className="flex items-center gap-1">
+                <Badge className="flex items-center gap-1 w-fit bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45]">
                   <Eye className="w-3 h-3" />
                   Publié
                 </Badge>
               ) : (
-                <Badge variant="secondary" className="flex items-center gap-1">
+                <Badge className="flex items-center gap-1 w-fit bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]">
                   <EyeOff className="w-3 h-3" />
                   Brouillon
                 </Badge>
               )}
             </div>
-            <p className="text-muted-foreground">
+            <p className="admin-page-description">
               Créé le {format(new Date(content.createdAt), 'PPpp', { locale: fr })}
             </p>
           </div>
@@ -231,8 +231,8 @@ export default function EcoContentDetailPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* URL */}
           {content.url && (
-            <Card>
-              <CardContent className="pt-6">
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardContent className="p-0">
                 <div className="flex items-center gap-2">
                   <ExternalLink className="w-4 h-4 text-muted-foreground" />
                   <a
@@ -249,34 +249,38 @@ export default function EcoContentDetailPage() {
           )}
 
           {/* Content */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                 <FileText className="w-5 h-5" />
                 Contenu
               </CardTitle>
-              <CardDescription>Article éco-éducatif</CardDescription>
+              <CardDescription className="text-sm text-muted-foreground font-normal">
+                Article éco-éducatif
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="p-0 space-y-6">
               {content.summary && (
                 <div>
-                  <h3 className="text-sm font-medium mb-2">Résumé</h3>
+                  <h3 className="text-sm font-medium text-foreground mb-2">Résumé</h3>
                   <div className="p-4 bg-muted rounded-lg">
-                    <p className="text-sm whitespace-pre-wrap">{content.summary}</p>
+                    <p className="text-sm text-foreground whitespace-pre-wrap">{content.summary}</p>
                   </div>
                 </div>
               )}
 
-              <Separator />
+              <Separator className="bg-border" />
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h3 className="text-sm font-medium mb-2">Type</h3>
-                  <Badge variant="secondary">{content.kind}</Badge>
+                  <h3 className="text-sm font-medium text-foreground mb-2">Type</h3>
+                  <Badge className="bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]">
+                    {content.kind}
+                  </Badge>
                 </div>
                 {content.source && (
                   <div>
-                    <h3 className="text-sm font-medium mb-2">Source</h3>
+                    <h3 className="text-sm font-medium text-foreground mb-2">Source</h3>
                     <span className="text-sm text-muted-foreground">{content.source}</span>
                   </div>
                 )}
@@ -284,12 +288,16 @@ export default function EcoContentDetailPage() {
 
               {content.tags && content.tags.length > 0 && (
                 <>
-                  <Separator />
+                  <Separator className="bg-border" />
                   <div>
-                    <h3 className="text-sm font-medium mb-2">Tags</h3>
+                    <h3 className="text-sm font-medium text-foreground mb-2">Tags</h3>
                     <div className="flex flex-wrap gap-2">
                       {content.tags.map((tag: string) => (
-                        <Badge key={tag} variant="outline">
+                        <Badge
+                          key={tag}
+                          variant="outline"
+                          className="border-border text-muted-foreground"
+                        >
                           <Tag className="w-3 h-3 mr-1" />
                           {tag}
                         </Badge>
@@ -305,69 +313,83 @@ export default function EcoContentDetailPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Status */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Statut</CardTitle>
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="text-base font-normal text-foreground">Statut</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-0 space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Publication</span>
                 {isPublished ? (
-                  <Badge variant="default">Publié</Badge>
+                  <Badge className="bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45]">
+                    Publié
+                  </Badge>
                 ) : (
-                  <Badge variant="secondary">Brouillon</Badge>
+                  <Badge className="bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]">
+                    Brouillon
+                  </Badge>
                 )}
               </div>
               {content.kind && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Type</span>
-                  <Badge variant="outline">{content.kind}</Badge>
+                  <Badge variant="outline" className="border-border text-muted-foreground">
+                    {content.kind}
+                  </Badge>
                 </div>
               )}
               {content.locale && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Locale</span>
-                  <Badge variant="outline">{content.locale}</Badge>
+                  <Badge variant="outline" className="border-border text-muted-foreground">
+                    {content.locale}
+                  </Badge>
                 </div>
               )}
             </CardContent>
           </Card>
 
           {/* Metadata */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Informations</CardTitle>
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="text-base font-normal text-foreground">Informations</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="p-0 space-y-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">ID</span>
-                <span className="font-mono text-xs">{content.id}</span>
+                <span className="font-mono text-xs text-foreground">{content.id}</span>
               </div>
               {content.publishedAt && (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Publié le</span>
-                  <span>{format(new Date(content.publishedAt), 'PP', { locale: fr })}</span>
+                  <span className="text-foreground">
+                    {format(new Date(content.publishedAt), 'PP', { locale: fr })}
+                  </span>
                 </div>
               )}
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Créé le</span>
-                <span>{format(new Date(content.createdAt), 'PP', { locale: fr })}</span>
+                <span className="text-foreground">
+                  {format(new Date(content.createdAt), 'PP', { locale: fr })}
+                </span>
               </div>
               {content.updatedAt && (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Mis à jour</span>
-                  <span>{format(new Date(content.updatedAt), 'PP', { locale: fr })}</span>
+                  <span className="text-foreground">
+                    {format(new Date(content.updatedAt), 'PP', { locale: fr })}
+                  </span>
                 </div>
               )}
             </CardContent>
           </Card>
 
           {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Actions rapides</CardTitle>
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="text-base font-normal text-foreground">Actions rapides</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="p-0 space-y-2">
               <Button
                 variant="outline"
                 className="w-full"
@@ -383,7 +405,7 @@ export default function EcoContentDetailPage() {
                 )}
                 {isPublished ? 'Dépublier' : 'Publier'}
               </Button>
-              <Button variant="outline" className="w-full" onClick={openEditDialog}>
+              <Button variant="outline" className="w-full border-border" onClick={openEditDialog}>
                 <Edit className="w-4 h-4 mr-2" />
                 Modifier
               </Button>

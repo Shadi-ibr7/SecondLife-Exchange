@@ -1,10 +1,3 @@
-/**
- * FICHIER: users/[id]/page.tsx
- *
- * DESCRIPTION:
- * Page de détails d'un utilisateur pour l'admin.
- */
-
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
@@ -22,12 +15,16 @@ import {
   Shield,
   Activity,
   FileText,
+  Eye,
 } from 'lucide-react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+
 import { adminApi } from '@/lib/admin.api';
 import { ADMIN_BASE_PATH } from '@/lib/admin.config';
 import { toast } from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -96,7 +93,7 @@ export default function UserDetailPage() {
       <div className="space-y-6">
         <div>
           <h1 className="admin-page-title">Détails utilisateur</h1>
-          <p className="text-muted-foreground">Chargement...</p>
+          <p className="admin-page-description">Chargement...</p>
         </div>
       </div>
     );
@@ -107,7 +104,7 @@ export default function UserDetailPage() {
       <div className="space-y-6">
         <div>
           <h1 className="admin-page-title">Utilisateur non trouvé</h1>
-          <p className="text-muted-foreground">L'utilisateur demandé n'existe pas</p>
+          <p className="admin-page-description">L'utilisateur demandé n'existe pas</p>
           <Button onClick={() => router.push(`/${ADMIN_BASE_PATH}/users`)} className="mt-4">
             Retour à la liste
           </Button>
@@ -121,16 +118,16 @@ export default function UserDetailPage() {
     (user._count?.exchangesRequested || 0) + (user._count?.exchangesResponded || 0);
 
   return (
-    <div className="space-y-6 lg:space-y-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => router.back()}>
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
             <h1 className="admin-page-title">Détails utilisateur</h1>
-            <p className="text-muted-foreground">Informations complètes sur l'utilisateur</p>
+            <p className="admin-page-description">Informations complètes sur l'utilisateur</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -148,9 +145,43 @@ export default function UserDetailPage() {
         </div>
       </div>
 
+      {/* Stats Cards */}
+      <div className="grid grid-cols-3 gap-4 h-[90.238px]">
+        <Card className="h-[90.238px] pt-[17.138px] px-[17.138px] pb-[1.155px]">
+          <CardContent className="flex flex-col gap-[3.987px] p-0">
+            <p className="text-sm text-muted-foreground font-normal leading-[20px] tracking-[-0.1504px]">
+              Objets
+            </p>
+            <p className="text-2xl font-normal text-foreground leading-[32px] tracking-[0.0703px]">
+              {user._count?.items || 0}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="h-[90.238px] pt-[17.138px] px-[17.138px] pb-[1.155px]">
+          <CardContent className="flex flex-col gap-[3.987px] p-0">
+            <p className="text-sm text-muted-foreground font-normal leading-[20px] tracking-[-0.1504px]">
+              Échanges
+            </p>
+            <p className="text-2xl font-normal text-foreground leading-[32px] tracking-[0.0703px]">
+              {totalExchanges}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="h-[90.238px] pt-[17.138px] px-[17.138px] pb-[1.155px]">
+          <CardContent className="flex flex-col gap-[3.987px] p-0">
+            <p className="text-sm text-muted-foreground font-normal leading-[20px] tracking-[-0.1504px]">
+              Demandés
+            </p>
+            <p className="text-2xl font-normal text-foreground leading-[32px] tracking-[0.0703px]">
+              {user._count?.exchangesRequested || 0}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* User Info Card */}
-      <Card>
-        <CardContent className="pt-6">
+      <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+        <CardContent className="p-0">
           <div className="flex flex-col md:flex-row gap-6">
             {/* Avatar Section */}
             <div className="flex flex-col items-center md:items-start">
@@ -160,11 +191,17 @@ export default function UserDetailPage() {
                   {user.displayName?.charAt(0).toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
-              <Badge variant={isBanned ? 'destructive' : 'default'}>
-                {isBanned ? 'Banni' : 'Actif'}
-              </Badge>
+              {isBanned ? (
+                <Badge className="bg-[rgba(239,68,68,0.1)] text-[#ef4444] dark:bg-[rgba(239,68,68,0.1)] dark:text-[#ef4444]">
+                  Banni
+                </Badge>
+              ) : (
+                <Badge className="bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45]">
+                  Actif
+                </Badge>
+              )}
               {user.roles === 'ADMIN' && (
-                <Badge variant="secondary" className="mt-2">
+                <Badge className="mt-2 bg-[rgba(217,160,85,0.1)] text-[#d9a055] dark:bg-[rgba(217,160,85,0.1)] dark:text-[#d9a055]">
                   <Shield className="w-3 h-3 mr-1" />
                   Admin
                 </Badge>
@@ -174,7 +211,7 @@ export default function UserDetailPage() {
             {/* Info Section */}
             <div className="flex-1 space-y-4">
               <div>
-                <h2 className="text-xl font-semibold mb-2">{user.displayName}</h2>
+                <h2 className="text-xl font-semibold mb-2 text-foreground">{user.displayName}</h2>
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Mail className="w-4 h-4" />
@@ -182,7 +219,7 @@ export default function UserDetailPage() {
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Calendar className="w-4 h-4" />
-                    Inscrit le {new Date(user.createdAt).toLocaleDateString('fr-FR')}
+                    Inscrit le {format(new Date(user.createdAt), 'dd MMM yyyy', { locale: fr })}
                   </div>
                   {user.profile?.location && (
                     <div className="flex items-center gap-2 text-muted-foreground">
@@ -195,7 +232,7 @@ export default function UserDetailPage() {
 
               {user.profile?.bio && (
                 <div>
-                  <h3 className="text-sm font-medium mb-1">Bio</h3>
+                  <h3 className="text-sm font-medium mb-1 text-foreground">Bio</h3>
                   <p className="text-sm text-muted-foreground">{user.profile.bio}</p>
                 </div>
               )}
@@ -207,33 +244,13 @@ export default function UserDetailPage() {
                     <span className="font-medium text-destructive">Utilisateur banni</span>
                   </div>
                   {user.ban.reason && (
-                    <p className="text-sm text-muted-foreground">
-                      Raison: {user.ban.reason}
-                    </p>
+                    <p className="text-sm text-muted-foreground">Raison: {user.ban.reason}</p>
                   )}
                   <p className="text-xs text-muted-foreground mt-1">
-                    Banni le {new Date(user.ban.createdAt).toLocaleDateString('fr-FR')}
+                    Banni le {format(new Date(user.ban.createdAt), 'dd MMM yyyy', { locale: fr })}
                   </p>
                 </div>
               )}
-            </div>
-
-            {/* Stats Section */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold">{user._count?.items || 0}</div>
-                <div className="text-xs text-muted-foreground">Objets</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold">{totalExchanges}</div>
-                <div className="text-xs text-muted-foreground">Échanges</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold">
-                  {user._count?.exchangesRequested || 0}
-                </div>
-                <div className="text-xs text-muted-foreground">Demandés</div>
-              </div>
             </div>
           </div>
         </CardContent>
@@ -258,21 +275,21 @@ export default function UserDetailPage() {
 
         {/* Items Tab */}
         <TabsContent value="items" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Objets publiés</CardTitle>
-              <CardDescription>
-                {user.items?.length || 0} objet{user.items?.length !== 1 ? 's' : ''} au total
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardContent className="p-0">
+              <div className="mb-6">
+                <h3 className="text-base font-normal text-foreground mb-1">Objets publiés</h3>
+                <p className="text-sm text-muted-foreground font-normal">
+                  {user.items?.length || 0} objet{user.items?.length !== 1 ? 's' : ''} au total
+                </p>
+              </div>
               {user.items && user.items.length > 0 ? (
                 <div className="space-y-4">
                   {user.items.map((item: any) => (
                     <Link
                       key={item.id}
-                      href={`/${ADMIN_BASE_PATH}/items`}
-                      className="flex items-center gap-4 p-4 border rounded-lg hover:bg-accent transition-colors"
+                      href={`/${ADMIN_BASE_PATH}/items/${item.id}`}
+                      className="flex items-center gap-4 p-4 border border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] rounded-lg hover:bg-muted transition-colors"
                     >
                       {item.photos && item.photos.length > 0 ? (
                         <div className="relative w-16 h-16 rounded-md overflow-hidden">
@@ -289,19 +306,24 @@ export default function UserDetailPage() {
                         </div>
                       )}
                       <div className="flex-1">
-                        <div className="font-medium">{item.title}</div>
+                        <div className="font-medium text-foreground">{item.title}</div>
                         <div className="text-sm text-muted-foreground">
                           {item.category} • {item.status}
                         </div>
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {new Date(item.createdAt).toLocaleDateString('fr-FR')}
+                        {format(new Date(item.createdAt), 'dd MMM yyyy', { locale: fr })}
                       </div>
+                      <Button variant="ghost" size="icon" className="w-[39.978px] h-[31.986px] rounded-[6px]">
+                        <Eye className="w-4 h-4 text-muted-foreground" />
+                      </Button>
                     </Link>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Aucun objet publié</p>
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Aucun objet publié
+                </p>
               )}
             </CardContent>
           </Card>
@@ -310,52 +332,70 @@ export default function UserDetailPage() {
         {/* Activity Tab */}
         <TabsContent value="activity" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Statistiques</CardTitle>
-                <CardDescription>Activité sur la plateforme</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Objets publiés</span>
-                  <span className="font-medium">{user._count?.items || 0}</span>
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardContent className="p-0">
+                <div className="mb-4">
+                  <h3 className="text-base font-normal text-foreground mb-1">Statistiques</h3>
+                  <p className="text-sm text-muted-foreground font-normal">
+                    Activité sur la plateforme
+                  </p>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Échanges demandés</span>
-                  <span className="font-medium">{user._count?.exchangesRequested || 0}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Échanges reçus</span>
-                  <span className="font-medium">{user._count?.exchangesResponded || 0}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Total échanges</span>
-                  <span className="font-medium">{totalExchanges}</span>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Objets publiés</span>
+                    <span className="font-medium text-foreground">{user._count?.items || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Échanges demandés</span>
+                    <span className="font-medium text-foreground">
+                      {user._count?.exchangesRequested || 0}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Échanges reçus</span>
+                    <span className="font-medium text-foreground">
+                      {user._count?.exchangesResponded || 0}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Total échanges</span>
+                    <span className="font-medium text-foreground">{totalExchanges}</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Informations</CardTitle>
-                <CardDescription>Détails du compte</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Rôle</span>
-                  <Badge variant="secondary">{user.roles}</Badge>
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardContent className="p-0">
+                <div className="mb-4">
+                  <h3 className="text-base font-normal text-foreground mb-1">Informations</h3>
+                  <p className="text-sm text-muted-foreground font-normal">Détails du compte</p>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Date d'inscription</span>
-                  <span className="text-sm font-medium">
-                    {new Date(user.createdAt).toLocaleDateString('fr-FR')}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Statut</span>
-                  <Badge variant={isBanned ? 'destructive' : 'default'}>
-                    {isBanned ? 'Banni' : 'Actif'}
-                  </Badge>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Rôle</span>
+                    <Badge className="bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]">
+                      {user.roles}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Date d'inscription</span>
+                    <span className="text-sm font-medium text-foreground">
+                      {format(new Date(user.createdAt), 'dd MMM yyyy', { locale: fr })}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Statut</span>
+                    {isBanned ? (
+                      <Badge className="bg-[rgba(239,68,68,0.1)] text-[#ef4444] dark:bg-[rgba(239,68,68,0.1)] dark:text-[#ef4444]">
+                        Banni
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45]">
+                        Actif
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -364,21 +404,28 @@ export default function UserDetailPage() {
 
         {/* Preferences Tab */}
         <TabsContent value="preferences" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Préférences</CardTitle>
-              <CardDescription>Préférences utilisateur</CardDescription>
-            </CardHeader>
-            <CardContent>
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardContent className="p-0">
+              <div className="mb-4">
+                <h3 className="text-base font-normal text-foreground mb-1">Préférences</h3>
+                <p className="text-sm text-muted-foreground font-normal">
+                  Préférences utilisateur
+                </p>
+              </div>
               {user.preferences ? (
                 <div className="space-y-4">
                   {user.preferences.preferredCategories &&
                     user.preferences.preferredCategories.length > 0 && (
                       <div>
-                        <h4 className="text-sm font-medium mb-2">Catégories préférées</h4>
+                        <h4 className="text-sm font-medium mb-2 text-foreground">
+                          Catégories préférées
+                        </h4>
                         <div className="flex flex-wrap gap-2">
                           {user.preferences.preferredCategories.map((cat: string) => (
-                            <Badge key={cat} variant="secondary">
+                            <Badge
+                              key={cat}
+                              className="bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]"
+                            >
                               {cat}
                             </Badge>
                           ))}
@@ -388,19 +435,25 @@ export default function UserDetailPage() {
                   {user.preferences.locale && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Locale</span>
-                      <span className="text-sm font-medium">{user.preferences.locale}</span>
+                      <span className="text-sm font-medium text-foreground">
+                        {user.preferences.locale}
+                      </span>
                     </div>
                   )}
                   {user.preferences.country && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Pays</span>
-                      <span className="text-sm font-medium">{user.preferences.country}</span>
+                      <span className="text-sm font-medium text-foreground">
+                        {user.preferences.country}
+                      </span>
                     </div>
                   )}
                   {user.preferences.radiusKm && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Rayon (km)</span>
-                      <span className="text-sm font-medium">{user.preferences.radiusKm}</span>
+                      <span className="text-sm font-medium text-foreground">
+                        {user.preferences.radiusKm}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -445,4 +498,3 @@ export default function UserDetailPage() {
     </div>
   );
 }
-

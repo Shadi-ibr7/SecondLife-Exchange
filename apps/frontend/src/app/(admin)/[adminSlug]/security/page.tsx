@@ -149,18 +149,22 @@ export default function SecurityPage() {
         {/* Settings Tab */}
         <TabsContent value="settings" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardHeader className="p-0 mb-6">
+                <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                   <Shield className="w-5 h-5" />
                   Sécurité générale
                 </CardTitle>
-                <CardDescription>Paramètres de sécurité de base</CardDescription>
+                <CardDescription className="text-sm text-muted-foreground font-normal">
+                  Paramètres de sécurité de base
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="p-0 space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label htmlFor="rateLimiting">Limitation de débit</Label>
+                    <Label htmlFor="rateLimiting" className="text-foreground">
+                      Limitation de débit
+                    </Label>
                     <p className="text-sm text-muted-foreground">
                       Limiter le nombre de requêtes par IP
                     </p>
@@ -173,10 +177,12 @@ export default function SecurityPage() {
                     }
                   />
                 </div>
-                <Separator />
+                <Separator className="bg-border" />
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label htmlFor="passwordPolicy">Politique de mot de passe</Label>
+                    <Label htmlFor="passwordPolicy" className="text-foreground">
+                      Politique de mot de passe
+                    </Label>
                     <p className="text-sm text-muted-foreground">
                       Exiger des mots de passe complexes
                     </p>
@@ -189,10 +195,12 @@ export default function SecurityPage() {
                     }
                   />
                 </div>
-                <Separator />
+                <Separator className="bg-border" />
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label htmlFor="ipWhitelist">Liste blanche IP</Label>
+                    <Label htmlFor="ipWhitelist" className="text-foreground">
+                      Liste blanche IP
+                    </Label>
                     <p className="text-sm text-muted-foreground">
                       Restreindre l'accès à certaines IP
                     </p>
@@ -208,15 +216,17 @@ export default function SecurityPage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardHeader className="p-0 mb-6">
+                <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                   <Lock className="w-5 h-5" />
                   Sessions
                 </CardTitle>
-                <CardDescription>Gestion des sessions utilisateurs</CardDescription>
+                <CardDescription className="text-sm text-muted-foreground font-normal">
+                  Gestion des sessions utilisateurs
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="p-0 space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="sessionTimeout">Délai d'expiration de session (minutes)</Label>
                   <Input
@@ -244,15 +254,17 @@ export default function SecurityPage() {
         {/* Authentication Tab */}
         <TabsContent value="authentication" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardHeader className="p-0 mb-6">
+                <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                   <Key className="w-5 h-5" />
                   Authentification
                 </CardTitle>
-                <CardDescription>Paramètres d'authentification</CardDescription>
+                <CardDescription className="text-sm text-muted-foreground font-normal">
+                  Paramètres d'authentification
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="p-0 space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label htmlFor="twoFactorAuth">Authentification à deux facteurs</Label>
@@ -268,10 +280,12 @@ export default function SecurityPage() {
                     }
                   />
                 </div>
-                <Separator />
+                <Separator className="bg-border" />
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label htmlFor="emailNotifications">Notifications email</Label>
+                    <Label htmlFor="emailNotifications" className="text-foreground">
+                      Notifications email
+                    </Label>
                     <p className="text-sm text-muted-foreground">
                       Recevoir des emails pour les événements de sécurité
                     </p>
@@ -284,10 +298,12 @@ export default function SecurityPage() {
                     }
                   />
                 </div>
-                <Separator />
+                <Separator className="bg-border" />
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label htmlFor="loginAlerts">Alertes de connexion</Label>
+                    <Label htmlFor="loginAlerts" className="text-foreground">
+                      Alertes de connexion
+                    </Label>
                     <p className="text-sm text-muted-foreground">
                       Alerter en cas de connexion suspecte
                     </p>
@@ -300,10 +316,10 @@ export default function SecurityPage() {
                     }
                   />
                 </div>
-                <Separator />
+                <Separator className="bg-border" />
                 <Button
                   variant="outline"
-                  className="w-full"
+                  className="w-full border-border"
                   onClick={() => setChangePasswordDialogOpen(true)}
                 >
                   <Key className="w-4 h-4 mr-2" />
@@ -312,45 +328,53 @@ export default function SecurityPage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+              <CardHeader className="p-0 mb-6">
+                <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                   <Users className="w-5 h-5" />
                   Permissions
                 </CardTitle>
-                <CardDescription>Gestion des rôles et permissions</CardDescription>
+                <CardDescription className="text-sm text-muted-foreground font-normal">
+                  Gestion des rôles et permissions
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="p-0 space-y-4">
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center justify-between p-3 border border-border rounded-lg">
                     <div>
-                      <div className="font-medium">Super Admin</div>
+                      <div className="font-medium text-foreground">Super Admin</div>
                       <div className="text-sm text-muted-foreground">
                         Accès complet à toutes les fonctionnalités
                       </div>
                     </div>
-                    <Badge variant="destructive">2 utilisateurs</Badge>
+                    <Badge className="bg-[rgba(239,68,68,0.1)] text-[#ef4444] dark:bg-[rgba(239,68,68,0.1)] dark:text-[#ef4444]">
+                      2 utilisateurs
+                    </Badge>
                   </div>
-                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center justify-between p-3 border border-border rounded-lg">
                     <div>
-                      <div className="font-medium">Admin</div>
+                      <div className="font-medium text-foreground">Admin</div>
                       <div className="text-sm text-muted-foreground">
                         Accès à la plupart des fonctionnalités
                       </div>
                     </div>
-                    <Badge variant="default">5 utilisateurs</Badge>
+                    <Badge className="bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45]">
+                      5 utilisateurs
+                    </Badge>
                   </div>
-                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center justify-between p-3 border border-border rounded-lg">
                     <div>
-                      <div className="font-medium">Modérateur</div>
+                      <div className="font-medium text-foreground">Modérateur</div>
                       <div className="text-sm text-muted-foreground">
                         Accès limité aux fonctionnalités de modération
                       </div>
                     </div>
-                    <Badge variant="secondary">3 utilisateurs</Badge>
+                    <Badge className="bg-[#1a1a1c] text-[#9a9a9d] dark:bg-[#1a1a1c] dark:text-[#9a9a9d]">
+                      3 utilisateurs
+                    </Badge>
                   </div>
                 </div>
-                <Button variant="outline" className="w-full" asChild>
+                <Button variant="outline" className="w-full border-border" asChild>
                   <a href={`/${ADMIN_BASE_PATH}/admins`}>
                     <Users className="w-4 h-4 mr-2" />
                     Gérer les administrateurs
@@ -363,15 +387,17 @@ export default function SecurityPage() {
 
         {/* API Tab */}
         <TabsContent value="api" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                 <Server className="w-5 h-5" />
                 Clés API
               </CardTitle>
-              <CardDescription>Gérer les clés API pour l'accès programmatique</CardDescription>
+              <CardDescription className="text-sm text-muted-foreground font-normal">
+                Gérer les clés API pour l'accès programmatique
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-0 space-y-4">
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Attention</AlertTitle>
@@ -407,24 +433,26 @@ export default function SecurityPage() {
                 </p>
               </div>
 
-              <Separator />
+              <Separator className="bg-border" />
 
               <div className="space-y-3">
-                <h4 className="text-sm font-medium">Clés API actives</h4>
+                <h4 className="text-sm font-medium text-foreground">Clés API actives</h4>
                 <div className="space-y-2">
                   {[
                     { name: 'Clé principale', created: new Date('2024-01-15'), lastUsed: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
                     { name: 'Clé de développement', created: new Date('2024-02-20'), lastUsed: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
                   ].map((key, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div key={index} className="flex items-center justify-between p-3 border border-border rounded-lg">
                       <div>
-                        <div className="font-medium text-sm">{key.name}</div>
+                        <div className="font-medium text-sm text-foreground">{key.name}</div>
                         <div className="text-xs text-muted-foreground">
                           Créée le {format(key.created, 'PP', { locale: fr })} • Dernière
                           utilisation: {format(key.lastUsed, 'PP', { locale: fr })}
                         </div>
                       </div>
-                      <Badge variant="default">Active</Badge>
+                      <Badge className="bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45]">
+                        Active
+                      </Badge>
                     </div>
                   ))}
                 </div>
@@ -435,18 +463,20 @@ export default function SecurityPage() {
 
         {/* Activity Tab */}
         <TabsContent value="activity" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
+            <CardHeader className="p-0 mb-6">
+              <CardTitle className="flex items-center gap-2 text-base font-normal text-foreground">
                 <FileText className="w-5 h-5" />
                 Connexions récentes
               </CardTitle>
-              <CardDescription>Historique des tentatives de connexion</CardDescription>
+              <CardDescription className="text-sm text-muted-foreground font-normal">
+                Historique des tentatives de connexion
+              </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               <div className="space-y-3">
                 {recentLogins.map((login, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div key={index} className="flex items-center justify-between p-3 border border-border rounded-lg">
                     <div className="flex items-center gap-3">
                       {login.success ? (
                         <CheckCircle className="w-5 h-5 text-green-500" />
@@ -454,7 +484,7 @@ export default function SecurityPage() {
                         <AlertTriangle className="w-5 h-5 text-destructive" />
                       )}
                       <div>
-                        <div className="font-medium text-sm">{login.ip}</div>
+                        <div className="font-medium text-sm text-foreground">{login.ip}</div>
                         <div className="text-xs text-muted-foreground flex items-center gap-1">
                           <Globe className="w-3 h-3" />
                           {login.location}
@@ -462,10 +492,16 @@ export default function SecurityPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-sm font-medium">
+                      <div className="text-sm font-medium text-foreground">
                         {format(login.date, 'PPp', { locale: fr })}
                       </div>
-                      <Badge variant={login.success ? 'default' : 'destructive'}>
+                      <Badge
+                        className={
+                          login.success
+                            ? 'bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45]'
+                            : 'bg-[rgba(239,68,68,0.1)] text-[#ef4444] dark:bg-[rgba(239,68,68,0.1)] dark:text-[#ef4444]'
+                        }
+                      >
                         {login.success ? 'Succès' : 'Échec'}
                       </Badge>
                     </div>
