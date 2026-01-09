@@ -2,75 +2,70 @@
  * FICHIER: components/common/ThemeToggle.tsx
  *
  * DESCRIPTION:
- * Bouton permettant de basculer entre thème clair/sombre. Ajoute ou retire
- * la classe `dark` sur `<html>` pour que Tailwind applique les styles `dark:`.
+ * Bouton permettant de basculer entre thème clair/sombre.
+ * Utilise le store Zustand pour gérer le thème de manière centralisée.
  *
  * FONCTIONNEMENT:
- * - À l’init, on détecte le thème actuel via la classe sur `<html>` ou la
- *   préférence système (`prefers-color-scheme`).
- * - Au clic, on inverse `isDark` et on met à jour les classes `dark`/`light`.
+ * - Utilise le store theme pour récupérer et modifier le thème.
+ * - Le thème est automatiquement sauvegardé dans localStorage via Zustand persist.
  *
  * UX:
- * - Utilise `Button` variant ghost + icônes Sun/Moon avec une rotation animée
- *   pour indiquer visuellement le changement.
+ * - Utilise des icônes Sun/Moon avec une rotation animée pour indiquer visuellement le changement.
  */
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { useEffect, useState } from 'react';
 import { Sun, Moon } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useThemeStore } from '@/store/theme';
 
 export function ThemeToggle() {
-  const [isDark, setIsDark] = useState(true); // Dark mode par défaut
+  const { theme, setTheme, resolvedTheme } = useThemeStore();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Vérifier le thème initial
-    const isDarkMode =
-      document.documentElement.classList.contains('dark') ||
-      (!document.documentElement.classList.contains('light') &&
-        window.matchMedia('(prefers-color-scheme: dark)').matches);
-
-    setIsDark(isDarkMode);
-
-    // Appliquer le thème par défaut si aucun n'est défini
-    if (
-      !document.documentElement.classList.contains('dark') &&
-      !document.documentElement.classList.contains('light')
-    ) {
-      document.documentElement.classList.add('dark');
-    }
+    setMounted(true);
   }, []);
 
   const toggleTheme = () => {
-    const newIsDark = !isDark;
-    setIsDark(newIsDark);
-
-    if (newIsDark) {
-      document.documentElement.classList.remove('light');
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.documentElement.classList.add('light');
-    }
+    // Basculer entre light et dark (ignorer 'system' pour le toggle)
+    const newTheme = resolvedTheme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
   };
 
+  // Éviter le flash de contenu non stylé
+  if (!mounted) {
+    return (
+      <button
+        className="h-8 w-8 rounded-md flex items-center justify-center"
+        aria-label="Chargement du thème"
+      >
+        <Sun className="h-4 w-4 text-[#1e1e20] dark:text-[#ececed]" />
+      </button>
+    );
+  }
+
+  const isDark = resolvedTheme === 'dark';
+
   return (
-    <Button
-      variant="ghost"
-      size="icon"
+    <button
       onClick={toggleTheme}
-      className="h-10 w-10 hover:bg-primary/10"
+      className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-[rgba(0,0,0,0.04)] dark:hover:bg-[rgba(255,255,255,0.04)] transition-colors"
       aria-label={isDark ? 'Passer en mode clair' : 'Passer en mode sombre'}
     >
       <motion.div
         initial={false}
         animate={{ rotate: isDark ? 0 : 180 }}
         transition={{ duration: 0.3 }}
+        className="flex items-center justify-center"
       >
-        {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+        {isDark ? (
+          <Sun className="h-4 w-4 text-[#1e1e20] dark:text-[#ececed]" />
+        ) : (
+          <Moon className="h-4 w-4 text-[#1e1e20] dark:text-[#ececed]" />
+        )}
       </motion.div>
-    </Button>
+    </button>
   );
 }
