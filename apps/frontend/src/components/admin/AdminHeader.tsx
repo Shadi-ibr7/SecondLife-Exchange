@@ -4,6 +4,7 @@
  * DESCRIPTION:
  * Header de l'admin dashboard avec profil, toggle de thème et logout.
  * Design aligné avec Figma (node 28-1189).
+ * Mobile-first avec support safe-area iOS.
  */
 
 'use client';
@@ -14,7 +15,11 @@ import { useRouter } from 'next/navigation';
 import { clearAdminToken } from '@/lib/admin.token';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
 
-export function AdminHeader() {
+interface AdminHeaderProps {
+  onMenuClick: () => void;
+}
+
+export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
   const router = useRouter();
 
   const handleLogout = () => {
@@ -23,50 +28,55 @@ export function AdminHeader() {
   };
 
   return (
-    <header className="fixed top-0 right-0 left-0 lg:left-60 h-16 bg-white dark:bg-[#141416] border-b border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] z-10">
-      <div className="h-full px-4 lg:px-4 flex items-center justify-between gap-4">
-        {/* Mobile Menu Button */}
-        <button
-          className="lg:hidden p-2 hover:bg-[rgba(0,0,0,0.04)] dark:hover:bg-[rgba(255,255,255,0.04)] rounded-md transition-colors"
-          aria-label="Menu"
-        >
-          <Menu className="w-5 h-5 text-[#1e1e20] dark:text-[#ececed]" />
-        </button>
+    <header className="fixed top-0 right-0 left-0 lg:left-60 h-16 bg-white dark:bg-[#141416] border-b border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] z-50 pt-[env(safe-area-inset-top)]">
+      <div className="h-16 px-3 sm:px-4 lg:px-6 flex items-center justify-between gap-2 sm:gap-3">
+        {/* Left side - Mobile Menu Button + Logo */}
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          {/* Mobile Menu Button */}
+          <button
+            onClick={onMenuClick}
+            className="lg:hidden p-2 -ml-1 hover:bg-[rgba(0,0,0,0.04)] dark:hover:bg-[rgba(255,255,255,0.04)] rounded-md transition-colors flex-shrink-0"
+            aria-label="Ouvrir le menu"
+            aria-expanded="false"
+          >
+            <Menu className="w-5 h-5 text-[#1e1e20] dark:text-[#ececed]" />
+          </button>
 
-        {/* Mobile Logo */}
-        <div className="lg:hidden flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#1b3828] dark:bg-[#2d5a45] flex items-center justify-center">
-            <span className="text-white text-sm font-medium">SL</span>
+          {/* Mobile Logo */}
+          <div className="lg:hidden flex items-center gap-2 flex-shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-[#1b3828] dark:bg-[#2d5a45] flex items-center justify-center">
+              <span className="text-white text-sm font-medium">SL</span>
+            </div>
           </div>
         </div>
 
         {/* Right side - Selon design Figma */}
-        <div className="flex items-center gap-2 lg:gap-3 ml-auto">
+        <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-3 flex-shrink-0">
           {/* Theme Toggle */}
           <div className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-[rgba(0,0,0,0.04)] dark:hover:bg-[rgba(255,255,255,0.04)] transition-colors">
             <ThemeToggle />
           </div>
 
           {/* Admin Badge */}
-          <span className="hidden sm:inline-flex px-2.5 py-0.5 rounded-full text-xs bg-[rgba(27,56,40,0.1)] dark:bg-[rgba(45,90,69,0.1)] text-[#1b3828] dark:text-[#2d5a45] font-normal">
+          <span className="hidden sm:inline-flex px-2.5 py-0.5 rounded-full text-xs bg-[rgba(27,56,40,0.1)] dark:bg-[rgba(45,90,69,0.1)] text-[#1b3828] dark:text-[#2d5a45] font-normal whitespace-nowrap">
             ADMIN
           </span>
 
           {/* Admin Profile */}
-          <div className="flex items-center gap-2 lg:gap-3">
-            <div className="text-right hidden md:block">
-              <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5">Admin User</p>
-              <p className="text-xs text-[#6f6f73] dark:text-[#9a9a9d] leading-4">admin@secondlife.com</p>
+          <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-3">
+            <div className="text-right hidden md:block min-w-0">
+              <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5 truncate max-w-[120px] lg:max-w-none">Admin User</p>
+              <p className="text-xs text-[#6f6f73] dark:text-[#9a9a9d] leading-4 truncate max-w-[120px] lg:max-w-none">admin@secondlife.com</p>
             </div>
-            <div className="w-10 h-10 rounded-full bg-[#f7f7f8] dark:bg-[#1a1a1c] flex items-center justify-center">
-              <span className="text-[#6f6f73] dark:text-[#9a9a9d] text-sm font-normal">AD</span>
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#f7f7f8] dark:bg-[#1a1a1c] flex items-center justify-center flex-shrink-0">
+              <span className="text-[#6f6f73] dark:text-[#9a9a9d] text-xs sm:text-sm font-normal">AD</span>
             </div>
           </div>
 
           {/* Logout Button - Avec flèche selon Figma */}
           <button
             onClick={handleLogout}
-            className="h-8 px-3 rounded-md flex items-center gap-2 hover:bg-[rgba(0,0,0,0.04)] dark:hover:bg-[rgba(255,255,255,0.04)] transition-colors"
+            className="h-8 px-2 sm:px-3 rounded-md flex items-center gap-1.5 sm:gap-2 hover:bg-[rgba(0,0,0,0.04)] dark:hover:bg-[rgba(255,255,255,0.04)] transition-colors flex-shrink-0"
             aria-label="Déconnexion"
           >
             <LogOut className="w-4 h-4 text-[#1e1e20] dark:text-[#ececed]" />
