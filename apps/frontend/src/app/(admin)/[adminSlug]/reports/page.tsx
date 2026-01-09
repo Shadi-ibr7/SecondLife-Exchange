@@ -42,6 +42,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ResponsiveTable } from '@/components/admin/ResponsiveTable';
 
 export default function AdminReportsPage() {
   const queryClient = useQueryClient();
@@ -99,40 +100,40 @@ export default function AdminReportsPage() {
         <p className="admin-page-description">Gérer les signalements des utilisateurs</p>
       </div>
 
-      {/* Stats Cards - 4 cartes selon Figma */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="h-[90px]">
-          <CardContent className="pt-[17px] px-[17px] pb-[1px] h-full flex flex-col gap-1">
-            <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal leading-5">
+      {/* Stats Cards - 4 cartes selon Figma (responsive) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="h-auto min-h-[90px]">
+          <CardContent className="pt-4 sm:pt-5 px-4 sm:px-5 pb-4 h-full flex flex-col gap-1">
+            <p className="text-xs sm:text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal leading-4 sm:leading-5">
               Total signalements
             </p>
-            <p className="text-2xl font-normal text-[#1e1e20] dark:text-[#ececed] leading-8">
+            <p className="text-xl sm:text-2xl font-normal text-[#1e1e20] dark:text-[#ececed] leading-7 sm:leading-8">
               {data?.total?.toLocaleString() || '0'}
             </p>
           </CardContent>
         </Card>
-        <Card className="h-[90px]">
-          <CardContent className="pt-[17px] px-[17px] pb-[1px] h-full flex flex-col gap-1">
-            <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal leading-5">Ouverts</p>
-            <p className="text-2xl font-normal text-[#1e1e20] dark:text-[#ececed] leading-8">
+        <Card className="h-auto min-h-[90px]">
+          <CardContent className="pt-4 sm:pt-5 px-4 sm:px-5 pb-4 h-full flex flex-col gap-1">
+            <p className="text-xs sm:text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal leading-4 sm:leading-5">Ouverts</p>
+            <p className="text-xl sm:text-2xl font-normal text-[#1e1e20] dark:text-[#ececed] leading-7 sm:leading-8">
               {data?.reports?.filter((r: any) => !r.resolved && !r.inProgress).length || 0}
             </p>
           </CardContent>
         </Card>
-        <Card className="h-[90px]">
-          <CardContent className="pt-[17px] px-[17px] pb-[1px] h-full flex flex-col gap-1">
-            <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal leading-5">En cours</p>
-            <p className="text-2xl font-normal text-[#1e1e20] dark:text-[#ececed] leading-8">
+        <Card className="h-auto min-h-[90px]">
+          <CardContent className="pt-4 sm:pt-5 px-4 sm:px-5 pb-4 h-full flex flex-col gap-1">
+            <p className="text-xs sm:text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal leading-4 sm:leading-5">En cours</p>
+            <p className="text-xl sm:text-2xl font-normal text-[#1e1e20] dark:text-[#ececed] leading-7 sm:leading-8">
               {data?.reports?.filter((r: any) => r.inProgress).length || 0}
             </p>
           </CardContent>
         </Card>
-        <Card className="h-[90px]">
-          <CardContent className="pt-[17px] px-[17px] pb-[1px] h-full flex flex-col gap-1">
-            <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal leading-5">
+        <Card className="h-auto min-h-[90px]">
+          <CardContent className="pt-4 sm:pt-5 px-4 sm:px-5 pb-4 h-full flex flex-col gap-1">
+            <p className="text-xs sm:text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal leading-4 sm:leading-5">
               Résolus ce mois
             </p>
-            <p className="text-2xl font-normal text-[#1e1e20] dark:text-[#ececed] leading-8">
+            <p className="text-xl sm:text-2xl font-normal text-[#1e1e20] dark:text-[#ececed] leading-7 sm:leading-8">
               {(() => {
                 const now = new Date();
                 const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -151,136 +152,123 @@ export default function AdminReportsPage() {
 
       {/* Reports Table - selon Figma */}
       <Card>
-        <CardContent className="pt-[25px] px-[25px] pb-[1px]">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] h-[44.5px]">
-                  <th className="text-left px-4 py-3">
-                    <p className="text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
-                      Signalé par
-                    </p>
-                  </th>
-                  <th className="text-left px-4 py-3">
-                    <p className="text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
-                      Utilisateur
-                    </p>
-                  </th>
-                  <th className="text-left px-4 py-3">
-                    <p className="text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d] leading-5">Type</p>
-                  </th>
-                  <th className="text-left px-4 py-3">
-                    <p className="text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
-                      Gravité
-                    </p>
-                  </th>
-                  <th className="text-left px-4 py-3">
-                    <p className="text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d] leading-5">Statut</p>
-                  </th>
-                  <th className="text-left px-4 py-3">
-                    <p className="text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d] leading-5">Date</p>
-                  </th>
-                  <th className="text-right px-4 py-3">
-                    <p className="text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d] leading-5">Actions</p>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {data?.reports?.map((report: any, index: number) => {
-                  const isLast = index === (data?.reports?.length || 0) - 1;
-                  const getTypeBadge = (type: string) => {
-                    if (type === 'USER') {
-                      return (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[#1a1a1c] dark:bg-[#1a1a1c] text-[#9a9a9d] dark:text-[#9a9a9d]">
-                          Utilisateur
-                        </span>
-                      );
-                    }
-                    if (type === 'ITEM') {
-                      return (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[#1a1a1c] dark:bg-[#1a1a1c] text-[#9a9a9d] dark:text-[#9a9a9d]">
-                          Objet
-                        </span>
-                      );
-                    }
-                    if (type === 'EXCHANGE') {
-                      return (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[#1a1a1c] dark:bg-[#1a1a1c] text-[#9a9a9d] dark:text-[#9a9a9d]">
-                          Échange
-                        </span>
-                      );
-                    }
+        <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6 pb-4">
+          {data?.reports && data.reports.length > 0 ? (
+            <ResponsiveTable
+              headers={[
+                { key: 'reporter', label: 'Signalé par' },
+                { key: 'target', label: 'Utilisateur' },
+                { key: 'type', label: 'Type' },
+                { key: 'severity', label: 'Gravité' },
+                { key: 'status', label: 'Statut' },
+                { key: 'date', label: 'Date' },
+                { key: 'actions', label: 'Actions', align: 'right' },
+              ]}
+              rows={data.reports.map((report: any) => {
+                const getTypeBadge = (type: string) => {
+                  if (type === 'USER') {
                     return (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[#1a1a1c] dark:bg-[#1a1a1c] text-[#9a9a9d] dark:text-[#9a9a9d]">
-                        {type}
+                        Utilisateur
                       </span>
                     );
-                  };
-                  const getSeverityBadge = (severity: string) => {
-                    if (severity === 'HIGH' || severity === 'CRITICAL') {
-                      return (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[rgba(220,38,38,0.1)] dark:bg-[rgba(220,38,38,0.1)] text-[#dc2626] dark:text-[#dc2626]">
-                          Élevé
-                        </span>
-                      );
-                    }
-                    if (severity === 'MEDIUM') {
-                      return (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[rgba(217,160,85,0.1)] dark:bg-[rgba(217,160,85,0.1)] text-[#d9a055] dark:text-[#d9a055]">
-                          Moyen
-                        </span>
-                      );
-                    }
+                  }
+                  if (type === 'ITEM') {
                     return (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[#1a1a1c] dark:bg-[#1a1a1c] text-[#9a9a9d] dark:text-[#9a9a9d]">
-                        Faible
+                        Objet
                       </span>
                     );
-                  };
-                  const getStatusBadge = (report: any) => {
-                    if (report.resolved) {
-                      return (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[rgba(27,56,40,0.1)] dark:bg-[rgba(27,56,40,0.1)] text-[#1b3828] dark:text-[#1b3828]">
-                          Résolu
-                        </span>
-                      );
-                    }
-                    if (report.inProgress) {
-                      return (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[rgba(217,160,85,0.2)] dark:bg-[rgba(217,160,85,0.2)] text-[#d9a055] dark:text-[#d9a055]">
-                          En cours
-                        </span>
-                      );
-                    }
+                  }
+                  if (type === 'EXCHANGE') {
+                    return (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[#1a1a1c] dark:bg-[#1a1a1c] text-[#9a9a9d] dark:text-[#9a9a9d]">
+                        Échange
+                      </span>
+                    );
+                  }
+                  return (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[#1a1a1c] dark:bg-[#1a1a1c] text-[#9a9a9d] dark:text-[#9a9a9d]">
+                      {type}
+                    </span>
+                  );
+                };
+                const getSeverityBadge = (severity: string) => {
+                  if (severity === 'HIGH' || severity === 'CRITICAL') {
+                    return (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[rgba(220,38,38,0.1)] dark:bg-[rgba(220,38,38,0.1)] text-[#dc2626] dark:text-[#dc2626]">
+                        Élevé
+                      </span>
+                    );
+                  }
+                  if (severity === 'MEDIUM') {
                     return (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[rgba(217,160,85,0.1)] dark:bg-[rgba(217,160,85,0.1)] text-[#d9a055] dark:text-[#d9a055]">
-                        Ouvert
+                        Moyen
                       </span>
                     );
-                  };
+                  }
                   return (
-                    <tr
-                      key={report.id}
-                      className={`${
-                        !isLast
-                          ? 'border-b border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)]'
-                          : ''
-                      } h-[65px]`}
-                    >
-                      <td className="px-4">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[#1a1a1c] dark:bg-[#1a1a1c] text-[#9a9a9d] dark:text-[#9a9a9d]">
+                      Faible
+                    </span>
+                  );
+                };
+                const getStatusBadge = (report: any) => {
+                  if (report.resolved) {
+                    return (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[rgba(27,56,40,0.1)] dark:bg-[rgba(27,56,40,0.1)] text-[#1b3828] dark:text-[#1b3828]">
+                        Résolu
+                      </span>
+                    );
+                  }
+                  if (report.inProgress) {
+                    return (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[rgba(217,160,85,0.2)] dark:bg-[rgba(217,160,85,0.2)] text-[#d9a055] dark:text-[#d9a055]">
+                        En cours
+                      </span>
+                    );
+                  }
+                  return (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[rgba(217,160,85,0.1)] dark:bg-[rgba(217,160,85,0.1)] text-[#d9a055] dark:text-[#d9a055]">
+                      Ouvert
+                    </span>
+                  );
+                };
+                return {
+                  key: report.id,
+                  cells: [
+                    {
+                      key: 'reporter',
+                      content: (
                         <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5">
                           {report.reporter?.displayName || report.reporterId || 'N/A'}
                         </p>
-                      </td>
-                      <td className="px-4">
+                      ),
+                    },
+                    {
+                      key: 'target',
+                      content: (
                         <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
                           {report.targetUser?.displayName || report.targetUserId || 'N/A'}
                         </p>
-                      </td>
-                      <td className="px-4">{getTypeBadge(report.type || 'OTHER')}</td>
-                      <td className="px-4">{getSeverityBadge(report.severity || 'LOW')}</td>
-                      <td className="px-4">{getStatusBadge(report)}</td>
-                      <td className="px-4">
+                      ),
+                    },
+                    {
+                      key: 'type',
+                      content: getTypeBadge(report.type || 'OTHER'),
+                    },
+                    {
+                      key: 'severity',
+                      content: getSeverityBadge(report.severity || 'LOW'),
+                    },
+                    {
+                      key: 'status',
+                      content: getStatusBadge(report),
+                    },
+                    {
+                      key: 'date',
+                      content: (
                         <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
                           {new Date(report.createdAt).toLocaleDateString('fr-FR', {
                             day: '2-digit',
@@ -288,8 +276,11 @@ export default function AdminReportsPage() {
                             year: 'numeric',
                           })}
                         </p>
-                      </td>
-                      <td className="px-4 text-right">
+                      ),
+                    },
+                    {
+                      key: 'actions',
+                      content: (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -300,13 +291,17 @@ export default function AdminReportsPage() {
                             <Eye className="w-4 h-4" />
                           </Link>
                         </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      ),
+                    },
+                  ],
+                };
+              })}
+            />
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d]">Aucun signalement trouvé</p>
+            </div>
+          )}
 
           {/* Pagination */}
           {data && data.totalPages > 1 && (

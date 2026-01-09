@@ -34,6 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { ResponsiveTable } from '@/components/admin/ResponsiveTable';
 import {
   Dialog,
   DialogContent,
@@ -47,16 +48,16 @@ import Link from 'next/link';
 
 function AdminStatsCard({ title, value, icon }: { title: string; value: string | number; icon: React.ReactNode }) {
   return (
-    <Card className="h-[90.238px] pt-[17.138px] px-[17.138px] pb-[1.155px]">
-      <CardContent className="flex items-center gap-[11.997px] p-0">
-        <div className="bg-muted rounded-[6px] size-[39.996px] flex items-center justify-center">
+    <Card className="h-auto min-h-[90px]">
+      <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5">
+        <div className="bg-muted rounded-md w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0">
           {icon}
         </div>
-        <div className="flex flex-col gap-[1.984px]">
-          <p className="text-sm text-muted-foreground font-normal leading-[20px] tracking-[-0.1504px]">
+        <div className="flex flex-col gap-1 min-w-0 flex-1">
+          <p className="text-xs sm:text-sm text-muted-foreground font-normal leading-4 sm:leading-5">
             {title}
           </p>
-          <p className="text-2xl font-normal text-foreground leading-[32px] tracking-[0.0703px]">
+          <p className="text-xl sm:text-2xl font-normal text-foreground leading-7 sm:leading-8">
             {value}
           </p>
         </div>
@@ -194,7 +195,7 @@ export default function AdminAdminsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 h-[90.238px]">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <AdminStatsCard title="Total administrateurs" value={totalAdmins} icon={<Users className="w-5 h-5 text-primary" />} />
         <AdminStatsCard title="Actifs" value={activeAdmins} icon={<UserCheck className="w-5 h-5 text-primary" />} />
         <AdminStatsCard title="Super admins" value={superAdmins} icon={<Shield className="w-5 h-5 text-primary" />} />
@@ -217,145 +218,132 @@ export default function AdminAdminsPage() {
       </Card>
 
       {/* Admins Table */}
-      <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px] h-[499.829px]">
-        <CardContent className="p-0 h-full flex flex-col">
-          <div className="mb-6">
-            <h3 className="text-base font-normal text-foreground mb-1">Liste des administrateurs</h3>
-            <p className="text-sm text-muted-foreground font-normal">
+      <Card className="h-auto min-h-[400px] sm:min-h-[500px]">
+        <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6 pb-4 h-full flex flex-col">
+          <div className="mb-4 sm:mb-6">
+            <h3 className="text-sm sm:text-base font-normal text-foreground mb-1">Liste des administrateurs</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground font-normal">
               {filteredAdmins.length} administrateur{filteredAdmins.length !== 1 ? 's' : ''} trouvé{filteredAdmins.length !== 1 ? 's' : ''}
             </p>
           </div>
-          <div className="flex-1 overflow-hidden">
-            <Table className="w-full">
-              <TableHeader>
-                <TableRow className="border-b border-border h-[44.56px]">
-                  <TableHead className="text-left px-4 py-3 text-sm font-bold text-muted-foreground">
-                    Administrateur
-                  </TableHead>
-                  <TableHead className="text-left px-4 py-3 text-sm font-bold text-muted-foreground">
-                    Rôle
-                  </TableHead>
-                  <TableHead className="text-left px-4 py-3 text-sm font-bold text-muted-foreground">
-                    Statut
-                  </TableHead>
-                  <TableHead className="text-left px-4 py-3 text-sm font-bold text-muted-foreground">
-                    Dernière connexion
-                  </TableHead>
-                  <TableHead className="text-left px-4 py-3 text-sm font-bold text-muted-foreground">
-                    Actions
-                  </TableHead>
-                  <TableHead className="text-right px-4 py-3 text-sm font-bold text-muted-foreground">
-                    Opérations
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAdmins.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="text-center py-4 text-sm text-muted-foreground">
-                      <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      Aucun administrateur trouvé
-                    </td>
-                  </tr>
-                ) : (
-                  filteredAdmins.map((admin, index) => {
-                    const isLast = index === filteredAdmins.length - 1;
-                    return (
-                      <tr
-                        key={admin.id}
-                        className={`${
-                          !isLast
-                            ? 'border-b border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)]'
-                            : ''
-                        } h-[65.108px]`}
-                      >
-                        <td className="px-4">
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10">
-                              <AvatarImage src={admin.avatarUrl || undefined} />
-                              <AvatarFallback>
-                                {admin.displayName.charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex flex-col">
-                              <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5">
-                                {admin.displayName}
-                              </p>
-                              <p className="text-xs text-[#6f6f73] dark:text-[#9a9a9d] leading-4 flex items-center gap-1">
-                                <Mail className="w-3 h-3" />
-                                {admin.email}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4">{getRoleBadge(admin.role)}</td>
-                        <td className="px-4">
-                          {admin.isActive ? (
-                            <Badge className="bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45] flex items-center gap-1 w-fit">
-                              <UserCheck className="w-3 h-3" />
-                              Actif
-                            </Badge>
-                          ) : (
-                            <Badge className="bg-[rgba(217,160,85,0.1)] text-[#d9a055] dark:bg-[rgba(217,160,85,0.1)] dark:text-[#d9a055] flex items-center gap-1 w-fit">
-                              <UserX className="w-3 h-3" />
-                              Inactif
-                            </Badge>
-                          )}
-                        </td>
-                        <td className="px-4">
-                          <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
-                            {format(admin.lastLogin, 'dd MMM yyyy HH:mm', { locale: fr })}
+          {filteredAdmins.length > 0 ? (
+            <ResponsiveTable
+              headers={[
+                { key: 'admin', label: 'Administrateur' },
+                { key: 'role', label: 'Rôle' },
+                { key: 'status', label: 'Statut' },
+                { key: 'lastLogin', label: 'Dernière connexion' },
+                { key: 'actions', label: 'Actions' },
+                { key: 'operations', label: 'Opérations', align: 'right' },
+              ]}
+              rows={filteredAdmins.map((admin) => ({
+                key: admin.id,
+                cells: [
+                  {
+                    key: 'admin',
+                    content: (
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={admin.avatarUrl || undefined} />
+                          <AvatarFallback>
+                            {admin.displayName.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                          <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5">
+                            {admin.displayName}
                           </p>
-                        </td>
-                        <td className="px-4">
-                          <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5 flex items-center gap-1">
-                            <Activity className="w-4 h-4" />
-                            {admin.actionsCount.toLocaleString()}
+                          <p className="text-xs text-[#6f6f73] dark:text-[#9a9a9d] leading-4 flex items-center gap-1">
+                            <Mail className="w-3 h-3" />
+                            {admin.email}
                           </p>
-                        </td>
-                        <td className="px-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="w-[39.978px] h-[31.986px] rounded-[6px]"
-                              asChild
-                            >
-                              <Link href={`/${ADMIN_BASE_PATH}/admins/${admin.id}`}>
-                                <Eye className="w-4 h-4 text-muted-foreground" />
-                              </Link>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="w-[39.978px] h-[31.986px] rounded-[6px]"
-                              asChild
-                            >
-                              <Link href={`/${ADMIN_BASE_PATH}/admins/${admin.id}/edit`}>
-                                <Edit className="w-4 h-4 text-muted-foreground" />
-                              </Link>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="w-[39.978px] h-[31.986px] rounded-[6px] text-destructive"
-                              onClick={() => {
-                                setSelectedAdmin(admin.id);
-                                setDeleteDialogOpen(true);
-                              }}
-                              disabled={admin.role === 'SUPER_ADMIN'}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                        </div>
+                      </div>
+                    ),
+                  },
+                  {
+                    key: 'role',
+                    content: getRoleBadge(admin.role),
+                  },
+                  {
+                    key: 'status',
+                    content: admin.isActive ? (
+                      <Badge className="bg-[rgba(45,90,69,0.1)] text-[#2d5a45] dark:bg-[rgba(45,90,69,0.1)] dark:text-[#2d5a45] flex items-center gap-1 w-fit">
+                        <UserCheck className="w-3 h-3" />
+                        Actif
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-[rgba(217,160,85,0.1)] text-[#d9a055] dark:bg-[rgba(217,160,85,0.1)] dark:text-[#d9a055] flex items-center gap-1 w-fit">
+                        <UserX className="w-3 h-3" />
+                        Inactif
+                      </Badge>
+                    ),
+                  },
+                  {
+                    key: 'lastLogin',
+                    content: (
+                      <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
+                        {format(admin.lastLogin, 'dd MMM yyyy HH:mm', { locale: fr })}
+                      </p>
+                    ),
+                  },
+                  {
+                    key: 'actions',
+                    content: (
+                      <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5 flex items-center gap-1">
+                        <Activity className="w-4 h-4" />
+                        {admin.actionsCount.toLocaleString()}
+                      </p>
+                    ),
+                  },
+                  {
+                    key: 'operations',
+                    content: (
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="w-[39.978px] h-[31.986px] rounded-[6px]"
+                          asChild
+                        >
+                          <Link href={`/${ADMIN_BASE_PATH}/admins/${admin.id}`}>
+                            <Eye className="w-4 h-4 text-muted-foreground" />
+                          </Link>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="w-[39.978px] h-[31.986px] rounded-[6px]"
+                          asChild
+                        >
+                          <Link href={`/${ADMIN_BASE_PATH}/admins/${admin.id}/edit`}>
+                            <Edit className="w-4 h-4 text-muted-foreground" />
+                          </Link>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="w-[39.978px] h-[31.986px] rounded-[6px] text-destructive"
+                          onClick={() => {
+                            setSelectedAdmin(admin.id);
+                            setDeleteDialogOpen(true);
+                          }}
+                          disabled={admin.role === 'SUPER_ADMIN'}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ),
+                  },
+                ],
+              }))}
+            />
+          ) : (
+            <div className="text-center py-12">
+              <Users className="w-12 h-12 mx-auto mb-4 opacity-50 text-[#6f6f73] dark:text-[#9a9a9d]" />
+              <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d]">Aucun administrateur trouvé</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

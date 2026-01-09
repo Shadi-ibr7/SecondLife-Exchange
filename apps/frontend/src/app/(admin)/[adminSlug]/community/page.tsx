@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { ResponsiveTable } from '@/components/admin/ResponsiveTable';
 import {
   Select,
   SelectContent,
@@ -34,12 +35,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 function CommunityStatsCard({ title, value }: { title: string; value: string | number }) {
   return (
-    <Card className="h-[90.238px] pt-[17.138px] px-[17.138px] pb-[1.155px]">
-      <CardContent className="flex flex-col gap-[3.987px] p-0">
-        <p className="text-sm text-muted-foreground font-normal leading-[20px] tracking-[-0.1504px]">
+    <Card className="h-auto min-h-[90px]">
+      <CardContent className="flex flex-col gap-1 p-4 sm:p-5">
+        <p className="text-xs sm:text-sm text-muted-foreground font-normal leading-4 sm:leading-5">
           {title}
         </p>
-        <p className="text-2xl font-normal text-foreground leading-[32px] tracking-[0.0703px]">
+        <p className="text-xl sm:text-2xl font-normal text-foreground leading-7 sm:leading-8">
           {value}
         </p>
       </CardContent>
@@ -123,7 +124,7 @@ export default function AdminCommunityPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4 h-[90.238px]">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <CommunityStatsCard title="Total threads" value={totalThreads} />
         <CommunityStatsCard title="Total posts" value={totalPosts} />
         <CommunityStatsCard title="Threads globaux" value={globalThreads} />
@@ -176,128 +177,117 @@ export default function AdminCommunityPage() {
           </Card>
 
           {/* Threads Table */}
-          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px] h-[499.829px]">
-            <CardContent className="p-0 h-full flex flex-col">
-              <div className="mb-6">
-                <h3 className="text-base font-normal text-foreground mb-1">Liste des threads</h3>
-                <p className="text-sm text-muted-foreground font-normal">
+          <Card className="h-auto min-h-[400px] sm:min-h-[500px]">
+            <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6 pb-4 h-full flex flex-col">
+              <div className="mb-4 sm:mb-6">
+                <h3 className="text-sm sm:text-base font-normal text-foreground mb-1">Liste des threads</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground font-normal">
                   {totalThreads} thread{totalThreads !== 1 ? 's' : ''} au total
                 </p>
               </div>
-              <div className="flex-1 overflow-hidden">
-                <Table className="w-full">
-                  <TableHeader>
-                    <TableRow className="border-b border-border h-[44.56px]">
-                      <TableHead className="text-left px-4 py-3 text-sm font-bold text-muted-foreground">
-                        Titre
-                      </TableHead>
-                      <TableHead className="text-left px-4 py-3 text-sm font-bold text-muted-foreground">
-                        Auteur
-                      </TableHead>
-                      <TableHead className="text-left px-4 py-3 text-sm font-bold text-muted-foreground">
-                        Scope
-                      </TableHead>
-                      <TableHead className="text-left px-4 py-3 text-sm font-bold text-muted-foreground">
-                        Posts
-                      </TableHead>
-                      <TableHead className="text-left px-4 py-3 text-sm font-bold text-muted-foreground">
-                        Date
-                      </TableHead>
-                      <TableHead className="text-right px-4 py-3 text-sm font-bold text-muted-foreground">
-                        Actions
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {threadsLoading ? (
-                      <tr>
-                        <td colSpan={6} className="text-center py-4 text-sm text-muted-foreground">
-                          Chargement...
-                        </td>
-                      </tr>
-                    ) : threads.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="text-center py-4 text-sm text-muted-foreground">
-                          <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                          Aucun thread trouvé
-                        </td>
-                      </tr>
-                    ) : (
-                      threads.map((thread: any, index: number) => {
-                        const isLast = index === threads.length - 1;
-                        return (
-                          <tr
-                            key={thread.id}
-                            className={`${
-                              !isLast
-                                ? 'border-b border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)]'
-                                : ''
-                            } h-[65.108px]`}
-                          >
-                            <td className="px-4">
+              {threadsLoading ? (
+                <div className="text-center py-12">
+                  <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d]">Chargement...</p>
+                </div>
+              ) : threads.length === 0 ? (
+                <div className="text-center py-12">
+                  <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-50 text-[#6f6f73] dark:text-[#9a9a9d]" />
+                  <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d]">Aucun thread trouvé</p>
+                </div>
+              ) : (
+                <ResponsiveTable
+                  headers={[
+                    { key: 'title', label: 'Titre' },
+                    { key: 'author', label: 'Auteur' },
+                    { key: 'scope', label: 'Scope' },
+                    { key: 'posts', label: 'Posts' },
+                    { key: 'date', label: 'Date' },
+                    { key: 'actions', label: 'Actions', align: 'right' },
+                  ]}
+                  rows={threads.map((thread: any) => ({
+                    key: thread.id,
+                    cells: [
+                      {
+                        key: 'title',
+                        content: (
+                          <div>
+                            <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5">
+                              {thread.title}
+                            </p>
+                            {thread.scopeRef && (
+                              <p className="text-xs text-muted-foreground">Ref: {thread.scopeRef}</p>
+                            )}
+                          </div>
+                        ),
+                      },
+                      {
+                        key: 'author',
+                        content: (
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={thread.author?.avatarUrl || undefined} />
+                              <AvatarFallback>
+                                {thread.author?.displayName?.charAt(0).toUpperCase() || 'U'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
                               <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5">
-                                {thread.title}
+                                {thread.author?.displayName || '-'}
                               </p>
-                              {thread.scopeRef && (
-                                <p className="text-xs text-muted-foreground">Ref: {thread.scopeRef}</p>
-                              )}
-                            </td>
-                            <td className="px-4">
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-8 w-8">
-                                  <AvatarImage src={thread.author?.avatarUrl || undefined} />
-                                  <AvatarFallback>
-                                    {thread.author?.displayName?.charAt(0).toUpperCase() || 'U'}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5">
-                                    {thread.author?.displayName || '-'}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">{thread.author?.email}</p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-4">{getScopeBadge(thread.scope || 'GLOBAL')}</td>
-                            <td className="px-4">
-                              <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
-                                {thread._count?.posts || 0}
-                              </p>
-                            </td>
-                            <td className="px-4">
-                              <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
-                                {format(new Date(thread.createdAt), 'dd MMM yyyy', { locale: fr })}
-                              </p>
-                            </td>
-                            <td className="px-4 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="w-[39.978px] h-[31.986px] rounded-[6px]"
-                                  asChild
-                                >
-                                  <Link href={`/${ADMIN_BASE_PATH}/community/threads/${thread.id}`}>
-                                    <Eye className="w-4 h-4 text-muted-foreground" />
-                                  </Link>
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="w-[39.978px] h-[31.986px] rounded-[6px]"
-                                  onClick={() => handleDeleteThread(thread.id)}
-                                >
-                                  <Trash2 className="w-4 h-4 text-muted-foreground" />
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                              <p className="text-xs text-muted-foreground">{thread.author?.email}</p>
+                            </div>
+                          </div>
+                        ),
+                      },
+                      {
+                        key: 'scope',
+                        content: getScopeBadge(thread.scope || 'GLOBAL'),
+                      },
+                      {
+                        key: 'posts',
+                        content: (
+                          <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
+                            {thread._count?.posts || 0}
+                          </p>
+                        ),
+                      },
+                      {
+                        key: 'date',
+                        content: (
+                          <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
+                            {format(new Date(thread.createdAt), 'dd MMM yyyy', { locale: fr })}
+                          </p>
+                        ),
+                      },
+                      {
+                        key: 'actions',
+                        content: (
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="w-[39.978px] h-[31.986px] rounded-[6px]"
+                              asChild
+                            >
+                              <Link href={`/${ADMIN_BASE_PATH}/community/threads/${thread.id}`}>
+                                <Eye className="w-4 h-4 text-muted-foreground" />
+                              </Link>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="w-[39.978px] h-[31.986px] rounded-[6px]"
+                              onClick={() => handleDeleteThread(thread.id)}
+                            >
+                              <Trash2 className="w-4 h-4 text-muted-foreground" />
+                            </Button>
+                          </div>
+                        ),
+                      },
+                    ],
+                  }))}
+                />
+              )}
 
               {/* Pagination */}
               {threadsData && threadsData.totalPages > 1 && (
@@ -352,129 +342,116 @@ export default function AdminCommunityPage() {
           </Card>
 
           {/* Posts Table */}
-          <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px] h-[499.829px]">
-            <CardContent className="p-0 h-full flex flex-col">
-              <div className="mb-6">
-                <h3 className="text-base font-normal text-foreground mb-1">Liste des posts</h3>
-                <p className="text-sm text-muted-foreground font-normal">
+          <Card className="h-auto min-h-[400px] sm:min-h-[500px]">
+            <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6 pb-4 h-full flex flex-col">
+              <div className="mb-4 sm:mb-6">
+                <h3 className="text-sm sm:text-base font-normal text-foreground mb-1">Liste des posts</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground font-normal">
                   {totalPosts} post{totalPosts !== 1 ? 's' : ''} au total
                 </p>
               </div>
-              <div className="flex-1 overflow-hidden">
-                <Table className="w-full">
-                  <TableHeader>
-                    <TableRow className="border-b border-border h-[44.56px]">
-                      <TableHead className="text-left px-4 py-3 text-sm font-bold text-muted-foreground">
-                        Contenu
-                      </TableHead>
-                      <TableHead className="text-left px-4 py-3 text-sm font-bold text-muted-foreground">
-                        Auteur
-                      </TableHead>
-                      <TableHead className="text-left px-4 py-3 text-sm font-bold text-muted-foreground">
-                        Thread
-                      </TableHead>
-                      <TableHead className="text-left px-4 py-3 text-sm font-bold text-muted-foreground">
-                        Réponses
-                      </TableHead>
-                      <TableHead className="text-left px-4 py-3 text-sm font-bold text-muted-foreground">
-                        Date
-                      </TableHead>
-                      <TableHead className="text-right px-4 py-3 text-sm font-bold text-muted-foreground">
-                        Actions
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {postsLoading ? (
-                      <tr>
-                        <td colSpan={6} className="text-center py-4 text-sm text-muted-foreground">
-                          Chargement...
-                        </td>
-                      </tr>
-                    ) : posts.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="text-center py-4 text-sm text-muted-foreground">
-                          <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                          Aucun post trouvé
-                        </td>
-                      </tr>
-                    ) : (
-                      posts.map((post: any, index: number) => {
-                        const isLast = index === posts.length - 1;
-                        return (
-                          <tr
-                            key={post.id}
-                            className={`${
-                              !isLast
-                                ? 'border-b border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)]'
-                                : ''
-                            } h-[65.108px]`}
-                          >
-                            <td className="px-4">
-                              <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5 line-clamp-2 max-w-md">
-                                {post.content}
+              {postsLoading ? (
+                <div className="text-center py-12">
+                  <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d]">Chargement...</p>
+                </div>
+              ) : posts.length === 0 ? (
+                <div className="text-center py-12">
+                  <Users className="w-12 h-12 mx-auto mb-4 opacity-50 text-[#6f6f73] dark:text-[#9a9a9d]" />
+                  <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d]">Aucun post trouvé</p>
+                </div>
+              ) : (
+                <ResponsiveTable
+                  headers={[
+                    { key: 'content', label: 'Contenu' },
+                    { key: 'author', label: 'Auteur' },
+                    { key: 'thread', label: 'Thread' },
+                    { key: 'replies', label: 'Réponses' },
+                    { key: 'date', label: 'Date' },
+                    { key: 'actions', label: 'Actions', align: 'right' },
+                  ]}
+                  rows={posts.map((post: any) => ({
+                    key: post.id,
+                    cells: [
+                      {
+                        key: 'content',
+                        content: (
+                          <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5 line-clamp-2 max-w-md">
+                            {post.content}
+                          </p>
+                        ),
+                      },
+                      {
+                        key: 'author',
+                        content: (
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={post.author?.avatarUrl || undefined} />
+                              <AvatarFallback>
+                                {post.author?.displayName?.charAt(0).toUpperCase() || 'U'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5">
+                                {post.author?.displayName || '-'}
                               </p>
-                            </td>
-                            <td className="px-4">
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-8 w-8">
-                                  <AvatarImage src={post.author?.avatarUrl || undefined} />
-                                  <AvatarFallback>
-                                    {post.author?.displayName?.charAt(0).toUpperCase() || 'U'}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5">
-                                    {post.author?.displayName || '-'}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">{post.author?.email}</p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-4">
-                              <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5 line-clamp-1 max-w-xs">
-                                {post.thread?.title || '-'}
-                              </p>
-                            </td>
-                            <td className="px-4">
-                              <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
-                                {post._count?.replies || 0}
-                              </p>
-                            </td>
-                            <td className="px-4">
-                              <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
-                                {format(new Date(post.createdAt), 'dd MMM yyyy', { locale: fr })}
-                              </p>
-                            </td>
-                            <td className="px-4 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="w-[39.978px] h-[31.986px] rounded-[6px]"
-                                  asChild
-                                >
-                                  <Link href={`/${ADMIN_BASE_PATH}/community/posts/${post.id}`}>
-                                    <Eye className="w-4 h-4 text-muted-foreground" />
-                                  </Link>
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="w-[39.978px] h-[31.986px] rounded-[6px]"
-                                  onClick={() => handleDeletePost(post.id)}
-                                >
-                                  <Trash2 className="w-4 h-4 text-muted-foreground" />
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                              <p className="text-xs text-muted-foreground">{post.author?.email}</p>
+                            </div>
+                          </div>
+                        ),
+                      },
+                      {
+                        key: 'thread',
+                        content: (
+                          <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5 line-clamp-1 max-w-xs">
+                            {post.thread?.title || '-'}
+                          </p>
+                        ),
+                      },
+                      {
+                        key: 'replies',
+                        content: (
+                          <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
+                            {post._count?.replies || 0}
+                          </p>
+                        ),
+                      },
+                      {
+                        key: 'date',
+                        content: (
+                          <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
+                            {format(new Date(post.createdAt), 'dd MMM yyyy', { locale: fr })}
+                          </p>
+                        ),
+                      },
+                      {
+                        key: 'actions',
+                        content: (
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="w-[39.978px] h-[31.986px] rounded-[6px]"
+                              asChild
+                            >
+                              <Link href={`/${ADMIN_BASE_PATH}/community/posts/${post.id}`}>
+                                <Eye className="w-4 h-4 text-muted-foreground" />
+                              </Link>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="w-[39.978px] h-[31.986px] rounded-[6px]"
+                              onClick={() => handleDeletePost(post.id)}
+                            >
+                              <Trash2 className="w-4 h-4 text-muted-foreground" />
+                            </Button>
+                          </div>
+                        ),
+                      },
+                    ],
+                  }))}
+                />
+              )}
 
               {/* Pagination */}
               {postsData && postsData.totalPages > 1 && (

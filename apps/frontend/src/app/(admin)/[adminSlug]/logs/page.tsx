@@ -20,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { ResponsiveTable } from '@/components/admin/ResponsiveTable';
 
 function LogStatsCard({
   title,
@@ -33,20 +34,20 @@ function LogStatsCard({
   iconBg?: string;
 }) {
   return (
-    <Card className="h-[88.236px] pt-[17.138px] px-[17.138px] pb-[1.155px]">
-      <CardContent className="p-0 flex items-center gap-[11.997px] h-[53.959px]">
+    <Card className="h-auto min-h-[88px]">
+      <CardContent className="p-4 sm:p-5 flex items-center gap-3 sm:gap-4">
         <div
-          className={`relative rounded-[6px] shrink-0 size-[39.996px] flex items-center justify-center ${
+          className={`relative rounded-md shrink-0 w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center ${
             iconBg || 'bg-[#1a1a1c]'
           }`}
         >
-          <Icon className="w-[19.989px] h-[19.989px] text-[#9a9a9d]" />
+          <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-[#9a9a9d]" />
         </div>
-        <div className="flex flex-col gap-[1.984px]">
-          <p className="text-sm text-muted-foreground font-normal leading-[20px] tracking-[-0.1504px]">
+        <div className="flex flex-col gap-1 min-w-0 flex-1">
+          <p className="text-xs sm:text-sm text-muted-foreground font-normal leading-4 sm:leading-5">
             {title}
           </p>
-          <p className="text-2xl font-normal text-foreground leading-[32px] tracking-[0.0703px]">
+          <p className="text-xl sm:text-2xl font-normal text-foreground leading-7 sm:leading-8">
             {value}
           </p>
         </div>
@@ -178,7 +179,7 @@ export default function AdminLogsPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4 h-[88.236px]">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <LogStatsCard
           title="Total logs"
           value={totalLogs.toLocaleString()}
@@ -258,88 +259,77 @@ export default function AdminLogsPage() {
       </Card>
 
       {/* Logs Table */}
-      <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px] h-[679.079px]">
-        <CardContent className="p-0 h-full flex flex-col">
-          <div className="flex-1 overflow-hidden">
-            <Table className="w-full">
-              <TableHeader>
-                <TableRow className="border-b border-border h-[44.56px]">
-                  <TableHead className="text-left px-4 py-3 text-sm font-bold text-muted-foreground">
-                    Type
-                  </TableHead>
-                  <TableHead className="text-left px-4 py-3 text-sm font-bold text-muted-foreground">
-                    Horodatage
-                  </TableHead>
-                  <TableHead className="text-left px-4 py-3 text-sm font-bold text-muted-foreground">
-                    Utilisateur
-                  </TableHead>
-                  <TableHead className="text-left px-4 py-3 text-sm font-bold text-muted-foreground">
-                    Action
-                  </TableHead>
-                  <TableHead className="text-left px-4 py-3 text-sm font-bold text-muted-foreground">
-                    IP
-                  </TableHead>
-                  <TableHead className="text-left px-4 py-3 text-sm font-bold text-muted-foreground">
-                    Détails
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredLogs.length > 0 ? (
-                  filteredLogs.map((log: any, index: number) => {
-                    const isLast = index === filteredLogs.length - 1;
-                    return (
-                      <tr
-                        key={log.id}
-                        className={`${
-                          !isLast
-                            ? 'border-b border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)]'
-                            : ''
-                        } h-[73.1px]`}
-                      >
-                        <td className="px-4">{getTypeBadge(log.action || 'Info')}</td>
-                        <td className="px-4">
-                          <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
-                            {format(new Date(log.createdAt), 'yyyy-MM-dd HH:mm:ss', { locale: fr })}
-                          </p>
-                        </td>
-                        <td className="px-4">
-                          <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5">
-                            {log.admin?.email || log.adminId || 'system'}
-                          </p>
-                        </td>
-                        <td className="px-4">
-                          <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5">
-                            {log.action || 'N/A'}
-                          </p>
-                        </td>
-                        <td className="px-4">
-                          <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
-                            {log.meta?.ip || log.meta?.ipAddress || 'localhost'}
-                          </p>
-                        </td>
-                        <td className="px-4">
-                          <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
-                            {log.meta?.details ||
-                              log.meta?.message ||
-                              log.resourceId ||
-                              'Admin panel access'}
-                          </p>
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan={6} className="text-center py-4 text-sm text-muted-foreground">
-                      <Shield className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      Aucun log trouvé.
-                    </td>
-                  </tr>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+      <Card className="h-auto min-h-[400px] sm:min-h-[500px]">
+        <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6 pb-4 h-full flex flex-col">
+          {filteredLogs.length > 0 ? (
+            <ResponsiveTable
+              headers={[
+                { key: 'type', label: 'Type' },
+                { key: 'timestamp', label: 'Horodatage' },
+                { key: 'user', label: 'Utilisateur' },
+                { key: 'action', label: 'Action' },
+                { key: 'ip', label: 'IP' },
+                { key: 'details', label: 'Détails' },
+              ]}
+              rows={filteredLogs.map((log: any) => ({
+                key: log.id,
+                cells: [
+                  {
+                    key: 'type',
+                    content: getTypeBadge(log.action || 'Info'),
+                  },
+                  {
+                    key: 'timestamp',
+                    content: (
+                      <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
+                        {format(new Date(log.createdAt), 'yyyy-MM-dd HH:mm:ss', { locale: fr })}
+                      </p>
+                    ),
+                  },
+                  {
+                    key: 'user',
+                    content: (
+                      <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5">
+                        {log.admin?.email || log.adminId || 'system'}
+                      </p>
+                    ),
+                  },
+                  {
+                    key: 'action',
+                    content: (
+                      <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5">
+                        {log.action || 'N/A'}
+                      </p>
+                    ),
+                  },
+                  {
+                    key: 'ip',
+                    content: (
+                      <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
+                        {log.meta?.ip || log.meta?.ipAddress || 'localhost'}
+                      </p>
+                    ),
+                  },
+                  {
+                    key: 'details',
+                    content: (
+                      <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
+                        {log.meta?.details ||
+                          log.meta?.message ||
+                          log.resourceId ||
+                          'Admin panel access'}
+                      </p>
+                    ),
+                  },
+                ],
+              }))}
+            />
+          ) : (
+            <div className="text-center py-12">
+              <Shield className="w-12 h-12 mx-auto mb-4 opacity-50 text-[#6f6f73] dark:text-[#9a9a9d]" />
+              <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d]">Aucun log trouvé</p>
+            </div>
+          )}
 
           {/* Pagination */}
           {data && data.totalPages > 1 && (

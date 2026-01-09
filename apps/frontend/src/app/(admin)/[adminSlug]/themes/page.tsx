@@ -51,20 +51,20 @@ function ThemeStatsCard({
   iconBg?: string;
 }) {
   return (
-    <Card className="h-[88.236px] pt-[17.138px] px-[17.138px] pb-[1.155px]">
-      <CardContent className="p-0 flex items-center gap-[11.997px] h-[53.959px]">
+    <Card className="h-auto min-h-[88px]">
+      <CardContent className="p-4 sm:p-5 flex items-center gap-3 sm:gap-4">
         <div
-          className={`relative rounded-[6px] shrink-0 size-[39.996px] flex items-center justify-center ${
+          className={`relative rounded-md shrink-0 w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center ${
             iconBg || 'bg-[rgba(45,90,69,0.1)]'
           }`}
         >
-          <Icon className="w-[19.989px] h-[19.989px] text-[#2d5a45]" />
+          <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-[#2d5a45]" />
         </div>
-        <div className="flex flex-col gap-[1.984px]">
-          <p className="text-sm text-muted-foreground font-normal leading-[20px] tracking-[-0.1504px]">
+        <div className="flex flex-col gap-1 min-w-0 flex-1">
+          <p className="text-xs sm:text-sm text-muted-foreground font-normal leading-4 sm:leading-5">
             {title}
           </p>
-          <p className="text-2xl font-normal text-foreground leading-[32px] tracking-[0.0703px]">
+          <p className="text-xl sm:text-2xl font-normal text-foreground leading-7 sm:leading-8">
             {value}
           </p>
         </div>
@@ -223,7 +223,7 @@ export default function AdminThemesPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-3 gap-4 h-[88.236px]">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <ThemeStatsCard
           title="Thèmes actifs"
           value={activeThemesCount}

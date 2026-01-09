@@ -34,21 +34,21 @@ function EcoImpactCard({
   icon: React.ElementType;
 }) {
   return (
-    <Card className="h-[138.244px] pt-[25.148px] px-[25.148px] pb-[1.155px]">
-      <CardContent className="p-0 flex items-start justify-between h-[87.947px]">
-        <div className="flex flex-col gap-[7.992px]">
-          <p className="text-sm text-muted-foreground font-normal leading-[20px] tracking-[-0.1504px]">
+    <Card className="h-auto min-h-[138px]">
+      <CardContent className="p-4 sm:p-6 flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-2 min-w-0 flex-1">
+          <p className="text-xs sm:text-sm text-muted-foreground font-normal leading-4 sm:leading-5">
             {title}
           </p>
-          <p className="text-[30px] font-normal text-foreground leading-[36px] tracking-[-0.3545px]">
+          <p className="text-2xl sm:text-[30px] font-normal text-foreground leading-7 sm:leading-[36px]">
             {value}
           </p>
           {change && (
-            <p className="text-xs font-normal text-[#2d5a45] leading-[16px]">{change}</p>
+            <p className="text-xs font-normal text-[#2d5a45] leading-4">{change}</p>
           )}
         </div>
-        <div className="bg-[rgba(45,90,69,0.1)] rounded-[8px] size-[47.988px] flex items-center justify-center shrink-0">
-          <Icon className="w-[23.994px] h-[23.994px] text-[#2d5a45]" />
+        <div className="bg-[rgba(45,90,69,0.1)] rounded-lg w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center shrink-0">
+          <Icon className="w-6 h-6 sm:w-7 sm:h-7 text-[#2d5a45]" />
         </div>
       </CardContent>
     </Card>
@@ -57,12 +57,12 @@ function EcoImpactCard({
 
 function EcoStatsCard({ title, value }: { title: string; value: string | number }) {
   return (
-    <Card className="h-[90.238px] pt-[17.138px] px-[17.138px] pb-[1.155px]">
-      <CardContent className="flex flex-col gap-[3.987px] p-0">
-        <p className="text-sm text-muted-foreground font-normal leading-[20px] tracking-[-0.1504px]">
+    <Card className="h-auto min-h-[90px]">
+      <CardContent className="flex flex-col gap-1 p-4 sm:p-5">
+        <p className="text-xs sm:text-sm text-muted-foreground font-normal leading-4 sm:leading-5">
           {title}
         </p>
-        <p className="text-2xl font-normal text-foreground leading-[32px] tracking-[0.0703px]">
+        <p className="text-xl sm:text-2xl font-normal text-foreground leading-7 sm:leading-8">
           {value}
         </p>
       </CardContent>
@@ -156,7 +156,7 @@ export default function AdminEcoPage() {
         <h3 className="text-base font-normal text-foreground leading-[24px] tracking-[-0.3125px]">
           Impact environnemental
         </h3>
-        <div className="grid grid-cols-3 gap-4 h-[138.244px]">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <EcoImpactCard
             title="CO₂ économisé"
             value={ecoAnalytics.co2Saved}
@@ -179,7 +179,7 @@ export default function AdminEcoPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4 h-[90.238px]">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <EcoStatsCard title="Total contenus" value={ecoAnalytics.total} />
         <EcoStatsCard title="Publiés" value={ecoAnalytics.published} />
         <EcoStatsCard title="Brouillons" value={ecoAnalytics.drafts} />

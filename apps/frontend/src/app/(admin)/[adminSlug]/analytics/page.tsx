@@ -28,12 +28,12 @@ function StatsCard({
   icon: React.ReactNode;
 }) {
   return (
-    <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px] hover:shadow-md transition-shadow">
-      <CardHeader className="p-0 mb-6">
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            <CardDescription className="text-sm text-muted-foreground font-normal">{title}</CardDescription>
-            <CardTitle className="text-3xl tracking-tight text-foreground">{value}</CardTitle>
+    <Card className="h-auto min-h-[120px] p-4 sm:p-6 hover:shadow-md transition-shadow">
+      <CardHeader className="p-0 mb-4 sm:mb-6">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1 sm:space-y-2 min-w-0 flex-1">
+            <CardDescription className="text-xs sm:text-sm text-muted-foreground font-normal">{title}</CardDescription>
+            <CardTitle className="text-2xl sm:text-3xl tracking-tight text-foreground">{value}</CardTitle>
             {change && (
               <p
                 className={`text-xs flex items-center gap-1 ${
@@ -168,27 +168,27 @@ export default function AdminAnalyticsPage() {
 
         {/* Users Tab */}
         <TabsContent value="users" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
-              <CardHeader className="p-0 mb-6">
-                <CardDescription className="text-sm text-muted-foreground font-normal">Total utilisateurs</CardDescription>
-                <CardTitle className="text-2xl text-foreground">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Card className="h-auto min-h-[100px] p-4 sm:p-6">
+              <CardHeader className="p-0 mb-4 sm:mb-6">
+                <CardDescription className="text-xs sm:text-sm text-muted-foreground font-normal">Total utilisateurs</CardDescription>
+                <CardTitle className="text-xl sm:text-2xl text-foreground">
                   {userAnalytics?.total?.toLocaleString() || '0'}
                 </CardTitle>
               </CardHeader>
             </Card>
-            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
-              <CardHeader className="p-0 mb-6">
-                <CardDescription className="text-sm text-muted-foreground font-normal">Utilisateurs actifs</CardDescription>
-                <CardTitle className="text-2xl text-foreground">
+            <Card className="h-auto min-h-[100px] p-4 sm:p-6">
+              <CardHeader className="p-0 mb-4 sm:mb-6">
+                <CardDescription className="text-xs sm:text-sm text-muted-foreground font-normal">Utilisateurs actifs</CardDescription>
+                <CardTitle className="text-xl sm:text-2xl text-foreground">
                   {userAnalytics?.active?.toLocaleString() || '0'}
                 </CardTitle>
               </CardHeader>
             </Card>
-            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
-              <CardHeader className="p-0 mb-6">
-                <CardDescription className="text-sm text-muted-foreground font-normal">Utilisateurs bannis</CardDescription>
-                <CardTitle className="text-2xl text-foreground">
+            <Card className="h-auto min-h-[100px] p-4 sm:p-6">
+              <CardHeader className="p-0 mb-4 sm:mb-6">
+                <CardDescription className="text-xs sm:text-sm text-muted-foreground font-normal">Utilisateurs bannis</CardDescription>
+                <CardTitle className="text-xl sm:text-2xl text-foreground">
                   {userAnalytics?.banned?.toLocaleString() || '0'}
                 </CardTitle>
               </CardHeader>
@@ -196,8 +196,8 @@ export default function AdminAnalyticsPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
-              <CardHeader className="p-0 mb-6">
+            <Card className="h-auto min-h-[200px] p-4 sm:p-6">
+              <CardHeader className="p-0 mb-4 sm:mb-6">
                 <CardTitle className="text-base font-normal text-foreground">Engagement utilisateurs</CardTitle>
                 <CardDescription className="text-sm text-muted-foreground font-normal">Statistiques d'activité</CardDescription>
               </CardHeader>

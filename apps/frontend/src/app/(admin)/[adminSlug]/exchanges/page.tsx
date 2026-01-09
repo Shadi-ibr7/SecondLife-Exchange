@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ResponsiveTable } from '@/components/admin/ResponsiveTable';
 
 export default function AdminExchangesPage() {
   const queryClient = useQueryClient();
@@ -119,25 +120,25 @@ export default function AdminExchangesPage() {
         <p className="admin-page-description">Suivi et administration des transactions entre utilisateurs</p>
       </div>
 
-      {/* Stats Cards - 5 cartes selon Figma (grille 2x3) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="h-[74px]">
-          <CardContent className="pt-[13px] px-[13px] pb-[1px] h-full flex flex-col gap-1">
+      {/* Stats Cards - 5 cartes selon Figma (grille responsive) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Card className="h-auto min-h-[74px]">
+          <CardContent className="pt-3 sm:pt-4 px-3 sm:px-4 pb-3 sm:pb-4 h-full flex flex-col gap-1">
             <p className="text-xs text-[#6f6f73] dark:text-[#9a9a9d] font-normal leading-4">
               Total échanges
             </p>
-            <p className="text-xl font-normal text-[#1e1e20] dark:text-[#ececed] leading-7">
+            <p className="text-lg sm:text-xl font-normal text-[#1e1e20] dark:text-[#ececed] leading-6 sm:leading-7">
               {exchangeAnalytics?.total?.toLocaleString() || data?.total?.toLocaleString() || '0'}
             </p>
           </CardContent>
         </Card>
-        <Card className="h-[74px]">
-          <CardContent className="pt-[13px] px-[13px] pb-[1px] h-full flex flex-col gap-1">
+        <Card className="h-auto min-h-[74px]">
+          <CardContent className="pt-3 sm:pt-4 px-3 sm:px-4 pb-3 sm:pb-4 h-full flex flex-col gap-1">
             <p className="text-xs text-[#6f6f73] dark:text-[#9a9a9d] font-normal leading-4">
               Complétés
             </p>
             <div className="flex items-baseline gap-2">
-              <p className="text-xl font-normal text-[#1e1e20] dark:text-[#ececed] leading-7">
+              <p className="text-lg sm:text-xl font-normal text-[#1e1e20] dark:text-[#ececed] leading-6 sm:leading-7">
                 {(() => {
                   const completed = exchangeAnalytics?.byStatus?.find(
                     (s: any) => s.status === 'COMPLETED'
@@ -164,12 +165,12 @@ export default function AdminExchangesPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="h-[74px]">
-          <CardContent className="pt-[13px] px-[13px] pb-[1px] h-full flex flex-col gap-1">
+        <Card className="h-auto min-h-[74px]">
+          <CardContent className="pt-3 sm:pt-4 px-3 sm:px-4 pb-3 sm:pb-4 h-full flex flex-col gap-1">
             <p className="text-xs text-[#6f6f73] dark:text-[#9a9a9d] font-normal leading-4">
               En attente
             </p>
-            <p className="text-xl font-normal text-[#1e1e20] dark:text-[#ececed] leading-7">
+            <p className="text-lg sm:text-xl font-normal text-[#1e1e20] dark:text-[#ececed] leading-6 sm:leading-7">
               {(() => {
                 const pending = exchangeAnalytics?.byStatus?.find(
                   (s: any) => s.status === 'PENDING' || s.status === 'ACCEPTED'
@@ -185,22 +186,22 @@ export default function AdminExchangesPage() {
             </p>
           </CardContent>
         </Card>
-        <Card className="h-[74px]">
-          <CardContent className="pt-[13px] px-[13px] pb-[1px] h-full flex flex-col gap-1">
+        <Card className="h-auto min-h-[74px]">
+          <CardContent className="pt-3 sm:pt-4 px-3 sm:px-4 pb-3 sm:pb-4 h-full flex flex-col gap-1">
             <p className="text-xs text-[#6f6f73] dark:text-[#9a9a9d] font-normal leading-4">
               Litiges
             </p>
-            <p className="text-xl font-normal text-[#1e1e20] dark:text-[#ececed] leading-7">
+            <p className="text-lg sm:text-xl font-normal text-[#1e1e20] dark:text-[#ececed] leading-6 sm:leading-7">
               {data?.exchanges?.filter((e: any) => e.status === 'DISPUTE').length || 0}
             </p>
           </CardContent>
         </Card>
-        <Card className="h-[74px]">
-          <CardContent className="pt-[13px] px-[13px] pb-[1px] h-full flex flex-col gap-1">
+        <Card className="h-auto min-h-[74px]">
+          <CardContent className="pt-3 sm:pt-4 px-3 sm:px-4 pb-3 sm:pb-4 h-full flex flex-col gap-1">
             <p className="text-xs text-[#6f6f73] dark:text-[#9a9a9d] font-normal leading-4">
               Valeur totale
             </p>
-            <p className="text-xl font-normal text-[#1e1e20] dark:text-[#ececed] leading-7">
+            <p className="text-lg sm:text-xl font-normal text-[#1e1e20] dark:text-[#ececed] leading-6 sm:leading-7">
               {(() => {
                 // Calculer la valeur totale des échanges complétés
                 const completedExchanges =
@@ -298,7 +299,7 @@ export default function AdminExchangesPage() {
 
       {/* Exchanges Table - selon Figma */}
       <Card>
-        <CardContent className="pt-[25px] px-[25px] pb-[1px]">
+        <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6 pb-4">
           <div className="mb-4">
             <h3 className="text-base font-normal text-[#1e1e20] dark:text-[#ececed] leading-6 mb-1">
               Liste des échanges
@@ -312,114 +313,107 @@ export default function AdminExchangesPage() {
               <ArrowLeftRight className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>Aucun échange trouvé</p>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] h-[44.5px]">
-                    <th className="text-left px-4 py-3">
-                      <p className="text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d] leading-5">De</p>
-                    </th>
-                    <th className="text-left px-4 py-3 w-[65px]">
-                      {/* Icône flèche */}
-                    </th>
-                    <th className="text-left px-4 py-3">
-                      <p className="text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d] leading-5">Vers</p>
-                    </th>
-                    <th className="text-left px-4 py-3">
-                      <p className="text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
-                        Objets échangés
-                      </p>
-                    </th>
-                    <th className="text-left px-4 py-3">
-                      <p className="text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d] leading-5">Statut</p>
-                    </th>
-                    <th className="text-right px-4 py-3">
-                      <p className="text-sm font-bold text-[#6f6f73] dark:text-[#9a9a9d] leading-5">Actions</p>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data?.exchanges?.map((exchange: any, index: number) => {
-                    const isLast = index === (data?.exchanges?.length || 0) - 1;
-                    return (
-                      <tr
-                        key={exchange.id}
-                        className={`${
-                          !isLast
-                            ? 'border-b border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)]'
-                            : ''
-                        } h-[77px]`}
+          ) : data?.exchanges && data.exchanges.length > 0 ? (
+            <ResponsiveTable
+              headers={[
+                { key: 'from', label: 'De' },
+                { key: 'arrow', label: '' },
+                { key: 'to', label: 'Vers' },
+                { key: 'items', label: 'Objets échangés' },
+                { key: 'status', label: 'Statut' },
+                { key: 'actions', label: 'Actions', align: 'right' },
+              ]}
+              rows={data.exchanges.map((exchange: any) => ({
+                key: exchange.id,
+                cells: [
+                  {
+                    key: 'from',
+                    content: (
+                      <div className="flex items-center gap-2">
+                        <Avatar className="w-8 h-8 bg-[#1a1a1c] dark:bg-[#1a1a1c]">
+                          <AvatarImage src={exchange.requester?.avatarUrl || undefined} />
+                          <AvatarFallback className="text-[#9a9a9d] text-xs">
+                            {exchange.requester?.displayName
+                              ?.split(' ')
+                              .map((n: string) => n[0])
+                              .join('')
+                              .toUpperCase()
+                              .slice(0, 2) || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5">
+                          {exchange.requester?.displayName || '-'}
+                        </p>
+                      </div>
+                    ),
+                  },
+                  {
+                    key: 'arrow',
+                    content: (
+                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-[#1a1a1c] dark:bg-[#1a1a1c]">
+                        <ArrowLeftRight className="w-3.5 h-3.5 text-[#9a9a9d] dark:text-[#9a9a9d]" />
+                      </div>
+                    ),
+                  },
+                  {
+                    key: 'to',
+                    content: (
+                      <div className="flex items-center gap-2">
+                        <Avatar className="w-8 h-8 bg-[#1a1a1c] dark:bg-[#1a1a1c]">
+                          <AvatarImage src={exchange.responder?.avatarUrl || undefined} />
+                          <AvatarFallback className="text-[#9a9a9d] text-xs">
+                            {exchange.responder?.displayName
+                              ?.split(' ')
+                              .map((n: string) => n[0])
+                              .join('')
+                              .toUpperCase()
+                              .slice(0, 2) || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5">
+                          {exchange.responder?.displayName || '-'}
+                        </p>
+                      </div>
+                    ),
+                  },
+                  {
+                    key: 'items',
+                    content: (
+                      <div className="flex flex-col gap-1">
+                        <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5">
+                          {exchange.requestedItem?.title || exchange.requestedItemTitle || '-'}
+                        </p>
+                        <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
+                          ↔ {exchange.offeredItem?.title || exchange.offeredItemTitle || '-'}
+                        </p>
+                      </div>
+                    ),
+                  },
+                  {
+                    key: 'status',
+                    content: getStatusBadge(exchange.status),
+                  },
+                  {
+                    key: 'actions',
+                    content: (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-md"
+                        asChild
                       >
-                        <td className="px-4">
-                          <div className="flex items-center gap-2">
-                            <Avatar className="w-8 h-8 bg-[#1a1a1c] dark:bg-[#1a1a1c]">
-                              <AvatarImage src={exchange.requester?.avatarUrl || undefined} />
-                              <AvatarFallback className="text-[#9a9a9d] text-xs">
-                                {exchange.requester?.displayName
-                                  ?.split(' ')
-                                  .map((n: string) => n[0])
-                                  .join('')
-                                  .toUpperCase()
-                                  .slice(0, 2) || 'U'}
-                              </AvatarFallback>
-                            </Avatar>
-                            <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5">
-                              {exchange.requester?.displayName || '-'}
-                            </p>
-                          </div>
-                        </td>
-                        <td className="px-4">
-                          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-[#1a1a1c] dark:bg-[#1a1a1c]">
-                            <ArrowLeftRight className="w-3.5 h-3.5 text-[#9a9a9d] dark:text-[#9a9a9d]" />
-                          </div>
-                        </td>
-                        <td className="px-4">
-                          <div className="flex items-center gap-2">
-                            <Avatar className="w-8 h-8 bg-[#1a1a1c] dark:bg-[#1a1a1c]">
-                              <AvatarImage src={exchange.responder?.avatarUrl || undefined} />
-                              <AvatarFallback className="text-[#9a9a9d] text-xs">
-                                {exchange.responder?.displayName
-                                  ?.split(' ')
-                                  .map((n: string) => n[0])
-                                  .join('')
-                                  .toUpperCase()
-                                  .slice(0, 2) || 'U'}
-                              </AvatarFallback>
-                            </Avatar>
-                            <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5">
-                              {exchange.responder?.displayName || '-'}
-                            </p>
-                          </div>
-                        </td>
-                        <td className="px-4">
-                          <div className="flex flex-col gap-1">
-                            <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5">
-                              {exchange.requestedItem?.title || exchange.requestedItemTitle || '-'}
-                            </p>
-                            <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
-                              ↔ {exchange.offeredItem?.title || exchange.offeredItemTitle || '-'}
-                            </p>
-                          </div>
-                        </td>
-                        <td className="px-4">{getStatusBadge(exchange.status)}</td>
-                        <td className="px-4 text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-md"
-                            asChild
-                          >
-                            <Link href={`/${ADMIN_BASE_PATH}/exchanges/${exchange.id}`}>
-                              <Eye className="w-4 h-4" />
-                            </Link>
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                        <Link href={`/${ADMIN_BASE_PATH}/exchanges/${exchange.id}`}>
+                          <Eye className="w-4 h-4" />
+                        </Link>
+                      </Button>
+                    ),
+                  },
+                ],
+              }))}
+            />
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d]">Aucun échange trouvé</p>
             </div>
           )}
 

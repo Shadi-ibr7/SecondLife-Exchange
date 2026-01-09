@@ -37,12 +37,12 @@ function StatsCard({
   icon: React.ReactNode;
 }) {
   return (
-    <Card className="h-[88px]">
-      <CardContent className="pt-[25px] px-[25px] pb-0 h-full">
-        <div className="flex items-start justify-between h-full">
-          <div className="flex flex-col gap-2 h-full">
-            <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal leading-5">{title}</p>
-            <p className="text-[30px] font-normal text-[#1e1e20] dark:text-[#ececed] leading-[36px] tracking-[-0.3545px]">
+    <Card className="h-auto min-h-[88px]">
+      <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6 pb-4 h-full">
+        <div className="flex items-start justify-between h-full gap-3">
+          <div className="flex flex-col gap-1.5 sm:gap-2 h-full min-w-0 flex-1">
+            <p className="text-xs sm:text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal leading-4 sm:leading-5">{title}</p>
+            <p className="text-2xl sm:text-[30px] font-normal text-[#1e1e20] dark:text-[#ececed] leading-7 sm:leading-[36px] tracking-[-0.3545px]">
               {value}
             </p>
             {change && (
@@ -169,8 +169,8 @@ export default function AdminDashboardPage() {
         </p>
       </div>
 
-      {/* KPI Cards - Grid 2x2 selon Figma */}
-      <div className="grid grid-cols-2 gap-4 h-[292px]">
+      {/* KPI Cards - Grid responsive selon Figma */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <StatsCard
           title="Utilisateurs totaux"
           value={stats?.totalUsers?.toLocaleString() || '0'}
@@ -201,26 +201,26 @@ export default function AdminDashboardPage() {
         />
       </div>
 
-      {/* Charts Section - Grid 1x2 selon Figma */}
-      <div className="grid grid-cols-1 gap-4 h-[620px]">
+      {/* Charts Section - Grid responsive */}
+      <div className="grid grid-cols-1 gap-4">
         {/* Graphique Utilisateurs actifs */}
-        <Card className="h-[252px]">
-          <CardContent className="pt-[25px] px-[25px] pb-0 h-full flex flex-col gap-4">
-            <div className="flex items-center justify-between h-[44px]">
-              <div className="h-full">
-                <h3 className="text-base font-normal text-[#1e1e20] dark:text-[#ececed] leading-6 mb-1">
+        <Card className="h-auto min-h-[220px] sm:min-h-[280px]">
+          <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6 pb-4 h-full flex flex-col gap-3 sm:gap-4">
+            <div className="flex items-center justify-between min-h-[44px]">
+              <div>
+                <h3 className="text-sm sm:text-base font-normal text-[#1e1e20] dark:text-[#ececed] leading-5 sm:leading-6 mb-1">
                   Utilisateurs actifs
                 </h3>
-                <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal leading-5">
+                <p className="text-xs sm:text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal leading-4 sm:leading-5">
                   30 derniers jours
                 </p>
               </div>
-              <button className="w-5 h-5 text-[#6f6f73] dark:text-[#9a9a9d] hover:text-[#1e1e20] dark:hover:text-[#ececed] transition-colors">
+              <button className="w-5 h-5 text-[#6f6f73] dark:text-[#9a9a9d] hover:text-[#1e1e20] dark:hover:text-[#ececed] transition-colors flex-shrink-0">
                 <MoreVertical className="w-5 h-5" strokeWidth={1.5} />
               </button>
             </div>
             {/* Graphique Utilisateurs actifs - 30 derniers jours */}
-            <div className="h-[192px] w-full">
+            <div className="h-[180px] sm:h-[200px] lg:h-[220px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
                   data={(() => {
@@ -246,18 +246,20 @@ export default function AdminDashboardPage() {
                   />
                   <XAxis
                     dataKey="day"
-                    tick={{ fill: '#6f6f73', fontSize: 12 }}
+                    tick={{ fill: '#6f6f73', fontSize: 10 }}
                     className="dark:[&_text]:fill-[#9a9a9d]"
                     axisLine={false}
                     tickLine={false}
+                    interval="preserveStartEnd"
                   />
                   <YAxis
-                    tick={{ fill: '#6f6f73', fontSize: 12 }}
+                    tick={{ fill: '#6f6f73', fontSize: 10 }}
                     className="dark:[&_text]:fill-[#9a9a9d]"
                     axisLine={false}
                     tickLine={false}
                     domain={[0, 800]}
                     ticks={[0, 200, 400, 600, 800]}
+                    width={40}
                   />
                   <Tooltip
                     contentStyle={{
@@ -282,18 +284,18 @@ export default function AdminDashboardPage() {
         </Card>
 
         {/* Graphique Objets par catégorie */}
-        <Card className="h-[252px]">
-          <CardContent className="pt-[25px] px-[25px] pb-0 h-full flex flex-col gap-4">
-            <div className="h-[44px]">
-              <h3 className="text-base font-normal text-[#1e1e20] dark:text-[#ececed] leading-6 mb-1">
+        <Card className="h-auto min-h-[220px] sm:min-h-[280px]">
+          <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6 pb-4 h-full flex flex-col gap-3 sm:gap-4">
+            <div className="min-h-[44px]">
+              <h3 className="text-sm sm:text-base font-normal text-[#1e1e20] dark:text-[#ececed] leading-5 sm:leading-6 mb-1">
                 Objets par catégorie
               </h3>
-              <p className="text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal leading-5">
+              <p className="text-xs sm:text-sm text-[#6f6f73] dark:text-[#9a9a9d] font-normal leading-4 sm:leading-5">
                 Distribution actuelle
               </p>
             </div>
             {/* Graphique Objets par catégorie - Bar chart */}
-            <div className="h-[192px] w-full">
+            <div className="h-[180px] sm:h-[200px] lg:h-[220px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={(() => {
@@ -320,18 +322,22 @@ export default function AdminDashboardPage() {
                   />
                   <XAxis
                     dataKey="name"
-                    tick={{ fill: '#6f6f73', fontSize: 11 }}
+                    tick={{ fill: '#6f6f73', fontSize: 9 }}
                     className="dark:[&_text]:fill-[#9a9a9d]"
                     axisLine={false}
                     tickLine={false}
+                    angle={-45}
+                    textAnchor="end"
+                    height={60}
                   />
                   <YAxis
-                    tick={{ fill: '#6f6f73', fontSize: 12 }}
+                    tick={{ fill: '#6f6f73', fontSize: 10 }}
                     className="dark:[&_text]:fill-[#9a9a9d]"
                     axisLine={false}
                     tickLine={false}
                     domain={[0, 3000]}
                     ticks={[0, 750, 1500, 2250, 3000]}
+                    width={40}
                   />
                   <Tooltip
                     contentStyle={{
@@ -350,8 +356,8 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Table Activité récente */}
-      <Card className="h-[421.5px]">
-        <CardContent className="pt-[25px] px-[25px] pb-0 h-full flex flex-col">
+      <Card className="h-auto min-h-[300px] sm:min-h-[400px]">
+        <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6 pb-4 h-full flex flex-col">
           <div className="h-[44px] mb-4">
             <h3 className="text-base font-normal text-[#1e1e20] dark:text-[#ececed] leading-6 mb-1">
               Activité récente
