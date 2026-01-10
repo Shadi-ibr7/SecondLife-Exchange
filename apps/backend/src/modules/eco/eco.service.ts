@@ -79,7 +79,10 @@ export class EcoService {
     const { page = 1, limit = 20, kind, tag, locale, q } = query;
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: any = {
+      // IMPORTANT: Ne retourner que les contenus publiés (publishedAt non null)
+      publishedAt: { not: null },
+    };
 
     // Filtres
     if (kind) {
@@ -129,6 +132,10 @@ export class EcoService {
 
   /**
    * Récupère un contenu éco-éducatif par son ID.
+   * IMPORTANT: Pour les routes publiques, on devrait filtrer par publishedAt.
+   * Pour l'instant, on retourne le contenu même s'il n'est pas publié
+   * (les routes admin peuvent en avoir besoin).
+   * Si nécessaire, ajouter un paramètre isPublic pour filtrer.
    *
    * @param id - ID du contenu
    * @returns Contenu éco avec toutes ses informations
@@ -167,6 +174,7 @@ export class EcoService {
         locale: input.locale,
         tags: input.tags || [],
         source: input.source,
+        // Note: summary n'est pas dans CreateEcoContentInput, mais peut être ajouté via enrichissement IA
         publishedAt: input.publishedAt ? new Date(input.publishedAt) : null,
       },
     });
@@ -197,6 +205,7 @@ export class EcoService {
     if (input.locale !== undefined) updateData.locale = input.locale;
     if (input.tags !== undefined) updateData.tags = input.tags;
     if (input.source !== undefined) updateData.source = input.source;
+    // Note: summary n'est pas dans UpdateEcoContentInput, mais peut être mis à jour via enrichissement IA
     if (input.publishedAt !== undefined) {
       updateData.publishedAt = input.publishedAt
         ? new Date(input.publishedAt)

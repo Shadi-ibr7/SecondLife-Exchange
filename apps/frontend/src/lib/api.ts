@@ -121,16 +121,38 @@ class ApiClient {
      * axios.create() crée une nouvelle instance avec des paramètres par défaut
      * qui seront appliqués à toutes les requêtes faites avec cette instance
      */
+
+    /**
+     * Construire l'URL de base de l'API
+     * Le backend a un préfixe global /api/v1, donc on doit l'inclure
+     */
+    const getApiBaseURL = () => {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      // Si l'URL contient déjà /api/v1, ne pas l'ajouter deux fois
+      if (apiUrl.includes('/api/v1')) {
+        return apiUrl;
+      }
+      // Sinon, ajouter /api/v1
+      return `${apiUrl}/api/v1`;
+    };
+
+    const baseURL = getApiBaseURL();
+
+    // Log pour déboguer en développement
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔧 API Base URL:', baseURL);
+    }
+
     this.client = axios.create({
       /**
        * URL de base de l'API
        * - process.env.NEXT_PUBLIC_API_URL: variable d'environnement (ex: https://api.example.com)
        * - Fallback: http://localhost:4000/api/v1 (pour le développement local)
+       * - S'assure que /api/v1 est toujours présent dans l'URL
        *
        * NOTE: NEXT_PUBLIC_* permet d'exposer la variable au client (browser)
        */
-      baseURL:
-        process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1',
+      baseURL,
 
       /**
        * Timeout de 10 secondes (10000 millisecondes)
@@ -1164,6 +1186,74 @@ class ApiClient {
    */
   async getUserStats() {
     const response = await this.client.get('/users/me/stats');
+    return response.data;
+  }
+
+  // ============================================
+  // ENDPOINTS CONTENUS ÉCO (PUBLIC)
+  // ============================================
+
+  /**
+   * Récupère la liste des contenus éco-éducatifs publiés.
+   * Endpoint public sans authentification.
+   *
+   * @param params - Paramètres de filtrage et pagination
+   * @returns Liste paginée de contenus éco
+   */
+  async getEcoContent(params?: {
+    page?: number;
+    limit?: number;
+    kind?: string;
+    tag?: string;
+    locale?: string;
+    q?: string;
+  }): Promise<{
+    items: EcoContent[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const response = await this.client.get('/eco', { params });
+    return response.data;
+  }
+
+  /**
+   * Récupère un contenu éco par son ID.
+   * Endpoint public sans authentification.
+   *
+   * @param id - ID du contenu éco
+   * @returns Détails du contenu éco
+   */
+  async getEcoContentById(id: string): Promise<EcoContent> {
+    const response = await this.client.get(`/eco/${id}`);
+    return response.data;
+  }
+
+  /**
+   * Récupère les tags populaires des contenus éco.
+   * Endpoint public sans authentification.
+   *
+   * @param limit - Nombre de tags à retourner (défaut: 20)
+   * @returns Liste des tags populaires
+   */
+  async getEcoTags(limit?: number): Promise<string[]> {
+    const response = await this.client.get('/eco/tags', { params: { limit } });
+    return response.data;
+  }
+
+  /**
+   * Récupère les statistiques des contenus éco.
+   * Endpoint public sans authentification.
+   *
+   * @returns Statistiques des contenus
+   */
+  async getEcoStats(): Promise<{
+    total: number;
+    byKind: Record<string, number>;
+    byLocale: Record<string, number>;
+  }> {
+    const response = await this.client.get('/eco/stats');
     return response.data;
   }
 }
