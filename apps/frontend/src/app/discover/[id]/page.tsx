@@ -401,7 +401,7 @@ export default function ArticleDetailPage() {
           </p>
           {article.tags.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-2">
-              {article.tags.slice(0, 5).map((tag, index) => (
+              {article.tags.slice(0, 5).map((tag: string, index: number) => (
                 <span
                   key={index}
                   className="rounded-lg border border-[rgba(16,185,129,0.25)] bg-white/60 px-2.5 py-1 text-xs font-medium text-[#10b981] dark:border-[rgba(16,185,129,0.35)] dark:bg-[#121216]/60"
@@ -471,7 +471,7 @@ export default function ArticleDetailPage() {
               </div>
               <ul className="space-y-2.5">
                 {keyFigures.length > 0 ? (
-                  keyFigures.map((figure, index) => (
+                  keyFigures.map((figure: string, index: number) => (
                     <li
                       key={index}
                       className="text-sm leading-[1.7] text-[#52525b] dark:text-[#a1a1aa] sm:text-base"
@@ -517,7 +517,7 @@ export default function ArticleDetailPage() {
           {/* Tags */}
           {article.tags.length > 0 && (
             <div className="my-6 flex flex-wrap gap-2 sm:my-8">
-              {article.tags.map((tag, index) => (
+              {article.tags.map((tag: string, index: number) => (
                 <span
                   key={index}
                   className="rounded-lg border border-[#e4e4e7] bg-[#fafafa] px-3 py-1.5 text-xs font-medium text-[#52525b] transition-colors hover:border-[#10b981] hover:bg-[#f0fdf4] dark:border-[#27272a] dark:bg-[#121216] dark:text-[#a1a1aa] dark:hover:border-[#10b981] dark:hover:bg-[#0a1f0f]"
@@ -597,7 +597,7 @@ export default function ArticleDetailPage() {
 
           {similarArticles.length > 0 ? (
             <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {similarArticles.map((similarArticle) => (
+              {similarArticles.map((similarArticle: any) => (
                 <ArticleCard key={similarArticle.id} {...similarArticle} />
               ))}
             </div>

@@ -51,6 +51,8 @@ import {
   LoginDto,
   RegisterDto,
   UpdateProfileDto,
+  EcoContent,
+  PaginatedEcoContentResponse,
 } from '@/types';
 
 /**
@@ -1207,14 +1209,8 @@ class ApiClient {
     tag?: string;
     locale?: string;
     q?: string;
-  }): Promise<{
-    items: EcoContent[];
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  }> {
-    const response = await this.client.get('/eco', { params });
+  }): Promise<PaginatedEcoContentResponse> {
+    const response = await this.client.get<PaginatedEcoContentResponse>('/eco', { params });
     return response.data;
   }
 

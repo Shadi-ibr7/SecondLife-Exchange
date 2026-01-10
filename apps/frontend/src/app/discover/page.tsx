@@ -22,7 +22,7 @@ import { ArticleCard } from '@/components/discover/ArticleCard';
 import { Sparkles, ArrowRight, FileText, Inbox, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { ecoApi } from '@/lib/eco.api';
-import { EcoContent } from '@/types';
+import { EcoContent, PaginatedEcoContentResponse } from '@/types';
 
 // Mapping des tags/kind vers les catégories d'affichage
 const categoryMapping: Record<string, string> = {
@@ -40,8 +40,8 @@ const categoryMapping: Record<string, string> = {
   'innovation': 'IA & innovation',
 };
 
-// Fonction utilitaire pour mapper un contenu EcoContent vers ArticleCard
-function mapEcoContentToArticle(content: EcoContent): {
+// Type pour l'article formaté
+type ArticleCardData = {
   id: string;
   title: string;
   description: string;
@@ -50,7 +50,10 @@ function mapEcoContentToArticle(content: EcoContent): {
   readingTime: string;
   co2Impact: string;
   aiSuggested: boolean;
-} {
+};
+
+// Fonction utilitaire pour mapper un contenu EcoContent vers ArticleCard
+function mapEcoContentToArticle(content: EcoContent): ArticleCardData {
   // Déterminer la catégorie à partir des tags ou du kind
   let category = 'Écologie'; // Par défaut
   const lowerTags = content.tags.map((t) => t.toLowerCase());
@@ -113,7 +116,7 @@ export default function DiscoverPage() {
     data: ecoContentData,
     isLoading,
     error,
-  } = useQuery({
+  } = useQuery<PaginatedEcoContentResponse>({
     queryKey: ['eco-content', 'public'],
     queryFn: async () => {
       try {
@@ -127,7 +130,7 @@ export default function DiscoverPage() {
       }
     },
     staleTime: 30 * 1000, // 30 secondes - permet de voir les nouvelles publications rapidement
-    cacheTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes (remplace cacheTime dans React Query v5)
     retry: 1,
   });
 
@@ -142,7 +145,7 @@ export default function DiscoverPage() {
     if (selectedCategory === 'Tous') {
       return articles;
     }
-    return articles.filter((article) => article.category === selectedCategory);
+    return articles.filter((article: ArticleCardData) => article.category === selectedCategory);
   }, [articles, selectedCategory]);
 
   // Pour l'instant, pas de recommandations IA - utiliser les 4 premiers articles
@@ -225,7 +228,7 @@ export default function DiscoverPage() {
           </div>
         ) : filteredArticles.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:gap-[24px]">
-            {filteredArticles.map((article) => (
+            {filteredArticles.map((article: ArticleCardData) => (
               <ArticleCard key={article.id} {...article} href={`/discover/${article.id}`} />
             ))}
           </div>
@@ -265,7 +268,7 @@ export default function DiscoverPage() {
         {/* Grille 2x2 */}
         {aiRecommendedArticles.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:gap-[24px]">
-            {aiRecommendedArticles.map((article) => (
+            {aiRecommendedArticles.map((article: ArticleCardData) => (
               <ArticleCard key={article.id} {...article} />
             ))}
           </div>
