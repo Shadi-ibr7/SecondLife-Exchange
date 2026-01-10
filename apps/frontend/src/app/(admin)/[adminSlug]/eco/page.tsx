@@ -2,13 +2,15 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Search, ExternalLink, Leaf, Eye, Edit, Trash2, Plus } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Search, ExternalLink, Leaf, Eye, Edit, Trash2, Plus, Loader2, Save } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { toast } from 'react-hot-toast';
 
 import { adminApi } from '@/lib/admin.api';
 import { ADMIN_BASE_PATH } from '@/lib/admin.config';
+import type { AdminEcoContent, CreateEcoContentPayload } from '@/lib/admin.types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -21,6 +23,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 
 function EcoImpactCard({
   title,
@@ -71,13 +84,84 @@ function EcoStatsCard({ title, value }: { title: string; value: string | number 
 }
 
 export default function AdminEcoPage() {
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedContent, setSelectedContent] = useState<AdminEcoContent | null>(null);
+  const [createForm, setCreateForm] = useState<CreateEcoContentPayload>({
+    title: '',
+    url: '',
+    kind: 'ARTICLE',
+    locale: 'fr',
+    summary: '',
+    source: '',
+    tags: [],
+    published: false,
+  });
+  const [tagsInput, setTagsInput] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-eco', page, search],
     queryFn: () => adminApi.getEcoContent(page, 20),
   });
+
+  const createMutation = useMutation({
+    mutationFn: (payload: CreateEcoContentPayload) => adminApi.createEcoContent(payload),
+    onSuccess: () => {
+      toast.success('Contenu créé avec succès');
+      setCreateDialogOpen(false);
+      resetCreateForm();
+      queryClient.invalidateQueries({ queryKey: ['admin-eco'] });
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Erreur lors de la création');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => adminApi.deleteEcoContent(id),
+    onSuccess: () => {
+      toast.success('Contenu supprimé avec succès');
+      setDeleteDialogOpen(false);
+      setSelectedContent(null);
+      queryClient.invalidateQueries({ queryKey: ['admin-eco'] });
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Erreur lors de la suppression');
+    },
+  });
+
+  const resetCreateForm = () => {
+    setCreateForm({
+      title: '',
+      url: '',
+      kind: 'ARTICLE',
+      locale: 'fr',
+      summary: '',
+      source: '',
+      tags: [],
+      published: false,
+    });
+    setTagsInput('');
+  };
+
+  const handleCreate = () => {
+    const tags = tagsInput.split(',').map(t => t.trim()).filter(Boolean);
+    createMutation.mutate({ ...createForm, tags });
+  };
+
+  const handleDeleteClick = (item: AdminEcoContent) => {
+    setSelectedContent(item);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (selectedContent) {
+      deleteMutation.mutate(selectedContent.id);
+    }
+  };
 
   // Mock analytics data (to be replaced with real API call)
   const ecoAnalytics = {
@@ -145,7 +229,10 @@ export default function AdminEcoPage() {
             Gérer les articles, vidéos et statistiques environnementales
           </p>
         </div>
-        <Button className="bg-[#2d5a45] hover:bg-[#2d5a45]/90 h-[39.996px] px-[15.98px] rounded-[6px]">
+        <Button
+          className="bg-[#2d5a45] hover:bg-[#2d5a45]/90 h-[39.996px] px-[15.98px] rounded-[6px]"
+          onClick={() => setCreateDialogOpen(true)}
+        >
           <Plus className="w-4 h-4 mr-2" />
           Nouveau contenu
         </Button>
@@ -325,13 +412,17 @@ export default function AdminEcoPage() {
                               variant="ghost"
                               size="icon"
                               className="w-[39.978px] h-[31.986px] rounded-[6px]"
+                              asChild
                             >
-                              <Edit className="w-4 h-4 text-muted-foreground" />
+                              <Link href={`/${ADMIN_BASE_PATH}/eco/${item.id}`}>
+                                <Edit className="w-4 h-4 text-muted-foreground" />
+                              </Link>
                             </Button>
                             <Button
                               variant="ghost"
                               size="icon"
                               className="w-[39.978px] h-[31.986px] rounded-[6px]"
+                              onClick={() => handleDeleteClick(item)}
                             >
                               <Trash2 className="w-4 h-4 text-muted-foreground" />
                             </Button>
@@ -382,6 +473,149 @@ export default function AdminEcoPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Create Dialog */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Nouveau contenu écologique</DialogTitle>
+            <DialogDescription>
+              Créer un nouveau contenu éducatif sur l'écologie
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="create-title">Titre *</Label>
+                <Input
+                  id="create-title"
+                  value={createForm.title}
+                  onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
+                  placeholder="Titre du contenu"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="create-kind">Type</Label>
+                <Input
+                  id="create-kind"
+                  value={createForm.kind}
+                  onChange={(e) => setCreateForm({ ...createForm, kind: e.target.value })}
+                  placeholder="ARTICLE, VIDEO, STATS..."
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="create-url">URL *</Label>
+              <Input
+                id="create-url"
+                value={createForm.url}
+                onChange={(e) => setCreateForm({ ...createForm, url: e.target.value })}
+                placeholder="https://..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="create-summary">Résumé</Label>
+              <Textarea
+                id="create-summary"
+                value={createForm.summary}
+                onChange={(e) => setCreateForm({ ...createForm, summary: e.target.value })}
+                rows={3}
+                placeholder="Description du contenu..."
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="create-source">Source</Label>
+                <Input
+                  id="create-source"
+                  value={createForm.source}
+                  onChange={(e) => setCreateForm({ ...createForm, source: e.target.value })}
+                  placeholder="ADEME, WWF..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="create-locale">Locale</Label>
+                <Input
+                  id="create-locale"
+                  value={createForm.locale}
+                  onChange={(e) => setCreateForm({ ...createForm, locale: e.target.value })}
+                  placeholder="fr, en, ma..."
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="create-tags">Tags (séparés par des virgules)</Label>
+              <Input
+                id="create-tags"
+                value={tagsInput}
+                onChange={(e) => setTagsInput(e.target.value)}
+                placeholder="recyclage, économie circulaire, durable"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="create-published">Publier immédiatement</Label>
+              <Switch
+                id="create-published"
+                checked={createForm.published}
+                onCheckedChange={(checked) => setCreateForm({ ...createForm, published: checked })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              onClick={handleCreate}
+              disabled={createMutation.isPending || !createForm.title || !createForm.url}
+            >
+              {createMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              Créer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer le contenu</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer définitivement ce contenu ?
+            </DialogDescription>
+          </DialogHeader>
+          {selectedContent && (
+            <div className="p-4 bg-muted rounded-lg">
+              <p className="font-medium">{selectedContent.title}</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {selectedContent.kind} • {selectedContent.locale}
+              </p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4 mr-2" />
+              )}
+              Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
