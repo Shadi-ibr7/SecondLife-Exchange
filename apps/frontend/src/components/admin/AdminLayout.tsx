@@ -50,7 +50,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       <MobileSidebar isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
       <div className="lg:ml-60">
         <AdminHeader onMenuClick={() => setIsMenuOpen(true)} />
-        <main className="p-4 sm:p-6 lg:p-8 pt-[calc(63px+env(safe-area-inset-top))] lg:pt-24">{children}</main>
+        <main className="p-4 sm:p-6 lg:p-8 pt-[calc(63px+env(safe-area-inset-top)+1rem)] lg:pt-[calc(63px+2rem)]">{children}</main>
       </div>
     </div>
   );

@@ -28,7 +28,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
   };
 
   return (
-    <header className="fixed top-0 right-0 left-0 lg:left-60 h-[63px] bg-white dark:bg-[#141416] border-b border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] z-50">
+    <header className="fixed top-0 right-0 left-0 lg:left-60 h-[calc(63px+env(safe-area-inset-top))] bg-white dark:bg-[#141416] border-b border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] z-50">
       {/* Safe-area spacer pour iOS */}
       <div className="h-[env(safe-area-inset-top)]" />
       
