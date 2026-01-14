@@ -36,44 +36,52 @@ export class CreateThemeDto {
    * PROPRIÉTÉ: title
    *
    * Titre du thème hebdomadaire.
+   * Optionnel : si non fourni, sera généré automatiquement par l'IA.
    *
+   * @IsOptional(): Optionnel (sera généré par IA si manquant)
    * @IsString(): Doit être une chaîne
    * @MinLength(3): Minimum 3 caractères
    * @MaxLength(100): Maximum 100 caractères
    */
-  @ApiProperty({
-    description: 'Titre du thème hebdomadaire',
+  @ApiPropertyOptional({
+    description:
+      'Titre du thème hebdomadaire (optionnel, généré par IA si manquant)',
     minLength: 3,
     maxLength: 100,
     example: 'Objets vintage des années 80',
   })
+  @IsOptional()
   @IsString()
   @MinLength(3)
   @MaxLength(100)
-  title: string;
+  title?: string;
 
   /**
    * PROPRIÉTÉ: slug
    *
    * Identifiant unique URL-friendly pour le thème.
    * Utilisé dans les URLs (ex: /themes/vintage-annees-80)
+   * Optionnel : si non fourni, sera généré automatiquement à partir du titre.
    *
+   * @IsOptional(): Optionnel (sera généré automatiquement si manquant)
    * @IsString(): Doit être une chaîne
    * @MinLength(3): Minimum 3 caractères
    * @MaxLength(50): Maximum 50 caractères
    *
    * NOTE: Le slug doit être unique dans la base de données
    */
-  @ApiProperty({
-    description: 'Slug unique pour le thème',
+  @ApiPropertyOptional({
+    description:
+      'Slug unique pour le thème (optionnel, généré automatiquement si manquant)',
     minLength: 3,
     maxLength: 50,
     example: 'vintage-annees-80',
   })
+  @IsOptional()
   @IsString()
   @MinLength(3)
   @MaxLength(50)
-  slug: string;
+  slug?: string;
 
   /**
    * PROPRIÉTÉ: startOfWeek

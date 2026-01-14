@@ -155,9 +155,9 @@ export default function AdminThemesPage() {
   const activeTheme = themesList.find((t: any) => t.isActive);
   const activeThemesCount = themesList.filter((t: any) => t.isActive).length;
   const totalThemes = themesList.length;
-  // Calculate total participants from suggestions count (mock for now)
+  // Calculate total participants from real stats
   const totalParticipants = themesList.reduce(
-    (acc: number, t: any) => acc + (t._count?.suggestions || 0),
+    (acc: number, t: any) => acc + (t.stats?.participants || 0),
     0
   );
 
@@ -198,7 +198,7 @@ export default function AdminThemesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between h-[63.971px]">
+      <div className="flex items-center justify-between">
         <div className="flex flex-col gap-[3.987px]">
           <h1 className="admin-page-title">Thèmes hebdomadaires IA</h1>
           <p className="admin-page-description">Gérer les thèmes proposés par l'IA Gemini</p>
@@ -232,7 +232,7 @@ export default function AdminThemesPage() {
         />
         <ThemeStatsCard
           title="Participants total"
-          value={totalParticipants || 629}
+          value={totalParticipants}
           icon={Users}
           iconBg="bg-[rgba(217,160,85,0.1)]"
         />
@@ -247,27 +247,27 @@ export default function AdminThemesPage() {
       {/* Active Theme Card */}
       {activeTheme && (
         <Card
-          className="pt-[25.148px] px-[25.148px] pb-[1.155px] h-[222.204px] border-[rgba(45,90,69,0.2)]"
+          className="border-[rgba(45,90,69,0.2)]"
           style={{
             backgroundImage:
               'linear-gradient(167.72deg, rgba(45, 90, 69, 0.05) 0%, rgba(45, 90, 69, 0.1) 100%), linear-gradient(90deg, rgba(20, 20, 22, 1) 0%, rgba(20, 20, 22, 1) 100%)',
           }}
         >
-          <CardContent className="p-0 flex flex-col gap-[11.997px] h-[171.908px]">
-            <div className="flex gap-[11.997px] items-start h-[47.988px]">
-              <div className="bg-[#2d5a45] rounded-[8px] size-[47.988px] flex items-center justify-center shrink-0">
-                <Sparkles className="w-[23.994px] h-[23.994px] text-white" />
+          <CardContent className="p-6 flex flex-col gap-4">
+            <div className="flex gap-3 items-start">
+              <div className="bg-[#2d5a45] rounded-lg w-12 h-12 flex items-center justify-center shrink-0">
+                <Sparkles className="w-6 h-6 text-white" />
               </div>
-              <div className="flex-1 flex flex-col gap-[3.987px]">
-                <div className="flex items-center gap-[11.997px] h-[23.994px]">
-                  <h3 className="text-base font-normal text-foreground leading-[24px] tracking-[-0.3125px]">
+              <div className="flex-1 flex flex-col gap-1 min-w-0">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h3 className="text-base font-normal text-foreground leading-6">
                     Thème actif de la semaine
                   </h3>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[rgba(45,90,69,0.1)] text-[#2d5a45]">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[rgba(45,90,69,0.1)] text-[#2d5a45] shrink-0">
                     Actif
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground font-normal leading-[20px] tracking-[-0.1504px]">
+                <p className="text-sm text-muted-foreground font-normal leading-5">
                   {(() => {
                     const range = getWeekRange(activeTheme.startOfWeek);
                     return `Du ${range.start} au ${range.end}`;
@@ -275,30 +275,30 @@ export default function AdminThemesPage() {
                 </p>
               </div>
             </div>
-            <div className="flex flex-col gap-[7.992px]">
-              <h4 className="text-base font-normal text-foreground leading-[24px] tracking-[-0.3125px]">
+            <div className="flex flex-col gap-2">
+              <h4 className="text-base font-normal text-foreground leading-6">
                 {activeTheme.title}
               </h4>
-              <p className="text-sm text-muted-foreground font-normal leading-[20px] tracking-[-0.1504px]">
+              <p className="text-sm text-muted-foreground font-normal leading-5 line-clamp-3 break-words">
                 {activeTheme.impactText ||
                   "Donnez une nouvelle vie à vos livres en les échangeant avec d'autres passionnés de lecture. Partagez vos coups de cœur et découvrez de nouvelles lectures."}
               </p>
             </div>
-            <div className="flex gap-[23.994px] items-center h-[19.989px]">
-              <div className="flex items-center gap-[7.992px]">
-                <span className="text-sm text-muted-foreground font-normal leading-[20px] tracking-[-0.1504px]">
+            <div className="flex gap-6 items-center flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground font-normal">
                   Participants:
                 </span>
-                <span className="text-sm text-foreground font-normal leading-[20px] tracking-[-0.1504px]">
-                  {activeTheme._count?.suggestions || 342} utilisateurs
+                <span className="text-sm text-foreground font-normal">
+                  {activeTheme.stats?.participants || activeTheme._count?.suggestions || 0} utilisateurs
                 </span>
               </div>
-              <div className="flex items-center gap-[7.992px]">
-                <span className="text-sm text-muted-foreground font-normal leading-[20px] tracking-[-0.1504px]">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground font-normal">
                   Objets échangés:
                 </span>
-                <span className="text-sm text-foreground font-normal leading-[20px] tracking-[-0.1504px]">
-                  128 livres
+                <span className="text-sm text-foreground font-normal">
+                  {activeTheme.stats?.exchanges || 0} échanges
                 </span>
               </div>
             </div>
@@ -315,42 +315,39 @@ export default function AdminThemesPage() {
           {themesList.map((theme: any) => {
             const range = getWeekRange(theme.startOfWeek);
             return (
-              <Card
-                key={theme.id}
-                className="pt-[25.148px] px-[25.148px] pb-[1.155px] h-[130.252px]"
-              >
-                <CardContent className="p-0 flex items-start justify-between h-[79.955px]">
-                  <div className="flex-1 flex flex-col gap-[3.987px]">
-                    <div className="flex items-center gap-[11.997px] h-[23.994px]">
-                      <h4 className="text-base font-normal text-foreground leading-[24px] tracking-[-0.3125px]">
+              <Card key={theme.id}>
+                <CardContent className="p-6 flex items-start justify-between gap-4">
+                  <div className="flex-1 flex flex-col gap-2 min-w-0">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <h4 className="text-base font-normal text-foreground leading-6 truncate">
                         {theme.title}
                       </h4>
                       {getStatusBadge(theme)}
                     </div>
-                    <p className="text-sm text-muted-foreground font-normal leading-[20px] tracking-[-0.1504px]">
+                    <p className="text-sm text-muted-foreground font-normal leading-5 line-clamp-2 break-words">
                       {theme.impactText ||
                         "Donnez une nouvelle vie à vos livres en les échangeant avec d'autres passionnés de lecture."}
                     </p>
-                    <div className="flex gap-[23.994px] items-center h-[19.989px]">
-                      <div className="flex items-center gap-[7.992px]">
-                        <Calendar className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground font-normal leading-[20px] tracking-[-0.1504px]">
+                    <div className="flex gap-6 items-center flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <span className="text-sm text-muted-foreground font-normal">
                           {range.start} - {range.end}
                         </span>
                       </div>
-                      <div className="flex items-center gap-[7.992px]">
-                        <Users className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground font-normal leading-[20px] tracking-[-0.1504px]">
-                          {theme._count?.suggestions || 0} participants
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <span className="text-sm text-muted-foreground font-normal">
+                          {theme.stats?.participants || theme._count?.suggestions || 0} participants
                         </span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-2 h-[31.986px]">
+                  <div className="flex gap-2 shrink-0">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="w-[39.978px] h-[31.986px] rounded-[6px]"
+                      className="w-10 h-10 rounded-md"
                       asChild
                     >
                       <Link href={`/${ADMIN_BASE_PATH}/themes/${theme.id}`}>
@@ -360,7 +357,7 @@ export default function AdminThemesPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="w-[39.978px] h-[31.986px] rounded-[6px]"
+                      className="w-10 h-10 rounded-md"
                       onClick={() => {
                         setSelectedThemeId(theme.id);
                         setIsSuggestionsOpen(true);
@@ -374,8 +371,8 @@ export default function AdminThemesPage() {
             );
           })}
           {themesList.length === 0 && (
-            <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px]">
-              <CardContent className="p-0 text-center py-8">
+            <Card>
+              <CardContent className="p-6 text-center py-8">
                 <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-50 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground font-normal">
                   Aucun thème pour le moment
@@ -387,17 +384,17 @@ export default function AdminThemesPage() {
       </div>
 
       {/* Suggestions IA Card */}
-      <Card className="pt-[25.148px] px-[25.148px] pb-[1.155px] h-[146.236px]">
-        <CardContent className="p-0 flex flex-col gap-[11.997px] h-[95.939px]">
-          <div className="flex gap-[11.997px] items-start h-[47.97px]">
-            <div className="bg-[#2d5a45] rounded-[8px] size-[39.996px] flex items-center justify-center shrink-0">
-              <Sparkles className="w-[19.989px] h-[19.989px] text-white" />
+      <Card>
+        <CardContent className="p-6 flex flex-col gap-4">
+          <div className="flex gap-3 items-start">
+            <div className="bg-[#2d5a45] rounded-lg w-10 h-10 flex items-center justify-center shrink-0">
+              <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <div className="flex-1 flex flex-col gap-[3.987px]">
-              <h4 className="text-base font-normal text-foreground leading-[24px] tracking-[-0.3125px]">
+            <div className="flex-1 flex flex-col gap-1 min-w-0">
+              <h4 className="text-base font-normal text-foreground leading-6">
                 Suggestions IA (Gemini)
               </h4>
-              <p className="text-sm text-muted-foreground font-normal leading-[20px] tracking-[-0.1504px]">
+              <p className="text-sm text-muted-foreground font-normal leading-5 break-words">
                 L'IA peut générer automatiquement des thèmes hebdomadaires basés sur les tendances, les saisons et les comportements des utilisateurs.
               </p>
             </div>
@@ -411,7 +408,7 @@ export default function AdminThemesPage() {
               }
             }}
             disabled={generateSuggestionsMutation.isPending || !activeTheme}
-            className="bg-[#2d5a45] hover:bg-[#2d5a45]/90 h-[31.986px] w-[194.602px] rounded-[6px]"
+            className="bg-[#2d5a45] hover:bg-[#2d5a45]/90 h-10 w-fit rounded-md"
           >
             {generateSuggestionsMutation.isPending ? (
               <>

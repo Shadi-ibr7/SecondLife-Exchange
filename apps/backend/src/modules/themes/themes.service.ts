@@ -87,6 +87,7 @@ export class ThemesService {
    * VALIDATION:
    * - Vérifie que le slug est unique
    * - Si le thème est activé, désactive automatiquement les autres
+   * - Génère automatiquement un titre et une description via IA si non fournis
    *
    * @param createThemeDto - Données du thème à créer
    * @returns Thème créé
@@ -94,15 +95,157 @@ export class ThemesService {
    */
   async createTheme(createThemeDto: CreateThemeDto): Promise<WeeklyTheme> {
     // ============================================
+    // GÉNÉRATION AUTOMATIQUE VIA IA
+    // ============================================
+    // Si le titre ou l'impactText ne sont pas fournis, générer via IA
+    let finalTitle = createThemeDto.title;
+    let finalImpactText = createThemeDto.impactText;
+    let finalSlug = createThemeDto.slug;
+
+    // Si le titre ou l'impactText ne sont pas fournis, ou si le titre est trop court, générer via IA
+    if (!finalTitle || !finalImpactText || finalTitle.trim().length < 5) {
+      console.log(
+        '🤖 Génération automatique du titre et de la description via IA...',
+      );
+      console.log(`📅 Date de début: ${createThemeDto.startOfWeek}`);
+      console.log(`📝 Titre fourni: "${finalTitle || 'AUCUN'}"`);
+      console.log(`📝 Description fournie: "${finalImpactText || 'AUCUNE'}"`);
+
+      const startOfWeekDate = new Date(createThemeDto.startOfWeek);
+
+      // Récupérer les thèmes récents pour éviter les répétitions
+      const recentThemes = await this.prisma.weeklyTheme.findMany({
+        take: 10,
+        orderBy: { createdAt: 'desc' },
+        select: { title: true, impactText: true },
+      });
+
+      console.log(
+        `📋 ${recentThemes.length} thèmes récents trouvés pour éviter les répétitions`,
+      );
+
+      let aiGenerated;
+      try {
+        aiGenerated = await this.geminiService.generateThemeTitleAndDescription(
+          startOfWeekDate,
+          finalTitle || undefined,
+          recentThemes.map((t) => ({
+            title: t.title,
+            impactText: t.impactText,
+          })),
+        );
+
+        if (aiGenerated) {
+          console.log(
+            `✅ IA a généré: titre="${aiGenerated.title}", description="${aiGenerated.impactText.substring(0, 50)}..."`,
+          );
+        } else {
+          console.error(
+            '❌ IA a retourné null - vérifiez les logs de GeminiService',
+          );
+        }
+      } catch (error: any) {
+        console.error(`❌ Erreur lors de l'appel à l'IA: ${error.message}`);
+        console.error(`🔍 Stack: ${error.stack}`);
+        aiGenerated = null;
+      }
+
+      if (aiGenerated) {
+        // Utiliser le titre généré par l'IA si pas fourni ou trop court
+        if (!finalTitle || finalTitle.trim().length < 5) {
+          finalTitle = aiGenerated.title;
+        }
+
+        // Utiliser la description générée par l'IA si pas fournie
+        if (!finalImpactText) {
+          finalImpactText = aiGenerated.impactText;
+        }
+      } else {
+        console.warn(
+          "⚠️  L'IA n'a pas pu générer le titre/description, utilisation des valeurs fournies ou fallback",
+        );
+
+        // Fallback si l'IA échoue - générer un titre VARIÉ
+        if (!finalTitle || finalTitle.trim().length < 5) {
+          const monthNames = [
+            'janvier',
+            'février',
+            'mars',
+            'avril',
+            'mai',
+            'juin',
+            'juillet',
+            'août',
+            'septembre',
+            'octobre',
+            'novembre',
+            'décembre',
+          ];
+          const monthName = monthNames[startOfWeekDate.getMonth()];
+          const timestamp = Date.now();
+
+          // Générer un titre varié basé sur le timestamp
+          const themeVariants = [
+            'Mode Vintage & Rétro',
+            'Artisanat Local et Fait Main',
+            'Électronique Durable et Réparable',
+            'Livres de Science-Fiction Rétro',
+            'Outils de Jardinage Écologiques',
+            'Jouets en Bois Naturel',
+            'Décoration Bohème et Naturelle',
+            'Instruments de Musique Vintage',
+            'Jeux de Société Rétro',
+            'Accessoires Mode Éthique',
+            'Objets Vintage des Années 80',
+            'Créations Artisanales Uniques',
+          ];
+
+          const variantIndex = timestamp % themeVariants.length;
+          finalTitle = `${themeVariants[variantIndex]} - ${monthName} ${startOfWeekDate.getFullYear()}`;
+        }
+
+        if (!finalImpactText) {
+          const timestamp = Date.now();
+          const descriptions = [
+            'Cette semaine, redécouvrez le charme du vintage – vêtements, accessoires et objets uniques aux tendances passées. Par exemple, une veste en jean vintage des années 80.',
+            "Cette semaine, mettez en avant l'artisanat local et les créations faites main. Par exemple, un service de vaisselle en céramique artisanale.",
+            "Cette semaine, donnez une seconde vie à l'électronique réparable. Par exemple, une console de jeux rétro des années 90.",
+            'Cette semaine, explorez les objets de décoration bohème et naturels. Par exemple, un tapis en jute fait main.',
+            'Cette semaine, valorisez les instruments de musique vintage. Par exemple, une guitare acoustique des années 70.',
+            'Cette semaine, découvrez les jeux de société rétro et les puzzles. Par exemple, un jeu de société des années 80.',
+            'Cette semaine, privilégiez les outils de jardinage écologiques. Par exemple, un arrosoir en métal vintage.',
+            'Cette semaine, explorez les livres de science-fiction rétro. Par exemple, une édition originale des années 70.',
+          ];
+          const descIndex = timestamp % descriptions.length;
+          finalImpactText = descriptions[descIndex];
+        }
+      }
+    }
+
+    // Générer le slug si non fourni (à partir du titre)
+    if (!finalSlug) {
+      finalSlug = finalTitle
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Supprimer les accents
+        .replace(/[^a-z0-9]+/g, '-') // Remplacer les caractères spéciaux par des tirets
+        .replace(/^-+|-+$/g, ''); // Supprimer les tirets en début/fin
+
+      // Ajouter un timestamp pour garantir l'unicité
+      finalSlug = `${finalSlug}-${Date.now()}`;
+    }
+
+    // ============================================
     // VÉRIFICATION DE L'UNICITÉ DU SLUG
     // ============================================
     // Vérifier que le slug est unique
     const existingTheme = await this.prisma.weeklyTheme.findUnique({
-      where: { slug: createThemeDto.slug },
+      where: { slug: finalSlug },
     });
 
     if (existingTheme) {
-      throw new BadRequestException('Un thème avec ce slug existe déjà');
+      // Si le slug existe, ajouter un suffixe unique
+      finalSlug = `${finalSlug}-${Date.now()}`;
     }
 
     // ============================================
@@ -118,7 +261,12 @@ export class ThemesService {
     }
 
     return this.prisma.weeklyTheme.create({
-      data: createThemeDto,
+      data: {
+        ...createThemeDto,
+        title: finalTitle,
+        slug: finalSlug,
+        impactText: finalImpactText,
+      },
     });
   }
 
@@ -220,8 +368,8 @@ export class ThemesService {
       targetCategories: Array.isArray(theme.targetCategories)
         ? theme.targetCategories
         : theme.targetCategories
-        ? JSON.parse(theme.targetCategories as any)
-        : [],
+          ? JSON.parse(theme.targetCategories as any)
+          : [],
     };
   }
 
@@ -265,8 +413,8 @@ export class ThemesService {
       targetCategories: Array.isArray(theme.targetCategories)
         ? theme.targetCategories
         : theme.targetCategories
-        ? JSON.parse(theme.targetCategories as any)
-        : [],
+          ? JSON.parse(theme.targetCategories as any)
+          : [],
     };
   }
 
@@ -329,8 +477,8 @@ export class ThemesService {
       targetCategories: Array.isArray(theme.targetCategories)
         ? theme.targetCategories
         : theme.targetCategories
-        ? JSON.parse(theme.targetCategories as any)
-        : [],
+          ? JSON.parse(theme.targetCategories as any)
+          : [],
     }));
 
     return {
@@ -452,23 +600,25 @@ export class ThemesService {
    * @param month - Date du mois (n'importe quel jour du mois)
    * @returns Liste des thèmes générés
    */
-  async generateMonthlyThemes(month: Date = new Date()): Promise<WeeklyTheme[]> {
+  async generateMonthlyThemes(
+    month: Date = new Date(),
+  ): Promise<WeeklyTheme[]> {
     const themes: WeeklyTheme[] = [];
-    
+
     // Trouver le premier lundi du mois
     const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
     let firstMonday = new Date(firstDay);
-    
+
     // Trouver le premier lundi
     const dayOfWeek = firstMonday.getDay();
     const daysToAdd = dayOfWeek === 0 ? 1 : (8 - dayOfWeek) % 7 || 7;
     firstMonday.setDate(firstDay.getDate() + (daysToAdd === 7 ? 0 : daysToAdd));
-    
+
     // Générer les 4 thèmes (4 semaines)
     for (let week = 0; week < 4; week++) {
       const weekStart = new Date(firstMonday);
-      weekStart.setDate(firstMonday.getDate() + (week * 7));
-      
+      weekStart.setDate(firstMonday.getDate() + week * 7);
+
       // Vérifier si un thème existe déjà pour cette semaine
       const existingTheme = await this.prisma.weeklyTheme.findFirst({
         where: {
@@ -478,16 +628,18 @@ export class ThemesService {
           },
         },
       });
-      
+
       if (existingTheme) {
-        console.log(`⚠️  Thème déjà existant pour la semaine du ${weekStart.toLocaleDateString('fr-FR')}`);
+        console.log(
+          `⚠️  Thème déjà existant pour la semaine du ${weekStart.toLocaleDateString('fr-FR')}`,
+        );
         themes.push(existingTheme);
       } else {
         const theme = await this.generateThemeWithAI(weekStart);
         themes.push(theme);
       }
     }
-    
+
     return themes;
   }
 
@@ -498,32 +650,96 @@ export class ThemesService {
    * @returns Thème généré
    */
   async generateThemeWithAI(startOfWeek: Date): Promise<WeeklyTheme> {
-    console.log('🎨 Début génération thème avec IA pour:', startOfWeek.toISOString());
-    
+    console.log(
+      '🎨 Début génération thème avec IA pour:',
+      startOfWeek.toISOString(),
+    );
+
+    // Récupérer les thèmes récents pour éviter les répétitions
+    const recentThemes = await this.prisma.weeklyTheme.findMany({
+      take: 10,
+      orderBy: { createdAt: 'desc' },
+      select: { title: true, impactText: true },
+    });
+
+    console.log(
+      `📋 ${recentThemes.length} thèmes récents trouvés pour éviter les répétitions`,
+    );
+
     // Générer le thème avec l'IA
-    const aiTheme = await this.geminiService.generateTheme(startOfWeek);
-    
+    const aiTheme = await this.geminiService.generateTheme(
+      startOfWeek,
+      recentThemes.map((t) => ({
+        title: t.title,
+        impactText: t.impactText,
+      })),
+    );
+
     if (!aiTheme) {
-      console.warn('⚠️  L\'IA n\'a pas pu générer le thème, utilisation du fallback');
+      console.warn(
+        "⚠️  L'IA n'a pas pu générer le thème, utilisation du fallback",
+      );
+      console.error(
+        '🔍 Debug: Vérifiez les logs de GeminiService pour voir pourquoi',
+      );
     } else {
-      console.log('✅ Thème généré par l\'IA:', aiTheme.title);
-      console.log('📋 Catégories ciblées:', aiTheme.targetCategories?.join(', ') || 'Aucune');
+      console.log("✅ Thème généré par l'IA:", aiTheme.title);
+      console.log(
+        '✅ Description générée:',
+        aiTheme.impactText?.substring(0, 100) + '...',
+      );
+      console.log(
+        '📋 Catégories ciblées:',
+        aiTheme.targetCategories?.join(', ') || 'Aucune',
+      );
     }
 
     if (!aiTheme) {
-      // Fallback si l'IA échoue - générer un titre plus créatif avec slug unique
-      const monthNames = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+      // Fallback si l'IA échoue - générer un titre VARIÉ avec slug unique
+      const monthNames = [
+        'janvier',
+        'février',
+        'mars',
+        'avril',
+        'mai',
+        'juin',
+        'juillet',
+        'août',
+        'septembre',
+        'octobre',
+        'novembre',
+        'décembre',
+      ];
       const monthName = monthNames[startOfWeek.getMonth()];
       const timestamp = Date.now();
-      const defaultTitle = `Échange Écoresponsable - ${monthName} ${startOfWeek.getFullYear()}`;
-      const defaultSlug = `echange-ecoresponsable-${monthName.toLowerCase()}-${startOfWeek.getFullYear()}-${timestamp}`;
+
+      // Générer un titre varié basé sur le timestamp pour éviter les répétitions
+      const themeVariants = [
+        'Mode Vintage & Rétro',
+        'Artisanat Local et Fait Main',
+        'Électronique Durable et Réparable',
+        'Livres de Science-Fiction Rétro',
+        'Outils de Jardinage Écologiques',
+        'Jouets en Bois Naturel',
+        'Décoration Bohème et Naturelle',
+        'Instruments de Musique Vintage',
+        'Jeux de Société Rétro',
+        'Accessoires Mode Éthique',
+        'Objets Vintage des Années 80',
+        'Créations Artisanales Uniques',
+      ];
+
+      // Utiliser le timestamp pour sélectionner un variant différent
+      const variantIndex = timestamp % themeVariants.length;
+      const defaultTitle = `${themeVariants[variantIndex]} - ${monthName} ${startOfWeek.getFullYear()}`;
+      const defaultSlug = `${themeVariants[variantIndex].toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${monthName.toLowerCase()}-${startOfWeek.getFullYear()}-${timestamp}`;
 
       // Vérifier si le slug existe déjà et générer un nouveau slug si nécessaire
       let finalSlug = defaultSlug;
       let slugExists = await this.prisma.weeklyTheme.findUnique({
         where: { slug: finalSlug },
       });
-      
+
       if (slugExists) {
         // Ajouter un suffixe aléatoire si le slug existe déjà
         finalSlug = `${defaultSlug}-${Math.random().toString(36).substring(2, 9)}`;
@@ -534,11 +750,20 @@ export class ThemesService {
           title: defaultTitle,
           slug: finalSlug,
           startOfWeek,
-          impactText:
-            "Ce thème a été généré automatiquement pour encourager les échanges d'objets écoresponsables. " +
-            "Profitez-en pour proposer, par exemple, une veste en jean vintage que vous ne portez plus, " +
-            "un service de vaisselle en céramique que vous souhaitez transmettre, ou encore un petit appareil " +
-            "électronique réparable (radio, console de jeux, enceinte) qui peut avoir une seconde vie chez quelqu'un d'autre.",
+          impactText: (() => {
+            const descriptions = [
+              'Cette semaine, redécouvrez le charme du vintage – vêtements, accessoires et objets uniques aux tendances passées. Par exemple, une veste en jean vintage des années 80.',
+              "Cette semaine, mettez en avant l'artisanat local et les créations faites main. Par exemple, un service de vaisselle en céramique artisanale.",
+              "Cette semaine, donnez une seconde vie à l'électronique réparable. Par exemple, une console de jeux rétro des années 90.",
+              'Cette semaine, explorez les objets de décoration bohème et naturels. Par exemple, un tapis en jute fait main.',
+              'Cette semaine, valorisez les instruments de musique vintage. Par exemple, une guitare acoustique des années 70.',
+              'Cette semaine, découvrez les jeux de société rétro et les puzzles. Par exemple, un jeu de société des années 80.',
+              'Cette semaine, privilégiez les outils de jardinage écologiques. Par exemple, un arrosoir en métal vintage.',
+              'Cette semaine, explorez les livres de science-fiction rétro. Par exemple, une édition originale des années 70.',
+            ];
+            const descIndex = timestamp % descriptions.length;
+            return descriptions[descIndex];
+          })(),
           targetCategories: [],
           isActive: true,
         },
@@ -560,26 +785,41 @@ export class ThemesService {
     let photoUnsplashId: string | null = null;
 
     if (aiTheme?.photoSearchQuery) {
-      console.log('📸 Recherche photo Unsplash pour:', aiTheme.photoSearchQuery);
-      const unsplashPhoto = await this.unsplashService.searchPhoto(aiTheme.photoSearchQuery);
+      console.log(
+        '📸 Recherche photo Unsplash pour:',
+        aiTheme.photoSearchQuery,
+      );
+      const unsplashPhoto = await this.unsplashService.searchPhoto(
+        aiTheme.photoSearchQuery,
+      );
       if (unsplashPhoto) {
         photoUrl = unsplashPhoto.urls.regular;
         photoUnsplashId = unsplashPhoto.id;
         console.log('✅ Photo Unsplash trouvée:', photoUrl);
-        
+
         // Déclencher le téléchargement pour l'attribution (requis par Unsplash)
         // On récupère d'abord les détails complets de la photo pour obtenir download_location
         try {
-          const photoDetails = await this.unsplashService.getPhotoById(unsplashPhoto.id);
+          const photoDetails = await this.unsplashService.getPhotoById(
+            unsplashPhoto.id,
+          );
           if (photoDetails?.links?.download_location) {
-            await this.unsplashService.triggerDownload(photoDetails.links.download_location);
+            await this.unsplashService.triggerDownload(
+              photoDetails.links.download_location,
+            );
           }
         } catch (error) {
-          console.warn('⚠️  Impossible de déclencher le téléchargement Unsplash:', error);
+          console.warn(
+            '⚠️  Impossible de déclencher le téléchargement Unsplash:',
+            error,
+          );
           // Ignorer les erreurs de téléchargement, ce n'est pas critique
         }
       } else {
-        console.warn('⚠️  Aucune photo Unsplash trouvée pour:', aiTheme.photoSearchQuery);
+        console.warn(
+          '⚠️  Aucune photo Unsplash trouvée pour:',
+          aiTheme.photoSearchQuery,
+        );
       }
     }
 
@@ -594,7 +834,8 @@ export class ThemesService {
 
     const isCurrentWeek =
       themeWeekStart.getTime() === currentWeekStart.getTime() ||
-      (themeWeekStart <= now && new Date(themeWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000) > now);
+      (themeWeekStart <= now &&
+        new Date(themeWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000) > now);
 
     // Créer le thème avec les données générées par l'IA
     // Activer uniquement si c'est la semaine actuelle
@@ -677,7 +918,7 @@ export class ThemesService {
     // Générer les 4 semaines du mois
     for (let week = 0; week < 4; week++) {
       const weekStart = new Date(firstMonday);
-      weekStart.setDate(firstMonday.getDate() + (week * 7));
+      weekStart.setDate(firstMonday.getDate() + week * 7);
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekEnd.getDate() + 6);
 
@@ -706,8 +947,8 @@ export class ThemesService {
               targetCategories: Array.isArray(theme.targetCategories)
                 ? theme.targetCategories
                 : theme.targetCategories
-                ? JSON.parse(theme.targetCategories as any)
-                : [],
+                  ? JSON.parse(theme.targetCategories as any)
+                  : [],
             }
           : null,
       });
@@ -719,9 +960,7 @@ export class ThemesService {
       year,
       currentWeek: calendar.findIndex(
         (w) =>
-          w.theme &&
-          new Date(w.weekStart) <= now &&
-          new Date(w.weekEnd) >= now,
+          w.theme && new Date(w.weekStart) <= now && new Date(w.weekEnd) >= now,
       ),
     };
   }
@@ -786,8 +1025,8 @@ export class ThemesService {
               targetCategories: Array.isArray(activeTheme.targetCategories)
                 ? activeTheme.targetCategories
                 : activeTheme.targetCategories
-                ? JSON.parse(activeTheme.targetCategories as any)
-                : [],
+                  ? JSON.parse(activeTheme.targetCategories as any)
+                  : [],
             }
           : null,
       });

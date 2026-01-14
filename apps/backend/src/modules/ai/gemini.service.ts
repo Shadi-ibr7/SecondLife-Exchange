@@ -314,14 +314,15 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
    * - Parse la réponse JSON
    *
    * CONFIGURATION:
-   * - temperature: 0.3 (réponses plus déterministes)
+   * - temperature: 0.3 par défaut (réponses plus déterministes), peut être personnalisée
    * - maxOutputTokens: 500 (limite la longueur de la réponse)
    *
    * @param prompt - Prompt texte à envoyer à l'IA
+   * @param temperature - Température pour la génération (défaut: 0.3, plus élevé = plus créatif)
    * @returns Réponse texte de l'IA, ou null si erreur
    * @throws Error si l'API retourne une erreur ou timeout
    */
-  private async callGeminiAPI(prompt: string): Promise<string | null> {
+  private async callGeminiAPI(prompt: string, temperature: number = 0.3): Promise<string | null> {
     const url = `${this.aiConfig.geminiBaseUrl}/models/${this.aiConfig.geminiModel}:generateContent?key=${this.aiConfig.geminiApiKey}`;
 
     const requestBody = {
@@ -335,8 +336,8 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
         },
       ],
       generationConfig: {
-        temperature: 0.3,
-        topP: 0.8,
+        temperature: temperature, // Utiliser la température passée en paramètre
+        topP: 0.95,
         topK: 40,
         maxOutputTokens: 500,
       },
@@ -598,7 +599,11 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
    *
    * @param response - Réponse texte de l'API Gemini
    * @returns Réponse validée avec Zod
-   * @throws BadRequestException si la réponse est invalide
+   *
+   * IMPORTANT:
+   * - En cas d'erreur de parsing ou de validation, on LOG l'erreur
+   *   mais on retourne un objet vide { items: [] } au lieu de lever
+   *   une exception, afin de ne jamais « casser » l'app côté suggestions.
    */
   private parseSuggestionsResponse(response: string): SuggestedItemsResponse {
     try {
@@ -614,9 +619,20 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
       const validated = SuggestedItemsResponseSchema.parse(parsed);
 
       return validated;
-    } catch (error) {
-      this.logger.error(`Erreur parsing réponse suggestions: ${error.message}`);
-      throw new BadRequestException('Réponse IA invalide pour les suggestions');
+    } catch (error: any) {
+      // On ne remonte plus d'exception ici : on log et on retourne un fallback vide
+      this.logger.warn(
+        `⚠️  Erreur parsing réponse suggestions: ${error?.message || 'inconnue'}`,
+      );
+      this.logger.warn(
+        `🔍 Réponse brute suggestions (premiers 500 caractères): ${response.substring(
+          0,
+          500,
+        )}`,
+      );
+
+      // Fallback propre: aucune suggestion plutôt qu'une erreur
+      return { items: [] };
     }
   }
 
@@ -636,7 +652,10 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
    * @param date - Date de la semaine pour le thème
    * @returns Thème généré avec titre, slug, impactText et photoSearchQuery
    */
-  async generateTheme(date: Date): Promise<{
+  async generateTheme(
+    date: Date,
+    recentThemes?: Array<{ title: string; impactText: string }>,
+  ): Promise<{
     title: string;
     slug: string;
     impactText: string;
@@ -655,28 +674,227 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
     );
 
     try {
-      const prompt = this.buildThemePrompt(date);
+      const prompt = this.buildThemePrompt(date, recentThemes);
 
       this.logger.log(
         `🎨 Génération de thème pour la semaine du ${date.toLocaleDateString('fr-FR')}`,
       );
+      if (recentThemes && recentThemes.length > 0) {
+        this.logger.log(
+          `📋 ${recentThemes.length} thèmes récents fournis pour éviter les répétitions`,
+        );
+      }
 
-      const response = await this.callGeminiAPI(prompt);
+      // Utiliser une température élevée (0.9) pour plus de créativité et variété
+      const response = await this.callGeminiAPI(prompt, 0.9);
 
       if (!response) {
         this.logger.warn(
           '⚠️  Réponse Gemini vide, génération de thème ignorée',
         );
+        this.logger.error('🔍 Debug: Aucune réponse de l\'API Gemini');
         return null;
       }
 
+      this.logger.log(`🔍 Réponse brute Gemini complète: ${response}`);
+      this.logger.log(`🔍 Longueur de la réponse: ${response.length} caractères`);
+
       const parsed = this.parseThemeResponse(response);
+      if (!parsed) {
+        // Réponse IA inutilisable → on laisse le service appelant gérer le fallback
+        this.logger.warn(
+          '⚠️  Réponse IA invalide pour le thème, utilisation du fallback côté ThemesService',
+        );
+        return null;
+      }
 
       this.logger.log(`✅ Thème généré: "${parsed.title}"`);
+      this.logger.log(
+        `✅ Description: "${parsed.impactText?.substring(0, 100)}..."`,
+      );
+
       return parsed;
     } catch (error: any) {
       this.logger.error(
         `❌ Erreur lors de la génération de thème: ${error.message}`,
+      );
+      this.logger.error(`Stack: ${error.stack}`);
+      return null;
+    }
+  }
+
+  // ============================================
+  // MÉTHODE: generateThemeTitleAndDescription
+  // ============================================
+
+  /**
+   * Génère un titre et une description simple pour un thème à partir d'informations minimales.
+   * Utilisé lors de la création manuelle d'un thème par un admin.
+   *
+   * @param startOfWeek - Date de début de la semaine
+   * @param userProvidedTitle - Titre fourni par l'utilisateur (optionnel, peut être amélioré)
+   * @param recentThemes - Liste des thèmes récents pour éviter les répétitions (optionnel)
+   * @returns Titre et description générés par l'IA
+   */
+  async generateThemeTitleAndDescription(
+    startOfWeek: Date,
+    userProvidedTitle?: string,
+    recentThemes?: Array<{ title: string; impactText: string }>,
+  ): Promise<{
+    title: string;
+    impactText: string;
+  } | null> {
+    if (!this.aiConfig.geminiApiKey) {
+      this.logger.error(
+        '❌ Clé API Gemini non configurée ! Vérifiez AI_GEMINI_API_KEY dans .env',
+      );
+      return null;
+    }
+
+    try {
+      const weekFormatted = startOfWeek.toLocaleDateString('fr-FR', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+
+      // Déterminer la saison et le contexte pour plus de variété
+      const month = startOfWeek.getMonth() + 1; // 1-12
+      const season = month >= 3 && month <= 5 ? 'printemps' :
+                     month >= 6 && month <= 8 ? 'été' :
+                     month >= 9 && month <= 11 ? 'automne' : 'hiver';
+
+      const weekNumber = Math.ceil((startOfWeek.getDate() + new Date(startOfWeek.getFullYear(), startOfWeek.getMonth(), 0).getDate()) / 7);
+
+      const prompt = `Rôle: Tu es un créateur de thèmes hebdomadaires pour une plateforme d'échange d'objets écoresponsables.
+Tâche: Créer un titre créatif et UNIQUE et une description simple avec exemples pour la semaine du ${weekFormatted}.
+
+CONTEXTE IMPORTANT:
+- Saison: ${season}
+- Semaine du mois: ${weekNumber}
+- Date: ${weekFormatted}
+- IMPORTANT: Chaque thème doit être DIFFÉRENT et VARIÉ. Ne répète JAMAIS le même titre ou la même description.
+
+${recentThemes && recentThemes.length > 0 ? `THÈMES RÉCENTS À ÉVITER (ne pas répéter):
+${recentThemes.map((t, i) => `${i + 1}. Titre: "${t.title}" - Description: "${t.impactText?.substring(0, 100)}..."`).join('\n')}
+
+CRITIQUE: Le nouveau thème doit être COMPLÈTEMENT DIFFÉRENT de tous ces thèmes précédents.` : ''}
+
+${userProvidedTitle ? `L'utilisateur a fourni ce titre: "${userProvidedTitle}". Améliore-le pour qu'il soit plus créatif, accrocheur et UNIQUE.` : 'Crée un titre créatif, accrocheur et COMPLÈTEMENT UNIQUE.'}
+
+IMPORTANT - Le titre doit être:
+- Créatif, accrocheur et mémorable (PAS juste "Thème de la semaine du..." ou "Échange Écoresponsable")
+- Inspirant et engageant
+- Spécifique à une ou plusieurs catégories d'objets
+- COMPLÈTEMENT DIFFÉRENT des thèmes précédents
+- Exemples de BONS titres VARIÉS: "Mode Vintage & Rétro", "Artisanat Local et Fait Main", "Électronique Durable et Réparable", "Livres de Science-Fiction Rétro", "Outils de Jardinage Écologiques", "Jouets en Bois Naturel", "Décoration Bohème et Naturelle", "Instruments de Musique Vintage", "Jeux de Société Rétro", "Accessoires Mode Éthique"
+- Exemples de MAUVAIS titres (NE PAS UTILISER): "Thème de la semaine du...", "Échange d'objets", "Thème écologique", "Échange Écoresponsable - [mois]"
+
+IMPORTANT - La description (impactText) doit être:
+- UNE SEULE phrase simple et claire (maximum 200 caractères)
+- Expliquer brièvement le thème de manière UNIQUE
+- Donner UN exemple concret d'objet typique de ce thème (DIFFÉRENT à chaque fois)
+- Format: "Cette semaine, [explication du thème]. Par exemple, [un objet concret et spécifique]."
+- VARIER les exemples à chaque génération
+
+Exemples de bonnes descriptions VARIÉES:
+- "Cette semaine, redécouvrez le charme du vintage – vêtements, accessoires et objets uniques aux tendances passées. Par exemple, une veste en jean vintage des années 80."
+- "Cette semaine, mettez en avant l'artisanat local et les créations faites main. Par exemple, un service de vaisselle en céramique artisanale."
+- "Cette semaine, donnez une seconde vie à l'électronique réparable. Par exemple, une console de jeux rétro des années 90."
+- "Cette semaine, explorez les objets de décoration bohème et naturels. Par exemple, un tapis en jute fait main."
+- "Cette semaine, valorisez les instruments de musique vintage. Par exemple, une guitare acoustique des années 70."
+
+Catégories d'objets disponibles:
+- CLOTHING (Vêtements, chaussures, accessoires)
+- ELECTRONICS (Électronique, smartphones, ordinateurs, gadgets)
+- BOOKS (Livres, romans, manuels, bandes dessinées)
+- HOME (Maison, décoration, mobilier, ustensiles)
+- TOOLS (Outils, bricolage, jardinage)
+- TOYS (Jouets, jeux de société, puzzles)
+- SPORTS (Équipement sportif, vêtements de sport)
+- ART (Peintures, sculptures, objets d'art)
+- VINTAGE (Objets rétro, collection, antiquités)
+- HANDCRAFT (Artisanat, objets faits main, créations)
+- OTHER (Autre)
+
+RÈGLE CRITIQUE: Choisis une catégorie ou combinaison de catégories DIFFÉRENTE à chaque fois. Varie entre les catégories pour éviter la répétition.
+
+Réponds UNIQUEMENT en JSON valide (pas de texte hors JSON):
+{
+  "title": string,              // Titre créatif, accrocheur et UNIQUE (ex: "Mode Vintage & Rétro", "Artisanat Local et Fait Main", etc.)
+  "impactText": string           // UNE phrase simple avec un exemple UNIQUE (max 200 caractères, format: "Cette semaine, [explication]. Par exemple, [objet concret et spécifique].")
+}
+
+IMPORTANT - Format JSON:
+- Utilise UNIQUEMENT des guillemets doubles (") pour les clés et valeurs
+- Échappe les guillemets dans les valeurs avec \\"
+- Échappe les retours à la ligne avec \\n
+- Pas de guillemets simples dans les valeurs
+- Pas de texte avant ou après le JSON
+- Le JSON doit être valide et parseable
+
+Exemple de réponse correcte:
+{"title":"Mode Vintage & Rétro","impactText":"Cette semaine, redécouvrez le charme du vintage. Par exemple, une veste en jean des années 80."}
+
+Sortie: Réponds uniquement le JSON valide, sans texte supplémentaire, sans markdown, sans code blocks.`;
+
+      this.logger.log(
+        `🎨 Génération titre et description pour la semaine du ${weekFormatted}`,
+      );
+
+      // Utiliser une température élevée (0.9) pour plus de créativité et variété
+      const response = await this.callGeminiAPI(prompt, 0.9);
+
+      if (!response) {
+        this.logger.warn(
+          '⚠️  Réponse Gemini vide, génération ignorée',
+        );
+        this.logger.error('🔍 Debug: Aucune réponse de l\'API Gemini');
+        return null;
+      }
+
+      this.logger.log(`🔍 Réponse brute Gemini: ${response.substring(0, 200)}...`);
+
+      // Parser la réponse JSON
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        this.logger.error('❌ Réponse Gemini ne contient pas de JSON valide');
+        this.logger.error(`🔍 Réponse complète: ${response}`);
+        return null;
+      }
+
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonMatch[0]);
+      } catch (parseError) {
+        this.logger.error(`❌ Erreur parsing JSON: ${parseError.message}`);
+        this.logger.error(`🔍 JSON extrait: ${jsonMatch[0]}`);
+        return null;
+      }
+
+      // Valider les champs requis
+      if (!parsed.title || !parsed.impactText) {
+        this.logger.error('❌ Réponse Gemini incomplète');
+        this.logger.error(`🔍 Données parsées: ${JSON.stringify(parsed)}`);
+        return null;
+      }
+
+      // S'assurer que impactText est bien une phrase simple
+      if (parsed.impactText.length > 200) {
+        this.logger.warn('⚠️  Description trop longue, tronquée');
+        parsed.impactText = parsed.impactText.substring(0, 197) + '...';
+      }
+
+      this.logger.log(`✅ Titre généré: "${parsed.title}"`);
+      this.logger.log(`✅ Description générée: "${parsed.impactText}"`);
+
+      return {
+        title: parsed.title.trim(),
+        impactText: parsed.impactText.trim(),
+      };
+    } catch (error: any) {
+      this.logger.error(
+        `❌ Erreur lors de la génération titre/description: ${error.message}`,
       );
       this.logger.error(`Stack: ${error.stack}`);
       return null;
@@ -690,7 +908,10 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
   /**
    * Construit le prompt pour la génération de thème hebdomadaire.
    */
-  private buildThemePrompt(date: Date): string {
+  private buildThemePrompt(
+    date: Date,
+    recentThemes?: Array<{ title: string; impactText: string }>,
+  ): string {
     const weekStart = new Date(date);
     weekStart.setDate(date.getDate() - date.getDay() + 1);
     const weekFormatted = weekStart.toLocaleDateString('fr-FR', {
@@ -699,15 +920,35 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
       year: 'numeric',
     });
 
+    // Déterminer la saison et le contexte pour plus de variété
+    const month = weekStart.getMonth() + 1; // 1-12
+    const season = month >= 3 && month <= 5 ? 'printemps' :
+                     month >= 6 && month <= 8 ? 'été' :
+                     month >= 9 && month <= 11 ? 'automne' : 'hiver';
+
+    const weekNumber = Math.ceil((weekStart.getDate() + new Date(weekStart.getFullYear(), weekStart.getMonth(), 0).getDate()) / 7);
+
     return `Rôle: Tu es un créateur de thèmes hebdomadaires pour une plateforme d'échange d'objets écoresponsables.
-Tâche: Créer un thème inspirant et créatif pour la semaine du ${weekFormatted}.
+Tâche: Créer un thème inspirant, créatif et COMPLÈTEMENT UNIQUE pour la semaine du ${weekFormatted}.
+
+CONTEXTE IMPORTANT:
+- Saison: ${season}
+- Semaine du mois: ${weekNumber}
+- Date: ${weekFormatted}
+- CRITIQUE: Chaque thème doit être DIFFÉRENT et VARIÉ. Ne répète JAMAIS le même titre ou la même description.
+
+${recentThemes && recentThemes.length > 0 ? `THÈMES RÉCENTS À ÉVITER (ne pas répéter):
+${recentThemes.map((t, i) => `${i + 1}. Titre: "${t.title}" - Description: "${t.impactText?.substring(0, 100)}..."`).join('\n')}
+
+CRITIQUE: Le nouveau thème doit être COMPLÈTEMENT DIFFÉRENT de tous ces thèmes précédents. Choisis une catégorie différente, un titre différent, et des exemples différents.` : ''}
 
 IMPORTANT - Le titre du thème doit être:
-- Créatif, accrocheur et mémorable (PAS juste "Thème de la semaine du...")
+- Créatif, accrocheur et mémorable (PAS juste "Thème de la semaine du..." ou "Échange Écoresponsable")
 - Inspirant et engageant
 - Spécifique à une ou plusieurs catégories d'objets
-- Exemples de BONS titres: "Objets Vintage des Années 80", "Artisanat Local et Fait Main", "Électronique Durable et Réparable", "Livres de Science-Fiction Rétro", "Outils de Jardinage Écologiques", "Jouets en Bois Naturel", "Art et Créations Originales", "Vêtements Vintage et Mode Circulaire"
-- Exemples de MAUVAIS titres: "Thème de la semaine du 29/11/2025", "Échange d'objets", "Thème écologique"
+- COMPLÈTEMENT DIFFÉRENT des thèmes précédents
+- Exemples de BONS titres VARIÉS: "Objets Vintage des Années 80", "Artisanat Local et Fait Main", "Électronique Durable et Réparable", "Livres de Science-Fiction Rétro", "Outils de Jardinage Écologiques", "Jouets en Bois Naturel", "Décoration Bohème et Naturelle", "Instruments de Musique Vintage", "Jeux de Société Rétro", "Accessoires Mode Éthique"
+- Exemples de MAUVAIS titres (NE PAS UTILISER): "Thème de la semaine du...", "Échange d'objets", "Thème écologique", "Échange Écoresponsable - [mois]"
 
 Catégories d'objets disponibles sur la plateforme:
 - CLOTHING (Vêtements, chaussures, accessoires)
@@ -724,25 +965,41 @@ Catégories d'objets disponibles sur la plateforme:
 
 Le thème doit:
 - Mettre en avant 1 à 3 catégories principales (choisies parmi la liste ci-dessus)
+- VARIER les catégories à chaque génération pour éviter la répétition
 - Être créatif et engageant
 - Mettre en avant l'échange, la réparation, la réutilisation
 - Être écologique et durable
 - Inspirer les utilisateurs à échanger des objets vintage, artisanaux, réparables
 - Être adapté à un public international (France, Maroc, Japon, USA, Brésil)
-- Varier chaque semaine pour éviter la répétition
+- Être COMPLÈTEMENT DIFFÉRENT des thèmes précédents
+
+RÈGLE CRITIQUE: Choisis une catégorie ou combinaison de catégories DIFFÉRENTE à chaque fois. Varie entre les catégories pour éviter la répétition.
 
 Réponds UNIQUEMENT en JSON valide (pas de texte hors JSON):
 {
-  "title": string,              // Titre créatif et accrocheur (ex: "Objets Vintage des Années 80", "Artisanat Local et Fait Main")
+  "title": string,              // Titre créatif, accrocheur et UNIQUE (ex: "Objets Vintage des Années 80", "Artisanat Local et Fait Main")
   "slug": string,               // Slug URL-friendly (ex: "objets-vintage-annees-80", "artisanat-local-fait-main")
-  "impactText": string,         // Texte explicatif (3-5 phrases) qui décrit le thème, explique son intérêt écologique
+  "impactText": string,         // Texte explicatif (2-3 phrases) qui décrit le thème, explique son intérêt écologique
                                 // ET donne au moins 2 à 3 exemples concrets d'objets typiques de ce thème
+                                // VARIER les exemples à chaque génération
                                 // (ex: "veste en jean vintage", "console de jeux des années 90", "service de vaisselle en céramique fait main")
   "photoSearchQuery": string,   // Terme de recherche pour trouver une photo sur Unsplash (en anglais, ex: "vintage 80s objects", "handmade crafts sustainable")
   "targetCategories": string[]  // 1 à 3 catégories principales ciblées par ce thème (ex: ["VINTAGE", "CLOTHING"], ["HANDCRAFT", "HOME"])
 }
 
-Sortie: Réponds uniquement le JSON, sans texte supplémentaire.`;
+IMPORTANT - Format JSON STRICT:
+- Utilise UNIQUEMENT des guillemets doubles (") pour les clés et valeurs
+- Échappe TOUS les guillemets dans les valeurs avec \\"
+- Échappe les retours à la ligne avec \\n
+- Pas de guillemets simples (') dans les valeurs
+- Pas de texte avant ou après le JSON
+- Pas de markdown, pas de code blocks
+- Le JSON doit être valide et parseable
+
+Exemple de réponse correcte:
+{"title":"Mode Vintage & Rétro","slug":"mode-vintage-retro","impactText":"Cette semaine, redécouvrez le charme du vintage. Par exemple, une veste en jean des années 80 ou une console de jeux rétro.","photoSearchQuery":"vintage 80s fashion","targetCategories":["VINTAGE","CLOTHING"]}
+
+Sortie: Réponds uniquement le JSON valide, sans texte supplémentaire, sans markdown, sans code blocks.`;
   }
 
   // ============================================
@@ -760,23 +1017,148 @@ Sortie: Réponds uniquement le JSON, sans texte supplémentaire.`;
     targetCategories: string[];
   } {
     try {
-      const cleanResponse = response
+      // Nettoyer la réponse - enlever les markdown code blocks
+      let cleanResponse = response
         .replace(/```json\n?/g, '')
         .replace(/```\n?/g, '')
         .trim();
 
-      const parsed = JSON.parse(cleanResponse);
+      // Essayer d'extraire le JSON si la réponse contient du texte avant/après
+      const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        cleanResponse = jsonMatch[0];
+      }
 
-      // Validation avec Zod
-      const validated = ThemeDraftSchema.parse(parsed);
+      this.logger.log(`🔍 Tentative de parsing JSON (premiers 500 caractères): ${cleanResponse.substring(0, 500)}...`);
+      this.logger.log(`🔍 JSON complet: ${cleanResponse}`);
+
+      // Essayer de réparer le JSON si nécessaire
+      let parsed;
+      try {
+        parsed = JSON.parse(cleanResponse);
+      } catch (parseError: any) {
+        this.logger.warn(`⚠️  Premier parsing échoué, tentative de réparation...`);
+        this.logger.warn(`🔍 Erreur: ${parseError.message}`);
+        this.logger.warn(`🔍 Position de l'erreur: ${parseError.message.match(/position (\d+)/)?.[1] || 'inconnue'}`);
+
+        // Essayer d'extraire les champs avec des regex plus permissives
+        try {
+          // Extraire title - accepter les guillemets simples ou doubles, gérer les échappements
+          const titleMatch = cleanResponse.match(/"title"\s*:\s*["']([^"']*(?:\\.[^"']*)*)["']/);
+          // Extraire impactText de la même manière
+          const impactTextMatch = cleanResponse.match(/"impactText"\s*:\s*["']([^"']*(?:\\.[^"']*)*)["']/);
+          // Extraire slug
+          const slugMatch = cleanResponse.match(/"slug"\s*:\s*["']([^"']*(?:\\.[^"']*)*)["']/);
+          // Extraire photoSearchQuery
+          const photoSearchQueryMatch = cleanResponse.match(/"photoSearchQuery"\s*:\s*["']([^"']*(?:\\.[^"']*)*)["']/);
+          // Extraire targetCategories (tableau)
+          const targetCategoriesMatch = cleanResponse.match(/"targetCategories"\s*:\s*\[([^\]]*)\]/);
+
+          if (titleMatch || impactTextMatch) {
+            this.logger.log(`🔧 Extraction manuelle des champs JSON`);
+            const extractedTitle = titleMatch?.[1]?.replace(/\\"/g, '"').replace(/\\'/g, "'").replace(/\\n/g, '\n') || 'Thème Écoresponsable';
+            const extractedImpactText = impactTextMatch?.[1]?.replace(/\\"/g, '"').replace(/\\'/g, "'").replace(/\\n/g, '\n') || 'Thème généré automatiquement.';
+
+            // Générer des catégories par défaut basées sur le titre si aucune n'est trouvée
+            let defaultCategories: string[] = [];
+            if (targetCategoriesMatch?.[1]) {
+              defaultCategories = targetCategoriesMatch[1].split(',').map(c => c.trim().replace(/["']/g, '').toUpperCase()).filter(Boolean);
+            }
+
+            // Si aucune catégorie n'a été extraite, générer une catégorie par défaut basée sur le titre
+            if (defaultCategories.length === 0) {
+              const titleLower = extractedTitle.toLowerCase();
+              // Mapper des mots-clés du titre vers des catégories
+              if (titleLower.includes('vêtement') || titleLower.includes('mode') || titleLower.includes('veste') || titleLower.includes('vintage')) {
+                defaultCategories = ['VINTAGE', 'CLOTHING'];
+              } else if (titleLower.includes('maison') || titleLower.includes('décoration') || titleLower.includes('home')) {
+                defaultCategories = ['HOME'];
+              } else if (titleLower.includes('électronique') || titleLower.includes('jeux') || titleLower.includes('console')) {
+                defaultCategories = ['ELECTRONICS'];
+              } else if (titleLower.includes('livre') || titleLower.includes('book')) {
+                defaultCategories = ['BOOKS'];
+              } else if (titleLower.includes('outil') || titleLower.includes('jardin')) {
+                defaultCategories = ['TOOLS'];
+              } else if (titleLower.includes('jouet') || titleLower.includes('jeu')) {
+                defaultCategories = ['TOYS'];
+              } else if (titleLower.includes('artisanat') || titleLower.includes('fait main') || titleLower.includes('handcraft')) {
+                defaultCategories = ['HANDCRAFT'];
+              } else {
+                // Catégorie par défaut
+                defaultCategories = ['HOME'];
+              }
+              this.logger.log(`🔧 Catégories par défaut générées: ${defaultCategories.join(', ')}`);
+            }
+
+            parsed = {
+              title: extractedTitle,
+              impactText: extractedImpactText,
+              slug: slugMatch?.[1]?.replace(/\\"/g, '"').replace(/\\'/g, "'") || extractedTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+              photoSearchQuery: photoSearchQueryMatch?.[1]?.replace(/\\"/g, '"').replace(/\\'/g, "'") || extractedTitle,
+              targetCategories: defaultCategories,
+            };
+            this.logger.log(`✅ Extraction réussie: title="${parsed.title}", impactText="${parsed.impactText.substring(0, 50)}...", categories="${parsed.targetCategories.join(', ')}"`);
+          } else {
+            // Si on ne peut pas extraire, essayer de réparer le JSON en fermant les chaînes non terminées
+            let repaired = cleanResponse;
+            // Trouver les chaînes non terminées et les fermer
+            repaired = repaired.replace(/"([^"]*)$/, '"$1"'); // Fermer la dernière chaîne si non terminée
+            repaired = repaired.replace(/,\s*$/, ''); // Enlever les virgules finales
+            repaired = repaired.replace(/,(\s*[}\]])/g, '$1'); // Enlever les virgules avant les fermetures
+
+            try {
+              parsed = JSON.parse(repaired);
+              this.logger.log(`✅ Réparation du JSON réussie`);
+            } catch (e) {
+              this.logger.error(`❌ Réparation du JSON échouée: ${e.message}`);
+              throw parseError; // Relancer l'erreur originale
+            }
+          }
+        } catch (repairError: any) {
+          this.logger.error(`❌ Réparation du JSON échouée: ${repairError.message}`);
+          throw parseError; // Relancer l'erreur originale
+        }
+      }
+
+      this.logger.log(`🔍 JSON parsé: ${JSON.stringify(parsed, null, 2)}`);
+
+      // Si le JSON parsé n'a pas tous les champs requis, essayer de les extraire manuellement
+      if (!parsed.title || !parsed.impactText) {
+        this.logger.warn(`⚠️  Champs manquants dans le JSON, extraction manuelle...`);
+
+        // Extraire title et impactText avec regex plus permissive
+        const titleRegex = /"title"\s*:\s*"((?:[^"\\]|\\.)*)"/;
+        const impactTextRegex = /"impactText"\s*:\s*"((?:[^"\\]|\\.)*)"/;
+
+        const titleMatch = cleanResponse.match(titleRegex);
+        const impactTextMatch = cleanResponse.match(impactTextRegex);
+
+        if (titleMatch) parsed.title = titleMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
+        if (impactTextMatch) parsed.impactText = impactTextMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
+      }
+
+      // Validation avec Zod (avec valeurs par défaut si manquantes)
+      // S'assurer qu'il y a au moins une catégorie
+      const categories = parsed.targetCategories && parsed.targetCategories.length > 0
+        ? parsed.targetCategories
+        : ['HOME']; // Catégorie par défaut si aucune n'est fournie
+
+      const validated = ThemeDraftSchema.parse({
+        title: parsed.title || 'Thème Écoresponsable',
+        impactText: parsed.impactText || 'Thème généré automatiquement pour encourager les échanges.',
+        slug: parsed.slug || parsed.title?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'theme-ecoresponsable',
+        photoSearchQuery: parsed.photoSearchQuery || parsed.title || 'échange écologique',
+        targetCategories: categories,
+      });
 
       // Nettoyer et valider les longueurs
-      return {
+      const result = {
         title: validated.title.trim().substring(0, 200),
         slug: validated.slug
           .trim()
           .toLowerCase()
           .replace(/[^a-z0-9-]/g, '-')
+          .replace(/^-+|-+$/g, '')
           .substring(0, 100),
         impactText: validated.impactText.trim().substring(0, 500),
         photoSearchQuery: validated.photoSearchQuery.trim().substring(0, 100),
@@ -784,9 +1166,29 @@ Sortie: Réponds uniquement le JSON, sans texte supplémentaire.`;
           .map((cat) => cat.trim().toUpperCase())
           .slice(0, 3),
       };
-    } catch (error) {
-      this.logger.error(`Erreur parsing réponse thème: ${error.message}`);
-      throw new BadRequestException('Réponse IA invalide pour le thème');
+
+      this.logger.log(
+        `✅ Validation réussie: titre="${result.title}", impactText="${result.impactText.substring(
+          0,
+          50,
+        )}..."`,
+      );
+
+      return result;
+    } catch (error: any) {
+      // Ne pas faire remonter d'exception jusqu'aux contrôleurs :
+      // on log et on laisse generateTheme() gérer le fallback.
+      this.logger.warn(
+        `⚠️  Erreur parsing réponse thème: ${error.message}`,
+      );
+      this.logger.warn(
+        `🔍 Réponse brute thème (premiers 500 caractères): ${response.substring(
+          0,
+          500,
+        )}`,
+      );
+      // Signal d'échec au niveau du parsing
+      return null as any;
     }
   }
 

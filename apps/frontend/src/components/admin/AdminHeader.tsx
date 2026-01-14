@@ -31,7 +31,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
     <header className="fixed top-0 right-0 left-0 lg:left-60 h-[calc(63px+env(safe-area-inset-top))] bg-white dark:bg-[#141416] border-b border-[rgba(0,0,0,0.06)] dark:border-[rgba(255,255,255,0.08)] z-50">
       {/* Safe-area spacer pour iOS */}
       <div className="h-[env(safe-area-inset-top)]" />
-      
+
       {/* Header content - Hauteur exacte 63px selon Figma */}
       <div className="h-[63px] px-4 flex items-center justify-between">
         {/* LEFT SIDE: Burger Menu + Logo (mobile uniquement) */}

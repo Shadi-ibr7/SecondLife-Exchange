@@ -91,7 +91,7 @@ export default function AdminAnalyticsPage() {
   return (
     <div className="space-y-6 lg:space-y-8">
       {/* Header */}
-      <div>
+      <div className="flex items-center justify-between">
         <h1 className="admin-page-title">Analytics</h1>
         <p className="admin-page-description">
           Statistiques et analyse de la plateforme SecondLife Exchange

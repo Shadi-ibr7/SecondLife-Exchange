@@ -119,11 +119,11 @@ export default function AdminDashboardPage() {
   if (hasError) {
     const error = statsError || analyticsError || usersError || itemsError;
     const errorMessage = error?.message || 'Une erreur est survenue';
-    const isNetworkError = 
-      errorMessage.includes('Network Error') || 
+    const isNetworkError =
+      errorMessage.includes('Network Error') ||
       errorMessage.includes('ECONNREFUSED') ||
       errorMessage.includes('fetch failed');
-    
+
     return (
       <div className="space-y-6">
         <div>

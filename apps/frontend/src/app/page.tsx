@@ -31,6 +31,14 @@ import { Sparkles, ArrowRight, TrendingUp, Leaf } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 
+// Import React Query pour les données
+import { useQuery } from '@tanstack/react-query';
+import { themesApi } from '@/lib/themes.api';
+import { itemsApi } from '@/lib/items.api';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { ITEM_CATEGORY_LABELS, ITEM_CONDITION_LABELS } from '@/lib/constants';
+
 /**
  * COMPOSANT: HomePage
  *
@@ -38,66 +46,94 @@ import Image from 'next/image';
  * Affiche le hero, le thème hebdomadaire, les suggestions IA et le contenu éco.
  */
 export default function HomePage() {
-  // Temporairement désactivé pour tester l'affichage
-  // const {
-  //   data: theme,
-  //   isLoading,
-  //   error,
-  // } = useQuery({
-  //   queryKey: ['activeTheme'],
-  //   queryFn: () => themesApi.getActiveTheme(),
-  // });
+  // Récupérer le thème actif
+  const {
+    data: theme,
+    isLoading: themeLoading,
+    error: themeError,
+  } = useQuery({
+    queryKey: ['activeTheme'],
+    queryFn: () => themesApi.getActiveTheme(),
+    retry: 1,
+  });
 
-  const isLoading = false;
-  const theme = null;
+  // Récupérer les suggestions IA pour le thème actif
+  const {
+    data: suggestionsData,
+    isLoading: suggestionsLoading,
+  } = useQuery({
+    queryKey: ['theme-suggestions', theme?.id],
+    queryFn: () => themesApi.getThemeSuggestions(theme!.id, { page: 1, limit: 4 }),
+    enabled: !!theme?.id,
+    retry: 1,
+  });
 
-  // Données de démonstration pour les suggestions IA
-  const aiSuggestions = [
-    {
-      id: '1',
-      title: 'Fauteuil vintage années 70',
-      image:
-        'https://images.unsplash.com/photo-1577176434922-803273eba97a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx2aW50YWdlJTIwZnVybml0dXJlfGVufDF8fHx8MTc2MTA3NTk1N3ww&ixlib=rb-4.1.0&q=80&w=1080',
-      category: 'Mobilier',
-      condition: 'Très bon',
-      location: 'Paris',
-      tags: ['Vintage', 'Réparable', 'Unique'],
-      aiSuggested: true,
+  // Récupérer les vrais items créés pendant la période du thème actif
+  const {
+    data: itemsData,
+    isLoading: itemsLoading,
+  } = useQuery({
+    queryKey: ['theme-items', theme?.id, theme?.startOfWeek],
+    queryFn: async () => {
+      if (!theme?.startOfWeek) return { items: [], total: 0 };
+
+      const startDate = new Date(theme.startOfWeek);
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + 6); // Semaine = 7 jours
+
+      // Récupérer les items créés pendant cette période
+      return itemsApi.listItems({
+        page: 1,
+        limit: 4,
+        sort: '-createdAt',
+        // Note: L'API items ne supporte pas encore le filtrage par date directement
+        // On récupère les 4 derniers items et on les filtre côté client
+      });
     },
-    {
-      id: '2',
-      title: 'Veste en cuir artisanale',
-      image:
-        'https://images.unsplash.com/photo-1534639077088-d702bcf685e7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdXN0YWluYWJsZSUyMGZhc2hpb258ZW58MXx8fHwxNzYxMDkyNzE1fDA&ixlib=rb-4.1.0&q=80&w=1080',
-      category: 'Mode',
-      condition: 'Comme neuf',
-      location: 'Lyon',
-      tags: ['Artisanal', 'Durable', 'Tendance'],
-      aiSuggested: true,
-    },
-    {
-      id: '3',
-      title: 'Céramique fait-main',
-      image:
-        'https://images.unsplash.com/photo-1506806732259-39c2d0268443?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxoYW5kbWFkZSUyMGNyYWZ0c3xlbnwxfHx8fDE3NjEwNTgxODN8MA&ixlib=rb-4.1.0&q=80&w=1080',
-      category: 'Artisanat',
-      condition: 'Comme neuf',
-      location: 'Bordeaux',
-      tags: ['Fait-main', 'Unique', 'Local'],
-      aiSuggested: true,
-    },
-    {
-      id: '4',
-      title: 'Appareil photo rétro',
-      image:
-        'https://images.unsplash.com/photo-1510222755157-fc26750f1199?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyZXRybyUyMGVsZWN0cm9uaWNzfGVufDF8fHx8MTc2MTEzNDM2MXww&ixlib=rb-4.1.0&q=80&w=1080',
-      category: 'Électronique',
-      condition: 'Bon',
-      location: 'Marseille',
-      tags: ['Rétro', 'Fonctionnel', 'Collection'],
-      aiSuggested: true,
-    },
-  ];
+    enabled: !!theme?.startOfWeek,
+    retry: 1,
+  });
+
+  // Filtrer les items par date si nécessaire
+  const themeItems = itemsData?.items?.filter((item) => {
+    if (!theme?.startOfWeek) return false;
+    const itemDate = new Date(item.createdAt);
+    const startDate = new Date(theme.startOfWeek);
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 6);
+    return itemDate >= startDate && itemDate <= endDate;
+  }).slice(0, 4) || [];
+
+  // Convertir les suggestions IA en format ItemCard
+  const aiSuggestions = suggestionsData?.items?.slice(0, 4).map((suggestion) => ({
+    id: suggestion.id,
+    title: suggestion.name,
+    image: suggestion.photoRef
+      ? `https://images.unsplash.com/photo-${suggestion.photoRef}?w=400`
+      : 'https://images.unsplash.com/photo-1506806732259-39c2d0268443?w=400',
+    category: ITEM_CATEGORY_LABELS[suggestion.category] || suggestion.category,
+    condition: 'Bon état',
+    location: suggestion.country,
+    tags: suggestion.tags || [],
+    aiSuggested: true,
+  })) || [];
+
+  // Convertir les vrais items en format ItemCard
+  const realItems = themeItems.map((item) => ({
+    id: item.id,
+    title: item.title,
+    image: item.photos?.[0]?.url || 'https://images.unsplash.com/photo-1506806732259-39c2d0268443?w=400',
+    category: ITEM_CATEGORY_LABELS[item.category] || item.category,
+    condition: ITEM_CONDITION_LABELS[item.condition] || item.condition,
+    location: item.owner?.location || 'France',
+    tags: item.tags || [],
+    aiSuggested: false,
+  }));
+
+  // Combiner suggestions IA et vrais items (priorité aux vrais items)
+  const displayItems = [...realItems, ...aiSuggestions].slice(0, 4);
+
+  const isLoading = themeLoading || suggestionsLoading || itemsLoading;
 
   const ecoContent = [
     {
@@ -247,62 +283,72 @@ export default function HomePage() {
         </div>
 
         {/* Carte thème - Design Figma */}
-        <div className="relative h-[743.75px] w-full overflow-hidden rounded-[14px] border-2 border-[#10b981] bg-[rgba(16,185,129,0.05)]">
-          {/* Image avec overlay */}
-          <div className="relative h-[537.75px] w-full overflow-hidden">
-            <Image
-              src="https://images.unsplash.com/photo-1534639077088-d702bcf685e7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdXN0YWluYWJsZSUyMGZhc2hpb258ZW58MXx8fHwxNzYxMDkyNzE1fDA&ixlib=rb-4.1.0&q=80&w=1080"
-              alt="Mode Vintage & Rétro"
-              fill
-              className="object-cover object-center"
-            />
-            {/* Gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+        {theme ? (
+          <div className="relative h-[743.75px] w-full overflow-hidden rounded-[14px] border-2 border-[#10b981] bg-[rgba(16,185,129,0.05)]">
+            {/* Image avec overlay */}
+            <div className="relative h-[537.75px] w-full overflow-hidden">
+              <Image
+                src={theme.photoUrl || 'https://images.unsplash.com/photo-1534639077088-d702bcf685e7?w=1080'}
+                alt={theme.title}
+                fill
+                className="object-cover object-center"
+              />
+              {/* Gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
-            {/* Badge "Thème actif" */}
-            <div className="absolute left-3 top-[13px] flex h-[22px] items-center gap-2 rounded-[8px] bg-[#10b981] px-2">
-              <TrendingUp className="h-3 w-3 text-white" />
-              <span className="text-xs font-semibold leading-4 text-white">
-                Thème actif
-              </span>
+              {/* Badge "Thème actif" */}
+              <div className="absolute left-3 top-[13px] flex h-[22px] items-center gap-2 rounded-[8px] bg-[#10b981] px-2">
+                <TrendingUp className="h-3 w-3 text-white" />
+                <span className="text-xs font-semibold leading-4 text-white">
+                  Thème actif
+                </span>
+              </div>
+
+              {/* Titre et date superposés */}
+              <div className="absolute bottom-0 left-3 flex flex-col gap-1 pb-4">
+                <h3 className="text-base leading-[24px] tracking-[-0.3125px] text-white">
+                  {theme.title}
+                </h3>
+                <p className="text-sm leading-[20px] tracking-[-0.1504px] text-white/80">
+                  {(() => {
+                    const start = new Date(theme.startOfWeek);
+                    const end = new Date(start);
+                    end.setDate(end.getDate() + 6);
+                    return `Du ${format(start, 'd MMMM yyyy', { locale: fr })} au ${format(end, 'd MMMM yyyy', { locale: fr })}`;
+                  })()}
+                </p>
+              </div>
             </div>
 
-            {/* Titre et date superposés */}
-            <div className="absolute bottom-0 left-3 flex flex-col gap-1 pb-4">
-              <h3 className="text-base leading-[24px] tracking-[-0.3125px] text-white">
-                Mode Vintage & Rétro
-              </h3>
-              <p className="text-sm leading-[20px] tracking-[-0.1504px] text-white/80">
-                Du 20 au 26 octobre 2025
+            {/* Contenu en bas de la carte */}
+            <div className="absolute bottom-0 left-0 right-0 flex flex-col gap-4 p-5">
+              {/* Description */}
+              <p className="text-base leading-[24px] tracking-[-0.3125px] text-[#71717a] dark:text-[#a1a1aa]">
+                {theme.impactText || 'Découvrez les objets proposés par notre communauté cette semaine.'}
               </p>
+
+              {/* Métrique CO2 */}
+              <div className="flex h-[46px] items-center gap-2 rounded-[14px] border border-[rgba(0,201,80,0.2)] bg-[rgba(0,201,80,0.1)] px-[13px]">
+                <Leaf className="h-4 w-4 text-[#05df72]" />
+                <span className="text-sm leading-[20px] tracking-[-0.1504px] text-[#05df72]">
+                  En moyenne -45kg de CO₂ par objet échangé vs acheté neuf
+                </span>
+              </div>
+
+              {/* Bouton CTA */}
+              <Button
+                onClick={() => (window.location.href = '/explore')}
+                className="h-9 w-full rounded-[8px] bg-[#10b981] text-sm font-semibold leading-[20px] tracking-[-0.1504px] text-white hover:bg-[#10b981]/90"
+              >
+                Voir les suggestions
+              </Button>
             </div>
           </div>
-
-          {/* Contenu en bas de la carte */}
-          <div className="absolute bottom-0 left-0 right-0 flex flex-col gap-4 p-5">
-            {/* Description */}
-            <p className="text-base leading-[24px] tracking-[-0.3125px] text-[#71717a] dark:text-[#a1a1aa]">
-              Cette semaine, redécouvrez le charme du vintage ! Vêtements,
-              accessoires et pièces uniques des années passées.
-            </p>
-
-            {/* Métrique CO2 */}
-            <div className="flex h-[46px] items-center gap-2 rounded-[14px] border border-[rgba(0,201,80,0.2)] bg-[rgba(0,201,80,0.1)] px-[13px]">
-              <Leaf className="h-4 w-4 text-[#05df72]" />
-              <span className="text-sm leading-[20px] tracking-[-0.1504px] text-[#05df72]">
-                En moyenne -45kg de CO₂ par vêtement échangé vs acheté neuf
-              </span>
-            </div>
-
-            {/* Bouton CTA */}
-            <Button
-              onClick={() => (window.location.href = '/explore')}
-              className="h-9 w-full rounded-[8px] bg-[#10b981] text-sm font-semibold leading-[20px] tracking-[-0.1504px] text-white hover:bg-[#10b981]/90"
-            >
-              Voir les suggestions
-            </Button>
+        ) : (
+          <div className="relative h-[743.75px] w-full overflow-hidden rounded-[14px] border-2 border-[#10b981] bg-[rgba(16,185,129,0.05)] flex items-center justify-center">
+            <p className="text-[#71717a] dark:text-[#a1a1aa]">Aucun thème actif pour le moment</p>
           </div>
-        </div>
+        )}
       </section>
 
       {/* Suggestions IA - Design Figma (2-189) */}
@@ -327,14 +373,20 @@ export default function HomePage() {
 
         {/* Grille de 4 cartes - gap 24px selon Figma */}
         <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-[24px]">
-          {aiSuggestions.map((item) => (
-            <ItemCard
-              key={item.id}
-              {...item}
-              aiSuggested={true}
-              onClick={() => (window.location.href = '/item-detail')}
-            />
-          ))}
+          {displayItems.length > 0 ? (
+            displayItems.map((item) => (
+              <ItemCard
+                key={item.id}
+                {...item}
+                aiSuggested={item.aiSuggested}
+                onClick={() => (window.location.href = `/item/${item.id}`)}
+              />
+            ))
+          ) : (
+            <div className="col-span-full text-center text-[#71717a] dark:text-[#a1a1aa]">
+              Aucune suggestion disponible pour le moment
+            </div>
+          )}
         </div>
 
         {/* Bouton centré */}

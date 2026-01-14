@@ -438,7 +438,7 @@ export class AdminService {
 
   // Themes Management
   async getThemes() {
-    return this.prisma.weeklyTheme.findMany({
+    const themes = await this.prisma.weeklyTheme.findMany({
       include: {
         _count: {
           select: { suggestions: true },
@@ -446,6 +446,130 @@ export class AdminService {
       },
       orderBy: { startOfWeek: 'desc' },
     });
+
+    // Enrichir avec les stats réelles pour chaque thème
+    const themesWithStats = await Promise.all(
+      themes.map(async (theme) => {
+        const startDate = new Date(theme.startOfWeek);
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 6); // Semaine = 7 jours
+
+        // Compter les items créés pendant la période du thème
+        const itemsCount = await this.prisma.item.count({
+          where: {
+            createdAt: {
+              gte: startDate,
+              lte: endDate,
+            },
+          },
+        });
+
+        // Compter les échanges créés/complétés pendant la période du thème
+        const exchangesCount = await this.prisma.exchange.count({
+          where: {
+            OR: [
+              {
+                createdAt: {
+                  gte: startDate,
+                  lte: endDate,
+                },
+              },
+              {
+                status: 'COMPLETED',
+                completedAt: {
+                  gte: startDate,
+                  lte: endDate,
+                },
+              },
+            ],
+          },
+        });
+
+        // Compter les utilisateurs uniques qui ont créé des items ou participé à des échanges pendant cette période
+        const [usersWithItems, usersWithExchanges] = await Promise.all([
+          this.prisma.user.findMany({
+            where: {
+              items: {
+                some: {
+                  createdAt: {
+                    gte: startDate,
+                    lte: endDate,
+                  },
+                },
+              },
+            },
+            select: { id: true },
+          }),
+          this.prisma.user.findMany({
+            where: {
+              OR: [
+                {
+                  exchangesRequested: {
+                    some: {
+                      OR: [
+                        {
+                          createdAt: {
+                            gte: startDate,
+                            lte: endDate,
+                          },
+                        },
+                        {
+                          status: 'COMPLETED',
+                          completedAt: {
+                            gte: startDate,
+                            lte: endDate,
+                          },
+                        },
+                      ],
+                    },
+                  },
+                },
+                {
+                  exchangesResponded: {
+                    some: {
+                      OR: [
+                        {
+                          createdAt: {
+                            gte: startDate,
+                            lte: endDate,
+                          },
+                        },
+                        {
+                          status: 'COMPLETED',
+                          completedAt: {
+                            gte: startDate,
+                            lte: endDate,
+                          },
+                        },
+                      ],
+                    },
+                  },
+                },
+              ],
+            },
+            select: { id: true },
+          }),
+        ]);
+
+        // Combiner et dédupliquer les utilisateurs
+        const uniqueUserIds = new Set([
+          ...usersWithItems.map((u) => u.id),
+          ...usersWithExchanges.map((u) => u.id),
+        ]);
+
+        return {
+          ...theme,
+          stats: {
+            suggestions: theme._count.suggestions,
+            items: itemsCount,
+            exchanges: exchangesCount,
+            participants: uniqueUserIds.size,
+          },
+        };
+      }),
+    );
+
+    return themesWithStats;
   }
 
   async getThemeById(id: string) {
@@ -1068,7 +1192,7 @@ export class AdminService {
       this.prisma.user.count(),
       this.prisma.ban.count(),
       this.prisma.$queryRaw`
-        SELECT 
+        SELECT
           DATE_TRUNC('month', "createdAt") as month,
           COUNT(*)::int as count
         FROM users
@@ -1123,7 +1247,7 @@ export class AdminService {
         _count: { condition: true },
       }),
       this.prisma.$queryRaw`
-        SELECT 
+        SELECT
           DATE_TRUNC('month', "createdAt") as month,
           COUNT(*)::int as count
         FROM items
@@ -1171,7 +1295,7 @@ export class AdminService {
         _count: { status: true },
       }),
       this.prisma.$queryRaw`
-        SELECT 
+        SELECT
           DATE_TRUNC('month', "createdAt") as month,
           COUNT(*)::int as count
         FROM exchanges
@@ -1180,7 +1304,7 @@ export class AdminService {
         ORDER BY month DESC
       `,
       this.prisma.$queryRaw<Array<{ avg: number }>>`
-        SELECT 
+        SELECT
           EXTRACT(EPOCH FROM AVG("completedAt" - "createdAt"))::float as avg
         FROM exchanges
         WHERE status = 'COMPLETED' AND "completedAt" IS NOT NULL
