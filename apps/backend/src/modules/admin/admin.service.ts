@@ -9,7 +9,11 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { ItemStatus } from '@prisma/client';
 import { ThemesService } from '../themes/themes.service';
-import { SuggestionsService, SuggestionStats } from '../suggestions/suggestions.service';
+import {
+  SuggestionsService,
+  SuggestionStats,
+} from '../suggestions/suggestions.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateThemeDto } from '../themes/dtos/create-theme.dto';
 import { UpdateThemeDto } from '../themes/dtos/update-theme.dto';
 
@@ -19,6 +23,7 @@ export class AdminService {
     private prisma: PrismaService,
     private themesService: ThemesService,
     private suggestionsService: SuggestionsService,
+    private notificationsService: NotificationsService,
   ) {}
 
   // Dashboard Stats
@@ -77,10 +82,18 @@ export class AdminService {
       totalItems,
       totalExchanges,
       openReports,
-      usersGrowth: totalUsersBefore > 0 ? ((usersLastMonth / totalUsersBefore) * 100) : 0,
-      itemsGrowth: totalItemsBefore > 0 ? ((itemsLastMonth / totalItemsBefore) * 100) : 0,
-      exchangesGrowth: totalExchangesBefore > 0 ? ((exchangesLastMonth / totalExchangesBefore) * 100) : 0,
-      reportsGrowth: totalReportsBefore > 0 ? ((reportsLastMonth / totalReportsBefore) * 100) : 0,
+      usersGrowth:
+        totalUsersBefore > 0 ? (usersLastMonth / totalUsersBefore) * 100 : 0,
+      itemsGrowth:
+        totalItemsBefore > 0 ? (itemsLastMonth / totalItemsBefore) * 100 : 0,
+      exchangesGrowth:
+        totalExchangesBefore > 0
+          ? (exchangesLastMonth / totalExchangesBefore) * 100
+          : 0,
+      reportsGrowth:
+        totalReportsBefore > 0
+          ? (reportsLastMonth / totalReportsBefore) * 100
+          : 0,
     };
   }
 
@@ -178,7 +191,11 @@ export class AdminService {
   }
 
   // Items Management
-  async getItems(page = 1, limit = 20, filters?: { ownerId?: string; category?: string; status?: string }) {
+  async getItems(
+    page = 1,
+    limit = 20,
+    filters?: { ownerId?: string; category?: string; status?: string },
+  ) {
     const skip = (page - 1) * limit;
     const where: any = {};
 
@@ -326,7 +343,7 @@ export class AdminService {
           targetUser,
           targetItem,
         };
-      })
+      }),
     );
 
     return {
@@ -403,7 +420,9 @@ export class AdminService {
   }
 
   async resolveReport(reportId: string, adminId: string, banUser = false) {
-    const report = await this.prisma.report.findUnique({ where: { id: reportId } });
+    const report = await this.prisma.report.findUnique({
+      where: { id: reportId },
+    });
     if (!report) {
       throw new NotFoundException('Signalement non trouvé');
     }
@@ -418,15 +437,23 @@ export class AdminService {
     });
 
     if (banUser && report.targetUserId) {
-      await this.banUser(report.targetUserId, adminId, `Banni suite au signalement #${reportId}`);
+      await this.banUser(
+        report.targetUserId,
+        adminId,
+        `Banni suite au signalement #${reportId}`,
+      );
     }
 
-    await this.logAction(adminId, 'RESOLVE_REPORT', 'Report', reportId, { banUser });
+    await this.logAction(adminId, 'RESOLVE_REPORT', 'Report', reportId, {
+      banUser,
+    });
     return { success: true };
   }
 
   async deleteReport(reportId: string, adminId: string) {
-    const report = await this.prisma.report.findUnique({ where: { id: reportId } });
+    const report = await this.prisma.report.findUnique({
+      where: { id: reportId },
+    });
     if (!report) {
       throw new NotFoundException('Signalement non trouvé');
     }
@@ -587,7 +614,13 @@ export class AdminService {
 
   async updateTheme(id: string, data: UpdateThemeDto, adminId: string) {
     const theme = await this.themesService.updateTheme(id, data);
-    await this.logAction(adminId, 'UPDATE_THEME', 'WeeklyTheme', theme.id, data);
+    await this.logAction(
+      adminId,
+      'UPDATE_THEME',
+      'WeeklyTheme',
+      theme.id,
+      data,
+    );
     return theme;
   }
 
@@ -619,11 +652,22 @@ export class AdminService {
       locales && locales.length > 0 ? locales : undefined,
     );
 
-    await this.logAction(adminId, 'GENERATE_THEME_SUGGESTIONS', 'WeeklyTheme', id, stats);
+    await this.logAction(
+      adminId,
+      'GENERATE_THEME_SUGGESTIONS',
+      'WeeklyTheme',
+      id,
+      stats,
+    );
     return stats;
   }
 
-  async getThemeSuggestions(id: string, page = 1, limit = 20, sort = '-createdAt') {
+  async getThemeSuggestions(
+    id: string,
+    page = 1,
+    limit = 20,
+    sort = '-createdAt',
+  ) {
     return this.suggestionsService.getThemeSuggestions(id, page, limit, sort);
   }
 
@@ -649,10 +693,16 @@ export class AdminService {
   async generateMonthlyThemes(adminId: string, month?: Date): Promise<any[]> {
     try {
       const themes = await this.themesService.generateMonthlyThemes(month);
-      await this.logAction(adminId, 'GENERATE_MONTHLY_THEMES', 'WeeklyTheme', null, {
-        count: themes.length,
-        month: month ? month.toISOString() : new Date().toISOString(),
-      });
+      await this.logAction(
+        adminId,
+        'GENERATE_MONTHLY_THEMES',
+        'WeeklyTheme',
+        null,
+        {
+          count: themes.length,
+          month: month ? month.toISOString() : new Date().toISOString(),
+        },
+      );
       return themes;
     } catch (error: any) {
       console.error('❌ Erreur génération thèmes mensuels:', error);
@@ -708,11 +758,47 @@ export class AdminService {
       },
     });
 
-    await this.logAction(adminId, 'CREATE_ECO_CONTENT', 'EcoContent', content.id, {
-      title: content.title,
-    });
+    await this.logAction(
+      adminId,
+      'CREATE_ECO_CONTENT',
+      'EcoContent',
+      content.id,
+      {
+        title: content.title,
+      },
+    );
+
+    // Si le contenu est publié, notifier les admins (non bloquant)
+    if (data.published) {
+      this.notifyEcoContentPublished(content.id, content.title).catch(() => {
+        // Erreur silencieuse
+      });
+    }
 
     return content;
+  }
+
+  /**
+   * Notifie les administrateurs de la publication d'un contenu éco.
+   */
+  private async notifyEcoContentPublished(
+    contentId: string,
+    contentTitle: string,
+  ) {
+    const admins = await this.prisma.user.findMany({
+      where: { roles: 'ADMIN' },
+      select: { id: true },
+    });
+
+    const adminIds = admins.map((a) => a.id);
+
+    if (adminIds.length > 0) {
+      await this.notificationsService.notifyEcoContentPublished(
+        adminIds,
+        contentTitle,
+        contentId,
+      );
+    }
   }
 
   async updateEcoContent(id: string, data: any, adminId: string) {
@@ -995,7 +1081,9 @@ export class AdminService {
   }
 
   async deleteThread(threadId: string, adminId: string) {
-    const thread = await this.prisma.thread.findUnique({ where: { id: threadId } });
+    const thread = await this.prisma.thread.findUnique({
+      where: { id: threadId },
+    });
     if (!thread) {
       throw new NotFoundException('Thread non trouvé');
     }
@@ -1005,7 +1093,11 @@ export class AdminService {
     return { success: true };
   }
 
-  async getPosts(page = 1, limit = 20, filters?: { threadId?: string; authorId?: string }) {
+  async getPosts(
+    page = 1,
+    limit = 20,
+    filters?: { threadId?: string; authorId?: string },
+  ) {
     const skip = (page - 1) * limit;
     const where: any = {};
 
@@ -1309,10 +1401,12 @@ export class AdminService {
         FROM exchanges
         WHERE status = 'COMPLETED' AND "completedAt" IS NOT NULL
       `.then((result) => (result[0]?.avg || 0) / 86400), // Convertir en jours
-      this.prisma.exchange.count({ where: { status: 'COMPLETED' } }).then(async (completed) => {
-        const total = await this.prisma.exchange.count();
-        return total > 0 ? (completed / total) * 100 : 0;
-      }),
+      this.prisma.exchange
+        .count({ where: { status: 'COMPLETED' } })
+        .then(async (completed) => {
+          const total = await this.prisma.exchange.count();
+          return total > 0 ? (completed / total) * 100 : 0;
+        }),
     ]);
 
     return {
@@ -1346,4 +1440,3 @@ export class AdminService {
     });
   }
 }
-

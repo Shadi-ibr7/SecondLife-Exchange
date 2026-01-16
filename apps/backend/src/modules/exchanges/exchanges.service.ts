@@ -160,15 +160,17 @@ export class ExchangesService {
     });
 
     // Notifier le propriétaire (répondant) d'une nouvelle proposition
-    try {
-      await this.notifications.sendExchangeStatusNotification(
-        exchange.id,
-        'PENDING',
+    // Non bloquant : si ça échoue, l'échange est quand même créé
+    this.notifications
+      .notifyExchangeRequest(
         responderId,
-      );
-    } catch (e) {
-      // Stratégie: on loggue côté NotificationsService; ici on n'empêche pas la création
-    }
+        exchange.requester.displayName,
+        exchange.id,
+        requestedItemTitle,
+      )
+      .catch(() => {
+        // Erreur silencieuse, loggée dans NotificationsService
+      });
 
     return exchange;
   }
@@ -216,7 +218,7 @@ export class ExchangesService {
       updateData.completedAt = new Date();
     }
 
-    return this.prisma.exchange.update({
+    const updated = await this.prisma.exchange.update({
       where: { id: exchangeId },
       data: updateData,
       include: {
@@ -238,6 +240,21 @@ export class ExchangesService {
         },
       },
     });
+
+    // Notifier l'autre partie du changement de statut
+    // Non bloquant : si ça échoue, l'échange est quand même mis à jour
+    const recipientId =
+      exchange.requesterId === userId
+        ? exchange.responderId
+        : exchange.requesterId;
+
+    this.notifications
+      .notifyExchangeStatus(recipientId, exchangeId, status)
+      .catch(() => {
+        // Erreur silencieuse, loggée dans NotificationsService
+      });
+
+    return updated;
   }
 
   /**

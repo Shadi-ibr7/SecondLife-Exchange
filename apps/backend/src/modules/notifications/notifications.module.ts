@@ -2,46 +2,33 @@
  * FICHIER: notifications.module.ts
  *
  * DESCRIPTION:
- * Ce module NestJS regroupe les fonctionnalités de notifications push.
- * Il gère l'enregistrement de tokens et l'envoi de notifications.
+ * Module NestJS pour la gestion des notifications In-App et Push Web.
  *
- * COMPOSANTS:
- * - NotificationsController: Routes HTTP pour les notifications
- * - NotificationsService: Logique métier pour les notifications
+ * FONCTIONNALITÉS:
+ * - Notifications In-App (DB) avec CRUD
+ * - Push Web avec VAPID
+ * - Tokens FCM pour mobile (future)
+ * - Cron pour rappels hebdomadaires
  *
  * DÉPENDANCES:
  * - PrismaModule: Accès à la base de données
- *
- * NOTE:
- * Le service inclut une tâche cron pour les rappels hebdomadaires de thèmes.
+ * - ConfigModule: Variables d'environnement VAPID
  */
 
-// Import du décorateur Module
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 
-// Import des composants du module
 import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
-
-// Import des modules dépendants
 import { PrismaModule } from '../../common/prisma/prisma.module';
 
-/**
- * MODULE: NotificationsModule
- *
- * Module pour la gestion des notifications push.
- */
 @Module({
-  // Modules importés nécessaires
-  imports: [PrismaModule], // Accès à la base de données
-
-  // Contrôleur qui expose les routes HTTP
+  imports: [
+    PrismaModule,
+    ConfigModule, // Pour VAPID keys
+  ],
   controllers: [NotificationsController],
-
-  // Services fournis par ce module
   providers: [NotificationsService],
-
-  // Services exportés pour être utilisés dans d'autres modules
-  exports: [NotificationsService],
+  exports: [NotificationsService], // Exporté pour être utilisé dans d'autres modules
 })
 export class NotificationsModule {}

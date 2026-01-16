@@ -2,81 +2,215 @@
  * FICHIER: notifications.service.ts
  *
  * DESCRIPTION:
- * Ce service gère l'envoi de notifications push aux utilisateurs.
- * Il permet d'enregistrer des tokens de notification et d'envoyer
- * des notifications pour différents événements (échanges, messages, thèmes).
+ * Service de gestion des notifications In-App et Push Web.
  *
  * FONCTIONNALITÉS:
- * - Enregistrement de tokens de notification (FCM, Web Push)
- * - Envoi de notifications de test
- * - Rappel hebdomadaire automatique pour les nouveaux thèmes (cron)
- * - Notifications pour changements de statut d'échange
- * - Notifications pour nouveaux messages dans les threads
+ * - Notifications In-App : CRUD dans la base de données
+ * - Push Web : envoi via Web Push API avec VAPID
+ * - Tokens : gestion des tokens FCM et WebPush
+ * - Triggers : méthodes pour déclencher les notifications depuis les services métier
  *
- * PROVIDERS SUPPORTÉS:
- * - fcm: Firebase Cloud Messaging (Android/iOS)
- * - webpush: Web Push API (navigateurs)
- *
- * NOTE:
- * L'implémentation actuelle est un placeholder. Dans un vrai projet,
- * il faudrait implémenter FCM HTTP v1 et Web Push avec VAPID.
+ * ARCHITECTURE:
+ * - Les notifications in-app sont stockées en DB (table notifications)
+ * - Les push sont envoyés en best-effort (échec non bloquant)
+ * - Les triggers sont non bloquants pour les opérations principales
  */
 
-// Import des classes NestJS
 import {
   Injectable,
   Logger,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Cron } from '@nestjs/schedule';
+import { NotificationType } from '@prisma/client';
 
-// Import du service Prisma
 import { PrismaService } from '../../common/prisma/prisma.service';
-
-// Import des DTOs
 import {
   RegisterTokenInput,
   SendTestNotificationInput,
   NotificationTokenResponse,
   SendNotificationResponse,
+  NotificationResponse,
+  PaginatedNotificationsResponse,
+  UnreadCountResponse,
+  CreateNotificationPayload,
+  PushNotificationPayload,
+  WebPushSubscribeDto,
 } from './dtos/notifications.dto';
 
-// Import du module de scheduling
-import { Cron, CronExpression } from '@nestjs/schedule';
+// Import de web-push pour les notifications push
+import * as webpush from 'web-push';
 
-/**
- * SERVICE: NotificationsService
- *
- * Service pour la gestion des notifications push.
- */
 @Injectable()
 export class NotificationsService {
-  /**
-   * Logger pour enregistrer les événements
-   */
   private readonly logger = new Logger(NotificationsService.name);
+  private vapidConfigured = false;
+
+  constructor(
+    private prisma: PrismaService,
+    private configService: ConfigService,
+  ) {
+    this.initializeVapid();
+  }
+
+  // ============================================
+  // INITIALISATION VAPID
+  // ============================================
+
+  private initializeVapid() {
+    const vapidPublicKey = this.configService.get<string>('VAPID_PUBLIC_KEY');
+    const vapidPrivateKey = this.configService.get<string>('VAPID_PRIVATE_KEY');
+    const vapidSubject =
+      this.configService.get<string>('VAPID_SUBJECT') ||
+      'mailto:contact@secondlife-exchange.com';
+
+    if (vapidPublicKey && vapidPrivateKey) {
+      try {
+        webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
+        this.vapidConfigured = true;
+        this.logger.log('VAPID configuré avec succès');
+      } catch (error: any) {
+        this.logger.error(`Erreur configuration VAPID: ${error.message}`);
+      }
+    } else {
+      this.logger.warn(
+        'VAPID_PUBLIC_KEY ou VAPID_PRIVATE_KEY manquant - Push notifications désactivées',
+      );
+    }
+  }
+
+  // ============================================
+  // NOTIFICATIONS IN-APP : CRUD
+  // ============================================
 
   /**
-   * CONSTRUCTEUR
-   *
-   * Injection du service Prisma
+   * Crée une notification in-app pour un utilisateur.
+   * Cette méthode est NON BLOQUANTE : les erreurs sont loggées mais ne sont pas propagées.
    */
-  constructor(private prisma: PrismaService) {}
+  async createNotification(
+    payload: CreateNotificationPayload,
+  ): Promise<NotificationResponse | null> {
+    try {
+      const notification = await this.prisma.notification.create({
+        data: {
+          userId: payload.userId,
+          type: payload.type,
+          title: payload.title,
+          body: payload.body,
+          data: payload.data || null,
+        },
+      });
+
+      this.logger.log(
+        `Notification créée pour user ${payload.userId} - type: ${payload.type}`,
+      );
+      return this.mapNotificationToResponse(notification);
+    } catch (error) {
+      this.logger.error(
+        `Erreur création notification: ${error.message}`,
+        error.stack,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Liste les notifications d'un utilisateur avec pagination.
+   */
+  async listNotifications(
+    userId: string,
+    options: { page?: number; limit?: number; unreadOnly?: boolean } = {},
+  ): Promise<PaginatedNotificationsResponse> {
+    const { page = 1, limit = 20, unreadOnly = false } = options;
+    const skip = (page - 1) * limit;
+
+    const where: any = { userId };
+    if (unreadOnly) {
+      where.readAt = null;
+    }
+
+    const [notifications, total, unreadCount] = await Promise.all([
+      this.prisma.notification.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.notification.count({ where }),
+      this.prisma.notification.count({ where: { userId, readAt: null } }),
+    ]);
+
+    return {
+      items: notifications.map(this.mapNotificationToResponse),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      unreadCount,
+    };
+  }
+
+  /**
+   * Récupère le nombre de notifications non lues.
+   */
+  async getUnreadCount(userId: string): Promise<UnreadCountResponse> {
+    const count = await this.prisma.notification.count({
+      where: { userId, readAt: null },
+    });
+    return { count };
+  }
+
+  /**
+   * Marque une notification comme lue.
+   */
+  async markAsRead(
+    userId: string,
+    notificationId: string,
+  ): Promise<NotificationResponse> {
+    // Vérifier que la notification appartient à l'utilisateur
+    const notification = await this.prisma.notification.findFirst({
+      where: { id: notificationId, userId },
+    });
+
+    if (!notification) {
+      throw new NotFoundException('Notification non trouvée');
+    }
+
+    if (notification.readAt) {
+      return this.mapNotificationToResponse(notification);
+    }
+
+    const updated = await this.prisma.notification.update({
+      where: { id: notificationId },
+      data: { readAt: new Date() },
+    });
+
+    return this.mapNotificationToResponse(updated);
+  }
+
+  /**
+   * Marque toutes les notifications d'un utilisateur comme lues.
+   */
+  async markAllAsRead(userId: string): Promise<{ count: number }> {
+    const result = await this.prisma.notification.updateMany({
+      where: { userId, readAt: null },
+      data: { readAt: new Date() },
+    });
+
+    this.logger.log(
+      `${result.count} notifications marquées comme lues pour user ${userId}`,
+    );
+    return { count: result.count };
+  }
 
   // ============================================
-  // MÉTHODE: registerToken (Enregistrer un token)
+  // PUSH TOKENS : REGISTER / UNREGISTER
   // ============================================
 
   /**
-   * Enregistre un token de notification pour un utilisateur.
-   *
-   * FONCTIONNEMENT:
-   * - Si le token existe déjà pour cet utilisateur et provider, le retourne
-   * - Sinon, crée ou met à jour le token (upsert)
-   *
-   * @param userId - ID de l'utilisateur
-   * @param input - Données du token (token, provider)
-   * @returns Token enregistré
+   * Enregistre un token de notification (FCM ou simple).
    */
   async registerToken(
     userId: string,
@@ -86,57 +220,399 @@ export class NotificationsService {
 
     // Vérifier si le token existe déjà
     const existingToken = await this.prisma.notificationToken.findFirst({
-      where: {
-        userId,
-        token,
-        provider,
-      },
+      where: { userId, token, provider },
     });
 
     if (existingToken) {
-      return this.mapToResponse(existingToken);
+      return this.mapTokenToResponse(existingToken);
     }
 
     // Créer ou mettre à jour le token
     const notificationToken = await this.prisma.notificationToken.upsert({
       where: {
-        userId_provider: {
+        userId_provider_endpoint: {
           userId,
           provider,
+          endpoint: token, // Pour les tokens simples, le token sert d'endpoint
         },
       },
-      update: {
-        token,
-      },
+      update: { token },
       create: {
         userId,
         provider,
         token,
+        endpoint: token,
       },
     });
 
     this.logger.log(
-      `Token de notification enregistré pour l'utilisateur ${userId}`,
+      `Token enregistré pour user ${userId} - provider: ${provider}`,
     );
-    return this.mapToResponse(notificationToken);
+    return this.mapTokenToResponse(notificationToken);
+  }
+
+  /**
+   * Enregistre une subscription WebPush complète.
+   */
+  async subscribeWebPush(
+    userId: string,
+    subscription: WebPushSubscribeDto,
+  ): Promise<NotificationTokenResponse> {
+    const { endpoint, keys, userAgent } = subscription;
+
+    // Vérifier si cette subscription existe déjà
+    const existing = await this.prisma.notificationToken.findFirst({
+      where: { userId, endpoint, provider: 'webpush' },
+    });
+
+    if (existing) {
+      return this.mapTokenToResponse(existing);
+    }
+
+    const notificationToken = await this.prisma.notificationToken.create({
+      data: {
+        userId,
+        provider: 'webpush',
+        token: JSON.stringify(subscription),
+        endpoint,
+        p256dh: keys.p256dh,
+        auth: keys.auth,
+        userAgent,
+      },
+    });
+
+    this.logger.log(`WebPush subscription créée pour user ${userId}`);
+    return this.mapTokenToResponse(notificationToken);
+  }
+
+  /**
+   * Supprime une subscription WebPush.
+   */
+  async unsubscribeWebPush(
+    userId: string,
+    endpoint: string,
+  ): Promise<{ success: boolean }> {
+    const result = await this.prisma.notificationToken.deleteMany({
+      where: { userId, endpoint, provider: 'webpush' },
+    });
+
+    if (result.count > 0) {
+      this.logger.log(`WebPush subscription supprimée pour user ${userId}`);
+    }
+
+    return { success: result.count > 0 };
   }
 
   // ============================================
-  // MÉTHODE: sendTestNotification
+  // PUSH : ENVOI
   // ============================================
 
   /**
-   * Envoie une notification de test à un utilisateur.
-   *
-   * UTILISATION:
-   * - Tests de configuration des notifications
-   * - Vérification que les tokens fonctionnent
-   *
-   * @param currentUserId - ID de l'utilisateur actuel (par défaut si userId non fourni)
-   * @param input - Données de la notification (userId?, title, body)
-   * @returns Résultat de l'envoi (nombre de notifications envoyées)
-   * @throws NotFoundException si aucun token trouvé
-   * @throws BadRequestException si aucune notification n'a pu être envoyée
+   * Envoie une notification push à un utilisateur (tous ses tokens).
+   * Cette méthode est NON BLOQUANTE.
+   */
+  async sendPushToUser(
+    userId: string,
+    payload: PushNotificationPayload,
+  ): Promise<{ sent: number; failed: number }> {
+    if (!this.vapidConfigured) {
+      this.logger.debug('Push non configuré, skip envoi');
+      return { sent: 0, failed: 0 };
+    }
+
+    const tokens = await this.prisma.notificationToken.findMany({
+      where: { userId, provider: 'webpush' },
+    });
+
+    if (tokens.length === 0) {
+      return { sent: 0, failed: 0 };
+    }
+
+    let sent = 0;
+    let failed = 0;
+    const invalidTokenIds: string[] = [];
+
+    for (const tokenData of tokens) {
+      try {
+        await this.sendPushToToken(tokenData, payload);
+        sent++;
+      } catch (error: any) {
+        failed++;
+        // Si le token est invalide (410 Gone ou 404), le marquer pour suppression
+        if (error.statusCode === 410 || error.statusCode === 404) {
+          invalidTokenIds.push(tokenData.id);
+          this.logger.warn(`Token invalide supprimé pour user ${userId}`);
+        } else {
+          this.logger.error(
+            `Erreur push pour user ${userId}: ${error.message}`,
+          );
+        }
+      }
+    }
+
+    // Supprimer les tokens invalides
+    if (invalidTokenIds.length > 0) {
+      await this.prisma.notificationToken.deleteMany({
+        where: { id: { in: invalidTokenIds } },
+      });
+    }
+
+    return { sent, failed };
+  }
+
+  /**
+   * Envoie une notification push à un token spécifique.
+   */
+  private async sendPushToToken(
+    tokenData: any,
+    payload: PushNotificationPayload,
+  ): Promise<void> {
+    if (!tokenData.endpoint || !tokenData.p256dh || !tokenData.auth) {
+      throw new Error('Token WebPush incomplet');
+    }
+
+    const subscription = {
+      endpoint: tokenData.endpoint,
+      keys: {
+        p256dh: tokenData.p256dh,
+        auth: tokenData.auth,
+      },
+    };
+
+    const pushPayload = JSON.stringify({
+      title: payload.title,
+      body: payload.body,
+      icon: payload.icon || '/icons/icon-192x192.png',
+      badge: payload.badge || '/icons/badge-72x72.png',
+      tag: payload.tag,
+      data: payload.data,
+    });
+
+    await webpush.sendNotification(subscription, pushPayload);
+  }
+
+  // ============================================
+  // TRIGGERS MÉTIERS (appelés par les autres services)
+  // ============================================
+
+  /**
+   * Notification pour un nouveau message dans un échange.
+   * Non bloquant : si ça échoue, l'opération principale continue.
+   */
+  async notifyNewMessage(
+    recipientUserId: string,
+    senderName: string,
+    exchangeId: string,
+    messagePreview: string,
+  ): Promise<void> {
+    try {
+      // Créer notification in-app
+      await this.createNotification({
+        userId: recipientUserId,
+        type: NotificationType.MESSAGE,
+        title: `Nouveau message de ${senderName}`,
+        body:
+          messagePreview.length > 100
+            ? `${messagePreview.substring(0, 100)}...`
+            : messagePreview,
+        data: { exchangeId, url: `/exchanges/${exchangeId}` },
+      });
+
+      // Envoyer push (best effort)
+      await this.sendPushToUser(recipientUserId, {
+        title: `Nouveau message de ${senderName}`,
+        body:
+          messagePreview.length > 100
+            ? `${messagePreview.substring(0, 100)}...`
+            : messagePreview,
+        tag: `message-${exchangeId}`,
+        data: { type: 'MESSAGE', exchangeId, url: `/exchanges/${exchangeId}` },
+      });
+    } catch (error) {
+      this.logger.error(`Erreur notifyNewMessage: ${error.message}`);
+    }
+  }
+
+  /**
+   * Notification pour une nouvelle demande d'échange.
+   */
+  async notifyExchangeRequest(
+    recipientUserId: string,
+    requesterName: string,
+    exchangeId: string,
+    itemTitle: string,
+  ): Promise<void> {
+    try {
+      await this.createNotification({
+        userId: recipientUserId,
+        type: NotificationType.EXCHANGE_REQUEST,
+        title: "Nouvelle demande d'échange",
+        body: `${requesterName} souhaite échanger "${itemTitle}"`,
+        data: { exchangeId, url: `/exchanges/${exchangeId}` },
+      });
+
+      await this.sendPushToUser(recipientUserId, {
+        title: "Nouvelle demande d'échange",
+        body: `${requesterName} souhaite échanger "${itemTitle}"`,
+        tag: `exchange-${exchangeId}`,
+        data: {
+          type: 'EXCHANGE_REQUEST',
+          exchangeId,
+          url: `/exchanges/${exchangeId}`,
+        },
+      });
+    } catch (error) {
+      this.logger.error(`Erreur notifyExchangeRequest: ${error.message}`);
+    }
+  }
+
+  /**
+   * Notification pour un changement de statut d'échange.
+   */
+  async notifyExchangeStatus(
+    recipientUserId: string,
+    exchangeId: string,
+    status: string,
+  ): Promise<void> {
+    const statusMessages: Record<string, string> = {
+      PENDING: "Nouvelle demande d'échange",
+      ACCEPTED: 'Votre échange a été accepté !',
+      DECLINED: 'Votre échange a été décliné',
+      COMPLETED: 'Échange terminé avec succès',
+      CANCELLED: "L'échange a été annulé",
+    };
+
+    const message = statusMessages[status] || "Statut d'échange mis à jour";
+
+    try {
+      await this.createNotification({
+        userId: recipientUserId,
+        type: NotificationType.EXCHANGE_STATUS,
+        title: 'SecondLife Exchange',
+        body: message,
+        data: { exchangeId, status, url: `/exchanges/${exchangeId}` },
+      });
+
+      await this.sendPushToUser(recipientUserId, {
+        title: 'SecondLife Exchange',
+        body: message,
+        tag: `exchange-status-${exchangeId}`,
+        data: {
+          type: 'EXCHANGE_STATUS',
+          exchangeId,
+          status,
+          url: `/exchanges/${exchangeId}`,
+        },
+      });
+    } catch (error) {
+      this.logger.error(`Erreur notifyExchangeStatus: ${error.message}`);
+    }
+  }
+
+  /**
+   * Notification pour une action admin (ban, warn).
+   */
+  async notifyAdminAction(
+    userId: string,
+    action: 'BAN' | 'WARN' | 'UNBAN',
+    reason?: string,
+  ): Promise<void> {
+    const messages: Record<string, { title: string; body: string }> = {
+      BAN: {
+        title: 'Compte suspendu',
+        body:
+          reason || 'Votre compte a été suspendu pour violation des règles.',
+      },
+      WARN: {
+        title: 'Avertissement',
+        body:
+          reason || "Vous avez reçu un avertissement de la part de l'équipe.",
+      },
+      UNBAN: {
+        title: 'Compte réactivé',
+        body: 'Votre compte a été réactivé. Bienvenue de retour !',
+      },
+    };
+
+    const { title, body } = messages[action] || {
+      title: 'Action admin',
+      body: 'Une action a été effectuée sur votre compte.',
+    };
+
+    try {
+      await this.createNotification({
+        userId,
+        type: NotificationType.ADMIN_ACTION,
+        title,
+        body,
+        data: { action, reason },
+      });
+
+      // Pas de push pour les actions admin (l'utilisateur peut être banni)
+    } catch (error) {
+      this.logger.error(`Erreur notifyAdminAction: ${error.message}`);
+    }
+  }
+
+  /**
+   * Notification pour un nouveau contenu éco publié.
+   */
+  async notifyEcoContentPublished(
+    userIds: string[],
+    contentTitle: string,
+    contentId: string,
+  ): Promise<void> {
+    for (const userId of userIds) {
+      try {
+        await this.createNotification({
+          userId,
+          type: NotificationType.ECO_CONTENT_PUBLISHED,
+          title: 'Nouveau contenu éco',
+          body: `Découvrez : ${contentTitle}`,
+          data: { contentId, url: `/eco/${contentId}` },
+        });
+      } catch (error) {
+        this.logger.error(
+          `Erreur notifyEcoContentPublished pour user ${userId}: ${error.message}`,
+        );
+      }
+    }
+  }
+
+  // ============================================
+  // MÉTHODES LEGACY (pour compatibilité)
+  // ============================================
+
+  /**
+   * @deprecated Utiliser notifyExchangeStatus à la place
+   */
+  async sendExchangeStatusNotification(
+    exchangeId: string,
+    status: string,
+    recipientUserId: string,
+  ): Promise<void> {
+    await this.notifyExchangeStatus(recipientUserId, exchangeId, status);
+  }
+
+  /**
+   * @deprecated Utiliser notifyNewMessage à la place
+   */
+  async sendNewMessageNotification(
+    threadId: string,
+    threadTitle: string,
+    recipientUserId: string,
+    senderName: string,
+  ): Promise<void> {
+    await this.notifyNewMessage(
+      recipientUserId,
+      senderName,
+      threadId,
+      `Dans: ${threadTitle}`,
+    );
+  }
+
+  /**
+   * Envoie une notification de test (admin uniquement).
    */
   async sendTestNotification(
     currentUserId: string,
@@ -144,108 +620,50 @@ export class NotificationsService {
   ): Promise<SendNotificationResponse> {
     const { userId = currentUserId, title, body } = input;
 
-    // Récupérer les tokens de l'utilisateur
-    const tokens = await this.prisma.notificationToken.findMany({
-      where: { userId },
-      include: {
-        user: {
-          select: {
-            displayName: true,
-            email: true,
-          },
-        },
-      },
+    // Créer notification in-app
+    await this.createNotification({
+      userId,
+      type: NotificationType.SYSTEM,
+      title: title || 'Test Notification',
+      body: body || 'Ceci est une notification de test',
+      data: { type: 'test' },
     });
 
-    if (tokens.length === 0) {
-      throw new NotFoundException(
-        'Aucun token de notification trouvé pour cet utilisateur',
-      );
+    // Envoyer push
+    const { sent, failed } = await this.sendPushToUser(userId, {
+      title: title || 'Test Notification',
+      body: body || 'Ceci est une notification de test',
+      tag: 'test',
+      data: { type: 'test', url: '/notifications' },
+    });
+
+    if (sent === 0 && failed === 0) {
+      return {
+        success: true,
+        message: 'Notification in-app créée (aucun token push trouvé)',
+        sentCount: 1,
+      };
     }
-
-    let sentCount = 0;
-    const errors: string[] = [];
-
-    // Envoyer la notification à chaque token
-    for (const tokenData of tokens) {
-      try {
-        await this.sendNotificationToToken(
-          tokenData.token,
-          tokenData.provider,
-          {
-            title,
-            body,
-            icon: '/logo.svg',
-            badge: '/badge.png',
-            data: {
-              url: '/',
-              type: 'test',
-            },
-          },
-        );
-        sentCount++;
-      } catch (error) {
-        this.logger.error(
-          `Erreur lors de l'envoi à ${tokenData.provider}:`,
-          error,
-        );
-        errors.push(`${tokenData.provider}: ${error.message}`);
-      }
-    }
-
-    if (sentCount === 0) {
-      throw new BadRequestException(
-        `Aucune notification envoyée. Erreurs: ${errors.join(', ')}`,
-      );
-    }
-
-    this.logger.log(
-      `Notification de test envoyée à ${sentCount}/${tokens.length} tokens pour l'utilisateur ${userId}`,
-    );
 
     return {
       success: true,
-      message: `Notification envoyée à ${sentCount} appareil(s)`,
-      sentCount,
+      message: `Notification envoyée à ${sent} appareil(s)`,
+      sentCount: sent,
     };
   }
 
   // ============================================
-  // TÂCHE CRON: sendWeeklyThemeReminder
+  // CRON : Rappel hebdomadaire
   // ============================================
 
-  /**
-   * Envoie un rappel hebdomadaire pour le nouveau thème.
-   *
-   * EXPRESSION CRON: '0 9 * * 1'
-   * - 0: minute 0
-   * - 9: heure 9 (09:00)
-   * - *: tous les jours du mois
-   * - *: tous les mois
-   * - 1: lundi
-   *
-   * Résultat: Tous les lundis à 09:00
-   *
-   * PROCESSUS:
-   * 1. Récupère le thème actif
-   * 2. Récupère tous les tokens de notification
-   * 3. Envoie une notification à tous les utilisateurs
-   */
-  @Cron('0 9 * * 1', {
-    timeZone: 'Europe/Paris',
-  })
+  @Cron('0 9 * * 1', { timeZone: 'Europe/Paris' })
   async sendWeeklyThemeReminder(): Promise<void> {
     this.logger.log('Démarrage du rappel hebdomadaire des thèmes');
 
     try {
-      // Récupérer le thème actuel
       const currentTheme = await this.prisma.weeklyTheme.findFirst({
-        where: {
-          isActive: true,
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
+        where: { isActive: true },
+        orderBy: { createdAt: 'desc' },
       });
 
       if (!currentTheme) {
@@ -255,245 +673,73 @@ export class NotificationsService {
         return;
       }
 
-      // Récupérer tous les tokens de notification
-      const tokens = await this.prisma.notificationToken.findMany({
-        include: {
-          user: {
-            select: {
-              displayName: true,
-            },
-          },
-        },
+      // Récupérer tous les utilisateurs avec des tokens push
+      const usersWithTokens = await this.prisma.notificationToken.findMany({
+        select: { userId: true },
+        distinct: ['userId'],
       });
 
-      if (tokens.length === 0) {
-        this.logger.warn(
-          'Aucun token de notification trouvé pour le rappel hebdomadaire',
-        );
-        return;
-      }
-
-      let sentCount = 0;
-      const errors: string[] = [];
-
-      // Envoyer la notification à tous les utilisateurs
-      for (const tokenData of tokens) {
+      for (const { userId } of usersWithTokens) {
         try {
-          await this.sendNotificationToToken(
-            tokenData.token,
-            tokenData.provider,
-            {
-              title: 'Nouveau thème de la semaine',
-              body: `Découvrez le thème: ${currentTheme.title}`,
-              icon: '/logo.svg',
-              badge: '/badge.png',
-              data: {
-                url: '/themes',
-                type: 'weekly_theme',
-                themeId: currentTheme.id,
-              },
+          await this.createNotification({
+            userId,
+            type: NotificationType.WEEKLY_THEME,
+            title: 'Nouveau thème de la semaine',
+            body: `Découvrez le thème: ${currentTheme.title}`,
+            data: { themeId: currentTheme.id, url: '/themes' },
+          });
+
+          await this.sendPushToUser(userId, {
+            title: 'Nouveau thème de la semaine',
+            body: `Découvrez le thème: ${currentTheme.title}`,
+            tag: `theme-${currentTheme.id}`,
+            data: {
+              type: 'WEEKLY_THEME',
+              themeId: currentTheme.id,
+              url: '/themes',
             },
-          );
-          sentCount++;
+          });
         } catch (error) {
           this.logger.error(
-            `Erreur lors de l'envoi du rappel à ${tokenData.provider}:`,
-            error,
+            `Erreur rappel hebdo pour user ${userId}: ${error.message}`,
           );
-          errors.push(`${tokenData.provider}: ${error.message}`);
         }
       }
 
       this.logger.log(
-        `Rappel hebdomadaire envoyé à ${sentCount}/${tokens.length} utilisateurs`,
+        `Rappel hebdomadaire envoyé à ${usersWithTokens.length} utilisateurs`,
       );
     } catch (error) {
       this.logger.error(
-        "Erreur lors de l'envoi du rappel hebdomadaire:",
-        error,
+        `Erreur lors de l'envoi du rappel hebdomadaire: ${error.message}`,
       );
     }
   }
 
   // ============================================
-  // MÉTHODE: sendExchangeStatusNotification
+  // HELPERS
   // ============================================
 
-  /**
-   * Envoie une notification lors d'un changement de statut d'échange.
-   *
-   * STATUTS:
-   * - PENDING: Nouvelle demande d'échange
-   * - ACCEPTED: Échange accepté
-   * - DECLINED: Échange décliné
-   * - COMPLETED: Échange terminé
-   * - CANCELLED: Échange annulé
-   *
-   * @param exchangeId - ID de l'échange
-   * @param status - Nouveau statut de l'échange
-   * @param recipientUserId - ID de l'utilisateur destinataire
-   */
-  async sendExchangeStatusNotification(
-    exchangeId: string,
-    status: string,
-    recipientUserId: string,
-  ): Promise<void> {
-    const tokens = await this.prisma.notificationToken.findMany({
-      where: { userId: recipientUserId },
-    });
-
-    if (tokens.length === 0) return;
-
-    const statusMessages = {
-      PENDING: "Nouvelle demande d'échange",
-      ACCEPTED: 'Votre échange a été accepté',
-      DECLINED: 'Votre échange a été décliné',
-      COMPLETED: 'Échange terminé avec succès',
-      CANCELLED: 'Échange annulé',
+  private mapNotificationToResponse(notification: any): NotificationResponse {
+    return {
+      id: notification.id,
+      userId: notification.userId,
+      type: notification.type,
+      title: notification.title,
+      body: notification.body,
+      data: notification.data,
+      readAt: notification.readAt?.toISOString() || null,
+      createdAt: notification.createdAt.toISOString(),
     };
-
-    const message = statusMessages[status] || "Statut d'échange mis à jour";
-
-    for (const tokenData of tokens) {
-      try {
-        await this.sendNotificationToToken(
-          tokenData.token,
-          tokenData.provider,
-          {
-            title: 'SecondLife Exchange',
-            body: message,
-            icon: '/logo.svg',
-            badge: '/badge.png',
-            data: {
-              url: '/exchanges',
-              type: 'exchange_status',
-              exchangeId,
-            },
-          },
-        );
-      } catch (error) {
-        this.logger.error(
-          `Erreur lors de l'envoi de notification d'échange:`,
-          error,
-        );
-      }
-    }
   }
 
-  // ============================================
-  // MÉTHODE: sendNewMessageNotification
-  // ============================================
-
-  /**
-   * Envoie une notification pour un nouveau message dans un thread.
-   *
-   * @param threadId - ID du thread
-   * @param threadTitle - Titre du thread
-   * @param recipientUserId - ID de l'utilisateur destinataire
-   * @param senderName - Nom de l'expéditeur
-   */
-  async sendNewMessageNotification(
-    threadId: string,
-    threadTitle: string,
-    recipientUserId: string,
-    senderName: string,
-  ): Promise<void> {
-    const tokens = await this.prisma.notificationToken.findMany({
-      where: { userId: recipientUserId },
-    });
-
-    if (tokens.length === 0) return;
-
-    for (const tokenData of tokens) {
-      try {
-        await this.sendNotificationToToken(
-          tokenData.token,
-          tokenData.provider,
-          {
-            title: `Nouveau message de ${senderName}`,
-            body: `Dans: ${threadTitle}`,
-            icon: '/logo.svg',
-            badge: '/badge.png',
-            data: {
-              url: `/thread/${threadId}`,
-              type: 'new_message',
-              threadId,
-            },
-          },
-        );
-      } catch (error) {
-        this.logger.error(
-          `Erreur lors de l'envoi de notification de message:`,
-          error,
-        );
-      }
-    }
-  }
-
-  // ============================================
-  // MÉTHODE PRIVÉE: sendNotificationToToken
-  // ============================================
-
-  /**
-   * Envoie une notification à un token spécifique.
-   *
-   * NOTE:
-   * Cette méthode est un placeholder. Dans un vrai projet, il faudrait:
-   * - Implémenter FCM HTTP v1 pour les tokens 'fcm'
-   * - Implémenter Web Push avec VAPID pour les tokens 'webpush'
-   *
-   * @param token - Token de notification
-   * @param provider - Provider (fcm ou webpush)
-   * @param payload - Données de la notification (title, body, icon, badge, data)
-   */
-  private async sendNotificationToToken(
-    token: string,
-    provider: string,
-    payload: {
-      title: string;
-      body: string;
-      icon?: string;
-      badge?: string;
-      data?: any;
-    },
-  ): Promise<void> {
-    // Placeholder pour l'envoi de notifications
-    // Dans un vrai projet, vous utiliseriez FCM HTTP v1 ou Web Push
-
-    this.logger.log(`Envoi de notification via ${provider} à ${token}:`, {
-      title: payload.title,
-      body: payload.body,
-    });
-
-    // Simulation d'envoi (à remplacer par l'implémentation réelle)
-    if (provider === 'fcm') {
-      // TODO: Implémenter FCM HTTP v1
-      // await this.sendFCMNotification(token, payload);
-    } else if (provider === 'webpush') {
-      // TODO: Implémenter Web Push avec VAPID
-      // await this.sendWebPushNotification(token, payload);
-    }
-
-    // Pour les tests, on simule un succès
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-
-  // ============================================
-  // MÉTHODE PRIVÉE: mapToResponse
-  // ============================================
-
-  /**
-   * Mappe un token Prisma vers la réponse API.
-   *
-   * @param token - Token depuis Prisma
-   * @returns Token formaté pour la réponse API
-   */
-  private mapToResponse(token: any): NotificationTokenResponse {
+  private mapTokenToResponse(token: any): NotificationTokenResponse {
     return {
       id: token.id,
       userId: token.userId,
       provider: token.provider,
       token: token.token,
+      endpoint: token.endpoint,
       createdAt: token.createdAt.toISOString(),
     };
   }

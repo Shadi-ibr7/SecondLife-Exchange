@@ -14,9 +14,10 @@ import { AdminJwtStrategy } from '../auth/strategies/admin-jwt.strategy';
 import { AdminMiddleware } from './admin.middleware';
 import { ThemesModule } from '../themes/themes.module';
 import { SuggestionsModule } from '../suggestions/suggestions.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [PrismaModule, ConfigModule, ThemesModule, SuggestionsModule],
+  imports: [PrismaModule, ConfigModule, ThemesModule, SuggestionsModule, NotificationsModule],
   controllers: [AdminController],
   providers: [AdminService, AdminJwtStrategy],
   exports: [AdminService],
@@ -26,7 +27,7 @@ export class AdminModule implements NestModule {
 
   configure(consumer: MiddlewareConsumer) {
     const adminBasePath = this.configService.get<string>('ADMIN_BASE_PATH') || 'admin';
-    
+
     // Appliquer le middleware uniquement aux routes admin
     consumer
       .apply(AdminMiddleware)

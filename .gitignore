@@ -78,7 +78,7 @@ jspm_packages/
 
 # Gatsby files
 .cache/
-public
+# public  # Commenté car on veut tracker apps/frontend/public/
 
 # Storybook build outputs
 .out
@@ -123,3 +123,8 @@ coverage/
 **/public/sw.js.map
 **/public/workbox-*.js.map
 **/public/worker-*.js.map
+
+# Documentation et scripts (ignorer les fichiers locaux)
+*.md
+!README.md
+*.sh

@@ -24,6 +24,7 @@ model User {
   threads            Thread[]
   posts              Post[]
   notificationTokens NotificationToken[]
+  notifications      Notification[] // Notifications in-app
   chatMessages       ChatMessage[]       @relation("MessageSender")
   ban                Ban?
   adminLogs          AdminLog[]          @relation("AdminLogs")
@@ -146,18 +147,18 @@ model ItemPhoto {
 }
 
 model WeeklyTheme {
-  id              String          @id @default(cuid())
-  title           String
-  slug            String          @unique
-  startOfWeek     DateTime
-  impactText      String?
-  photoUrl        String? // URL de la photo depuis Unsplash
-  photoUnsplashId String? // ID de la photo Unsplash pour attribution
+  id               String          @id @default(cuid())
+  title            String
+  slug             String          @unique
+  startOfWeek      DateTime
+  impactText       String?
+  photoUrl         String? // URL de la photo depuis Unsplash
+  photoUnsplashId  String? // ID de la photo Unsplash pour attribution
   targetCategories Json? // Catégories ciblées par le thème (ex: ["VINTAGE", "CLOTHING"])
-  isActive        Boolean         @default(false)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  suggestions     SuggestedItem[]
+  isActive         Boolean         @default(false)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  suggestions      SuggestedItem[]
 
   @@index([startOfWeek])
   @@index([isActive])
@@ -246,15 +247,50 @@ model Post {
 model NotificationToken {
   id        String   @id @default(cuid())
   userId    String
-  provider  String
-  token     String
+  provider  String // 'webpush' ou 'fcm'
+  token     String // Pour FCM: le token, Pour WebPush: JSON stringified de la subscription
+  endpoint  String? // Pour WebPush: l'endpoint
+  p256dh    String? // Pour WebPush: clé publique p256dh
+  auth      String? // Pour WebPush: clé auth
+  userAgent String? // User-Agent du navigateur
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, provider])
+  @@unique([userId, provider, endpoint])
   @@index([userId])
   @@index([provider])
+  @@index([endpoint])
   @@map("notification_tokens")
+}
+
+// ============================================
+// MODÈLE: Notification (In-App Notifications)
+// ============================================
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  data      Json? // Payload de navigation (exchangeId, itemId, threadId, etc.)
+  readAt    DateTime? // null = non lu
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  MESSAGE // Nouveau message dans un échange
+  EXCHANGE_REQUEST // Nouvelle demande d'échange
+  EXCHANGE_STATUS // Changement de statut d'échange (accepté, refusé, complété)
+  ADMIN_ACTION // Action admin (ban, warn, etc.)
+  ECO_CONTENT_PUBLISHED // Nouveau contenu éco publié
+  MATCH_FOUND // Correspondance trouvée pour un objet
+  WEEKLY_THEME // Nouveau thème de la semaine
+  SYSTEM // Notification système générale
 }
 
 enum UserRole {

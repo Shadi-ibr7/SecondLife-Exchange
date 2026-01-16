@@ -38,8 +38,9 @@ import { Server, Socket } from 'socket.io';
 // Import des classes NestJS
 import { Logger, UseGuards } from '@nestjs/common';
 
-// Import du service
+// Import des services
 import { ExchangesService } from './exchanges.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { JwtAccessGuard } from '../../common/guards/jwt-access.guard';
 
 /**
@@ -87,9 +88,12 @@ export class ExchangesGateway
   /**
    * CONSTRUCTEUR
    *
-   * Injection du service d'échanges
+   * Injection des services
    */
-  constructor(private exchangesService: ExchangesService) {}
+  constructor(
+    private exchangesService: ExchangesService,
+    private notificationsService: NotificationsService,
+  ) {}
 
   // ============================================
   // GESTION DES CONNEXIONS
@@ -237,6 +241,33 @@ export class ExchangesGateway
       this.logger.log(
         `Message sent in exchange ${exchangeId} by user ${userId}`,
       );
+
+      // ============================================
+      // NOTIFICATION AU DESTINATAIRE
+      // ============================================
+      /**
+       * Envoyer une notification in-app + push au destinataire.
+       * On détermine le destinataire en récupérant l'échange.
+       * C'est non bloquant : si ça échoue, le message est quand même envoyé.
+       */
+      try {
+        // Récupérer l'échange pour déterminer le destinataire
+        const exchange = await this.exchangesService.getExchangeById(exchangeId, userId);
+        const recipientId = exchange.requesterId === userId
+          ? exchange.responderId
+          : exchange.requesterId;
+
+        // Envoyer la notification (non bloquant)
+        this.notificationsService.notifyNewMessage(
+          recipientId,
+          message.sender.displayName,
+          exchangeId,
+          content,
+        ).catch(err => this.logger.error(`Erreur notification message: ${err.message}`));
+      } catch (notifError) {
+        // Ignorer les erreurs de notification pour ne pas impacter l'envoi du message
+        this.logger.warn(`Notification message ignorée: ${notifError.message}`);
+      }
     } catch (error: any) {
       // ============================================
       // GESTION DES ERREURS
