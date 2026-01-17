@@ -33,10 +33,12 @@ import {
   HttpCode, // Décorateur pour définir le code HTTP de réponse
   HttpStatus, // Enum des codes HTTP
   UseInterceptors, // Décorateur pour appliquer des intercepteurs
+  Req, // Décorateur pour accéder à la requête Express
 } from '@nestjs/common';
+import { Request } from 'express';
 
 // Import du guard de rate limiting (limitation des requêtes)
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 
 // Import du service d'authentification
 import { AuthService } from './auth.service';
@@ -123,14 +125,19 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK) // Code HTTP 200 (succès)
   @UseGuards(ThrottlerGuard) // Protection contre les attaques par force brute
-  async login(@Body() loginDto: AuthLoginDto) {
+  @Throttle({ login: { limit: 10, ttl: 60000 } }) // 10 tentatives par minute
+  async login(@Body() loginDto: AuthLoginDto, @Req() req: Request) {
     /**
      * `ThrottlerGuard` s'appuie sur la configuration définie dans `app.module.ts`.
-     * Ici, nous limitons volontairement à 5 tentatives/minute pour réduire le brute-force.
+     * Ici, nous limitons volontairement à 10 tentatives/minute pour réduire le brute-force.
      * Toute la logique (vérification du mot de passe, génération des tokens) est déléguée
      * à AuthService pour rester DRY.
      */
-    return this.authService.login(loginDto);
+    // Extraire l'IP et le userAgent pour le système anti-bruteforce
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const userAgent = req.get('user-agent') || undefined;
+    
+    return this.authService.login(loginDto, ip, userAgent);
   }
 
   // ============================================
@@ -155,7 +162,8 @@ export class AuthController {
    */
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(JwtRefreshGuard) // Vérifie que le refresh token est valide
+  @UseGuards(JwtRefreshGuard, ThrottlerGuard) // Vérifie que le refresh token est valide + rate limiting
+  @Throttle({ refresh: { limit: 20, ttl: 60000 } }) // 20 rafraîchissements par minute
   async refresh(@Body('refreshToken') refreshToken: string) {
     /**
      * `JwtRefreshGuard` lit automatiquement le refresh token (cookie, header ou body selon implémentation)

@@ -389,3 +389,19 @@ model AdminLog {
   @@index([createdAt])
   @@map("admin_logs")
 }
+
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  ip        String
+  userAgent String?
+  success   Boolean  @default(false)
+  blocked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ip, createdAt])
+  @@index([email, ip, createdAt])
+  @@index([blocked, createdAt])
+  @@map("login_attempts")
+}

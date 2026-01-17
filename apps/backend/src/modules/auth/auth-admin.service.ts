@@ -30,6 +30,7 @@ import {
   clearAuthCookies,
   COOKIE_MAX_AGE,
 } from '../../common/utils/cookie.utils';
+import { LoginAttemptService } from './services/login-attempt.service';
 
 /**
  * Réponse du login admin (sans les tokens - ils sont dans les cookies)
@@ -63,6 +64,7 @@ export class AuthAdminService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private loginAttemptService: LoginAttemptService,
   ) {}
 
   /**
@@ -119,14 +121,33 @@ export class AuthAdminService {
   /**
    * Connexion admin avec génération de tokens et cookies
    *
+   * SÉCURITÉ:
+   * - Vérification anti-bruteforce avant toute opération
+   * - Enregistrement des tentatives (succès/échec)
+   * - Messages d'erreur génériques pour éviter l'enumeration
+   *
    * @param loginDto - Email et mot de passe
    * @param res - Objet Response Express (optionnel, pour set cookies)
+   * @param ip - Adresse IP de la requête
+   * @param userAgent - User-Agent de la requête (optionnel)
    * @returns Informations utilisateur (tokens dans cookies si res fourni)
    */
   async login(
     loginDto: AdminLoginDto,
     res?: Response,
+    ip?: string,
+    userAgent?: string,
   ): Promise<AdminLoginResponse> {
+    // ============================================
+    // VÉRIFICATION ANTI-BRUTEFORCE
+    // ============================================
+    if (ip) {
+      await this.loginAttemptService.checkAndThrowIfBlocked(
+        loginDto.email,
+        ip,
+      );
+    }
+
     // Rechercher l'utilisateur
     const user = await this.prisma.user.findUnique({
       where: { email: loginDto.email },
@@ -134,6 +155,13 @@ export class AuthAdminService {
 
     // Vérifier que l'utilisateur existe et est admin
     if (!user || user.roles !== UserRole.ADMIN) {
+      if (ip) {
+        await this.loginAttemptService.recordFailure(
+          loginDto.email,
+          ip,
+          userAgent,
+        );
+      }
       throw new UnauthorizedException('Identifiants invalides');
     }
 
@@ -144,6 +172,13 @@ export class AuthAdminService {
     );
 
     if (!isPasswordValid) {
+      if (ip) {
+        await this.loginAttemptService.recordFailure(
+          loginDto.email,
+          ip,
+          userAgent,
+        );
+      }
       throw new UnauthorizedException('Identifiants invalides');
     }
 
@@ -169,6 +204,13 @@ export class AuthAdminService {
     // Définir les cookies si Response fournie
     if (res) {
       setAuthCookies(res, accessToken, refreshToken);
+    }
+
+    // ============================================
+    // ENREGISTREMENT DU SUCCÈS
+    // ============================================
+    if (ip) {
+      await this.loginAttemptService.recordSuccess(loginDto.email, ip);
     }
 
     // Réponse avec infos utilisateur

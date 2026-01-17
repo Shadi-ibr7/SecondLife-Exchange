@@ -63,6 +63,7 @@ import { ListItemsQueryDto } from './dtos/list-items.query.dto';
 
 // Import des guards
 import { JwtAccessGuard } from '../../common/guards/jwt-access.guard';
+import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 
 // Import des types Prisma
 import { ItemStatus } from '@prisma/client';
@@ -89,7 +90,8 @@ export class ItemsController {
   ) {}
 
   @Post()
-  @UseGuards(JwtAccessGuard)
+  @UseGuards(JwtAccessGuard, ThrottlerGuard)
+  @Throttle({ ai: { limit: 10, ttl: 60000 } }) // 10 requêtes IA par minute
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Créer un nouvel item' })
   @ApiResponse({ status: 201, description: 'Item créé avec succès' })
@@ -247,7 +249,8 @@ export class ItemsController {
   // === Routes d'upload ===
 
   @Post('uploads/signature')
-  @UseGuards(JwtAccessGuard)
+  @UseGuards(JwtAccessGuard, ThrottlerGuard)
+  @Throttle({ upload: { limit: 20, ttl: 60000 } }) // 20 uploads par minute
   @ApiBearerAuth()
   @ApiOperation({ summary: "Générer une signature d'upload Cloudinary" })
   @ApiResponse({ status: 200, description: 'Signature générée avec succès' })
@@ -265,7 +268,8 @@ export class ItemsController {
   }
 
   @Post(':id/photos')
-  @UseGuards(JwtAccessGuard)
+  @UseGuards(JwtAccessGuard, ThrottlerGuard)
+  @Throttle({ upload: { limit: 20, ttl: 60000 } }) // 20 uploads par minute
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Attacher une photo à un item' })
   @ApiResponse({ status: 201, description: 'Photo attachée avec succès' })

@@ -31,6 +31,11 @@ import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 import { AuthAdminController } from './auth-admin.controller';
 import { AuthAdminService } from './auth-admin.service';
 import { AdminJwtStrategy } from './strategies/admin-jwt.strategy';
+import { LoginAttemptService } from './services/login-attempt.service';
+
+// Import des modules nécessaires
+import { RedisModule } from '../../common/redis/redis.module';
+import { PrismaModule } from '../../common/prisma/prisma.module';
 
 /**
  * MODULE: AuthModule
@@ -45,6 +50,12 @@ import { AdminJwtStrategy } from './strategies/admin-jwt.strategy';
     // PassportModule: Module de base pour l'authentification
     // Utilisé par les stratégies JWT
     PassportModule,
+
+    // RedisModule: Module Redis pour le système anti-bruteforce
+    RedisModule,
+
+    // PrismaModule: Module pour accéder à la base de données
+    PrismaModule,
 
     // JwtModule: Module pour générer et vérifier les tokens JWT
     // registerAsync permet de charger la configuration depuis ConfigService
@@ -76,6 +87,7 @@ import { AdminJwtStrategy } from './strategies/admin-jwt.strategy';
     JwtRefreshStrategy, // Stratégie pour valider les refresh tokens
     AuthAdminService, // Service d'authentification admin
     AdminJwtStrategy, // Stratégie JWT pour les admins
+    LoginAttemptService, // Service pour gérer les tentatives de login et blocages
   ],
 
   // ============================================

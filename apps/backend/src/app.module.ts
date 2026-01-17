@@ -23,6 +23,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 
 // Import des modules métier de l'application
 import { PrismaModule } from './common/prisma/prisma.module'; // Module pour la base de données
+import { RedisModule } from './common/redis/redis.module'; // Module Redis pour cache et rate limiting
 import { AuthModule } from './modules/auth/auth.module'; // Authentification JWT
 import { UsersModule } from './modules/users/users.module'; // Gestion des utilisateurs
 import { ProfilesModule } from './modules/profiles/profiles.module'; // Profils utilisateurs
@@ -76,9 +77,13 @@ import prismaConfig from './config/prisma.config'; // Configuration de la base d
      * ThrottlerModule limite le nombre de requêtes par IP pour protéger l'API
      * contre les attaques par déni de service (DDoS) et les abus.
      *
-     * Trois limites différentes:
+     * Limites par endpoint:
      * - default: 100 requêtes par minute (limite générale)
-     * - login: 5 tentatives de connexion par minute (protection contre brute force)
+     * - login: 10 tentatives de connexion par minute (protection contre brute force)
+     * - admin-login: 5 tentatives de connexion admin par minute (strict)
+     * - refresh: 20 rafraîchissements de token par minute
+     * - ai: 10 requêtes IA par minute (économie de coûts API)
+     * - upload: 20 uploads par minute
      * - recommendations: 10 recommandations par minute (limite pour l'IA)
      */
     ThrottlerModule.forRoot([
@@ -90,7 +95,27 @@ import prismaConfig from './config/prisma.config'; // Configuration de la base d
       {
         name: 'login',
         ttl: 60 * 1000, // 1 minute
-        limit: 5, // Maximum 5 tentatives de connexion par minute (sécurité)
+        limit: 10, // Maximum 10 tentatives de connexion par minute (sécurité)
+      },
+      {
+        name: 'admin-login',
+        ttl: 60 * 1000, // 1 minute
+        limit: 5, // Maximum 5 tentatives de connexion admin par minute (strict)
+      },
+      {
+        name: 'refresh',
+        ttl: 60 * 1000, // 1 minute
+        limit: 20, // Maximum 20 rafraîchissements de token par minute
+      },
+      {
+        name: 'ai',
+        ttl: 60 * 1000, // 1 minute
+        limit: 10, // Maximum 10 requêtes IA par minute (économie de coûts API)
+      },
+      {
+        name: 'upload',
+        ttl: 60 * 1000, // 1 minute
+        limit: 20, // Maximum 20 uploads par minute
       },
       {
         name: 'recommendations',
@@ -108,6 +133,17 @@ import prismaConfig from './config/prisma.config'; // Configuration de la base d
      * Tous les autres modules peuvent utiliser PrismaService pour interroger la DB.
      */
     PrismaModule,
+
+    // ============================================
+    // REDIS (Cache et Rate Limiting)
+    // ============================================
+    /**
+     * RedisModule fournit l'accès à Redis pour:
+     * - Cache des données fréquemment accédées
+     * - Stockage des tentatives de login (anti-bruteforce)
+     * - Rate limiting distribué
+     */
+    RedisModule,
 
     // ============================================
     // MODULES MÉTIER (Fonctionnalités de l'application)

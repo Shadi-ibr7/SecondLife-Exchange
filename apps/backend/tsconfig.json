@@ -25,6 +25,7 @@
     "resolveJsonModule": true,
     "lib": ["ES2022"],
     "typeRoots": ["node_modules/@types", "../../node_modules/@types"],
+    "types": [],
     "paths": {
       "@/*": ["src/*"],
       "@/common/*": ["src/common/*"],

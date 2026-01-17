@@ -51,6 +51,9 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 // Import de bcrypt pour hasher les mots de passe
 import * as bcrypt from 'bcrypt';
 
+// Import du service de gestion des tentatives de login
+import { LoginAttemptService } from './services/login-attempt.service';
+
 // Import des DTOs (Data Transfer Objects) pour typer les entrées
 import { AuthRegisterInput } from './dtos/auth-register.dto';
 import { AuthLoginInput } from './dtos/auth-login.dto';
@@ -90,6 +93,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private loginAttemptService: LoginAttemptService,
   ) {}
 
   // ============================================
@@ -265,19 +269,43 @@ export class AuthService {
    * Connecte un utilisateur existant à l'application.
    *
    * PROCESSUS:
-   * 1. Trouve l'utilisateur par email
-   * 2. Vérifie que le mot de passe correspond (avec bcrypt.compare)
-   * 3. Génère de nouveaux tokens JWT
-   * 4. Stocke le refresh token hashé dans la base de données
-   * 5. Retourne les tokens et les informations de l'utilisateur
+   * 1. Vérifie si l'email/IP est bloqué (anti-bruteforce)
+   * 2. Trouve l'utilisateur par email
+   * 3. Vérifie que le mot de passe correspond (avec bcrypt.compare)
+   * 4. Enregistre l'échec si le mot de passe est incorrect
+   * 5. Génère de nouveaux tokens JWT si succès
+   * 6. Stocke le refresh token hashé dans la base de données
+   * 7. Enregistre le succès et réinitialise les tentatives
+   * 8. Retourne les tokens et les informations de l'utilisateur
+   *
+   * SÉCURITÉ:
+   * - Vérification anti-bruteforce avant toute opération
+   * - Enregistrement des tentatives (succès/échec)
+   * - Messages d'erreur génériques pour éviter l'enumeration
    *
    * @param input - Données de connexion (email, password)
+   * @param ip - Adresse IP de la requête
+   * @param userAgent - User-Agent de la requête (optionnel)
    * @returns Tokens JWT et informations de l'utilisateur
+   * @throws ForbiddenException si bloqué par anti-bruteforce
    * @throws UnauthorizedException si l'email ou le mot de passe est incorrect
    */
-  async login(input: AuthLoginInput): Promise<TokenResponse> {
+  async login(
+    input: AuthLoginInput,
+    ip: string,
+    userAgent?: string,
+  ): Promise<TokenResponse> {
     // Extraire les données de connexion
     const { email, password } = input;
+
+    // ============================================
+    // VÉRIFICATION ANTI-BRUTEFORCE
+    // ============================================
+    /**
+     * Vérifier si l'email/IP est bloqué avant toute opération.
+     * Cela évite de faire des requêtes DB inutiles si l'utilisateur est bloqué.
+     */
+    await this.loginAttemptService.checkAndThrowIfBlocked(email, ip);
 
     // ============================================
     // RECHERCHE DE L'UTILISATEUR
@@ -309,13 +337,18 @@ export class AuthService {
      * IMPORTANT: On ne compare JAMAIS les mots de passe en clair!
      * On compare toujours le hash du mot de passe saisi avec le hash stocké.
      */
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+    const isPasswordValid =
+      user && (await bcrypt.compare(password, user.passwordHash));
+
+    if (!isPasswordValid) {
       /**
        * IMPORTANT:
        * - On renvoie un message volontairement générique pour éviter de confirmer
        *   l'existence d'un email (technique anti enumeration).
        * - bcrypt.compare renvoie false en temps constant, ce qui évite les side-channels.
+       * - Enregistrer l'échec pour le système anti-bruteforce
        */
+      await this.loginAttemptService.recordFailure(email, ip, userAgent);
       throw new UnauthorizedException('Email ou mot de passe incorrect');
     }
 
@@ -362,6 +395,15 @@ export class AuthService {
         throw error;
       }
     }
+
+    // ============================================
+    // ENREGISTREMENT DU SUCCÈS
+    // ============================================
+    /**
+     * Enregistrer le succès et réinitialiser les tentatives.
+     * Cela permet de débloquer l'utilisateur en cas de login réussi.
+     */
+    await this.loginAttemptService.recordSuccess(email, ip);
 
     return {
       accessToken,

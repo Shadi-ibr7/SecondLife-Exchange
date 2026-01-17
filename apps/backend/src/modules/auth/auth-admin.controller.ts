@@ -27,6 +27,7 @@ import {
   Res,
   Req,
 } from '@nestjs/common';
+import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Response, Request } from 'express';
 import { AuthAdminService } from './auth-admin.service';
@@ -67,14 +68,22 @@ export class AuthAdminController {
    */
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard) // Protection contre les attaques par force brute
+  @Throttle({ 'admin-login': { limit: 5, ttl: 60000 } }) // 5 tentatives par minute (strict)
   @ApiOperation({ summary: 'Connexion admin' })
   @ApiResponse({ status: 200, description: 'Connexion réussie, cookies définis' })
   @ApiResponse({ status: 401, description: 'Identifiants invalides' })
+  @ApiResponse({ status: 403, description: 'Trop de tentatives, compte bloqué temporairement' })
   async login(
     @Body() loginDto: AdminLoginDto,
     @Res({ passthrough: true }) res: Response,
+    @Req() req: Request,
   ) {
-    return this.authAdminService.login(loginDto, res);
+    // Extraire l'IP et le userAgent pour le système anti-bruteforce
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const userAgent = req.get('user-agent') || undefined;
+    
+    return this.authAdminService.login(loginDto, res, ip, userAgent);
   }
 
   /**
@@ -94,6 +103,8 @@ export class AuthAdminController {
    */
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard) // Rate limiting
+  @Throttle({ refresh: { limit: 20, ttl: 60000 } }) // 20 rafraîchissements par minute
   @ApiOperation({ summary: 'Rafraîchir les tokens admin' })
   @ApiResponse({ status: 200, description: 'Tokens rafraîchis' })
   @ApiResponse({ status: 401, description: 'Refresh token invalide ou expiré' })
