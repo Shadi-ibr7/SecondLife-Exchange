@@ -64,7 +64,54 @@ export const ADMIN_LOGIN_ENDPOINT = '/auth/admin/login';
 export const ADMIN_REFRESH_ENDPOINT = '/auth/admin/refresh';
 export const ADMIN_LOGOUT_ENDPOINT = '/auth/admin/logout';
 export const ADMIN_ME_ENDPOINT = '/auth/admin/me';
+export const CSRF_ENDPOINT = '/security/csrf';
 export const getAdminApiBaseUrl = getApiBaseURL;
+
+/**
+ * Nom du cookie CSRF (non-httpOnly pour que JS puisse le lire)
+ */
+const CSRF_COOKIE_NAME = 'XSRF-TOKEN';
+
+/**
+ * Nom du header CSRF à envoyer dans les requêtes
+ */
+const CSRF_HEADER_NAME = 'X-CSRF-Token';
+
+/**
+ * Récupère le token CSRF depuis le cookie
+ * @returns Token CSRF ou null si absent
+ */
+function getCsrfTokenFromCookie(): string | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const cookieValue = document.cookie
+      .split('; ')
+      .find((row) => row.startsWith(`${CSRF_COOKIE_NAME}=`))
+      ?.split('=')[1];
+
+    if (!cookieValue) return null;
+
+    // Décoder l'URL encoding si nécessaire
+    return decodeURIComponent(cookieValue);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Récupère un nouveau token CSRF depuis l'endpoint /security/csrf
+ * @returns Token CSRF ou null en cas d'erreur
+ */
+async function fetchCsrfToken(): Promise<string | null> {
+  try {
+    const response = await adminApiClient.get<{ csrfToken: string }>(CSRF_ENDPOINT);
+    return response.data.csrfToken || null;
+  } catch (error) {
+    console.warn('[CSRF] Erreur lors de la récupération du token CSRF:', error);
+    return null;
+  }
+}
 
 /**
  * Client Axios configuré pour l'API admin
@@ -83,8 +130,43 @@ const adminApiClient = axios.create({
 });
 
 /**
- * Intercepteur de réponse pour gérer les erreurs d'authentification
+ * Intercepteur de requête pour ajouter le token CSRF
+ * - Récupère le token depuis le cookie XSRF-TOKEN
+ * - Si absent, en récupère un nouveau via /security/csrf
+ * - Ajoute le header X-CSRF-Token sur toutes les requêtes mutantes
+ */
+adminApiClient.interceptors.request.use(
+  async (config) => {
+    // Méthodes HTTP mutantes nécessitant CSRF
+    const mutatingMethods = ['POST', 'PATCH', 'DELETE', 'PUT'];
+
+    // Ajouter CSRF uniquement sur les méthodes mutantes
+    if (config.method && mutatingMethods.includes(config.method.toUpperCase())) {
+      // Essayer de récupérer le token depuis le cookie
+      let csrfToken = getCsrfTokenFromCookie();
+
+      // Si absent, en récupérer un nouveau
+      if (!csrfToken) {
+        csrfToken = await fetchCsrfToken();
+      }
+
+      // Ajouter le header CSRF si le token est disponible
+      if (csrfToken && config.headers) {
+        config.headers[CSRF_HEADER_NAME] = csrfToken;
+      }
+    }
+
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+/**
+ * Intercepteur de réponse pour gérer les erreurs d'authentification et CSRF
  * - 401: Token expiré ou invalide → tenter refresh ou rediriger vers login
+ * - 403: CSRF token invalide → récupérer un nouveau token et réessayer
  */
 adminApiClient.interceptors.response.use(
   (response) => response,
@@ -118,6 +200,36 @@ adminApiClient.interceptors.response.use(
           window.location.href = `/${adminBasePath}/login`;
         }
         return Promise.reject(refreshError);
+      }
+    }
+
+    // Gérer les erreurs CSRF (403 avec message spécifique)
+    if (
+      error.response?.status === 403 &&
+      error.response?.data?.message?.includes('CSRF')
+    ) {
+      const originalRequest = error.config as typeof error.config & {
+        _retry?: boolean;
+      };
+
+      // Éviter les boucles infinies
+      if (originalRequest?._retry) {
+        return Promise.reject(error);
+      }
+
+      originalRequest._retry = true;
+
+      try {
+        // Récupérer un nouveau token CSRF
+        const csrfToken = await fetchCsrfToken();
+        if (csrfToken && originalRequest.headers) {
+          originalRequest.headers[CSRF_HEADER_NAME] = csrfToken;
+        }
+        // Réessayer la requête avec le nouveau token
+        return adminApiClient(originalRequest);
+      } catch (csrfError) {
+        console.error('[CSRF] Erreur lors du retry après échec CSRF:', csrfError);
+        return Promise.reject(error);
       }
     }
 

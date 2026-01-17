@@ -35,5 +35,16 @@ export default registerAs('app', () => ({
 
   // URL du frontend autorisée pour CORS (Cross-Origin Resource Sharing)
   // Permet au frontend de faire des requêtes vers l'API
+  // DEPRECATED: Utiliser FRONTEND_ORIGINS à la place
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+
+  // Origines frontend autorisées (séparées par des virgules)
+  // Ex: FRONTEND_ORIGINS=https://second-life-exchange.vercel.app,https://secondelife-exchange.fr
+  frontendOrigins: process.env.FRONTEND_ORIGINS
+    ? process.env.FRONTEND_ORIGINS.split(',').map((origin) => origin.trim())
+    : ['http://localhost:3000'],
+
+  // Origine admin (optionnel, peut être différente du frontend)
+  // Ex: ADMIN_ORIGIN=https://admin.secondelife-exchange.fr
+  adminOrigin: process.env.ADMIN_ORIGIN || null,
 }));

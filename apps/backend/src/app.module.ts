@@ -36,6 +36,7 @@ import { EcoModule } from './modules/eco/eco.module'; // Contenu écologique
 import { CommunityModule } from './modules/community/community.module'; // Communauté (forums)
 import { NotificationsModule } from './modules/notifications/notifications.module'; // Notifications
 import { AdminModule } from './modules/admin/admin.module'; // Administration
+import { SecurityModule } from './modules/security/security.module'; // Sécurité (CSRF)
 
 // Import des fichiers de configuration
 import appConfig from './config/app.config'; // Configuration générale de l'app
@@ -140,6 +141,7 @@ import prismaConfig from './config/prisma.config'; // Configuration de la base d
     CommunityModule,
     NotificationsModule,
     AdminModule,
+    SecurityModule,
   ],
 })
 /**

@@ -108,43 +108,65 @@ async function bootstrap() {
   // CONFIGURATION CORS (Cross-Origin Resource Sharing)
   // ============================================
   /**
-   * CORS permet au frontend (qui tourne sur un autre port/domaine) de faire des requêtes
-   * vers le backend. Sans CORS, le navigateur bloquerait ces requêtes.
+   * CORS strict avec whitelist d'origins.
+   * En production, toutes les requêtes sans origin ou avec origin non-whitelisted sont rejetées.
    *
-   * CONFIGURATION MULTI-ORIGINES:
-   * - En dev: http://localhost:3000
-   * - En prod: URL Vercel du frontend
+   * CONFIGURATION:
+   * - FRONTEND_ORIGINS: Liste des origines autorisées (séparées par virgules)
+   * - ADMIN_ORIGIN: Origine admin optionnelle (si différente)
    *
-   * credentials: true est OBLIGATOIRE pour envoyer/recevoir des cookies
+   * SÉCURITÉ:
+   * - credentials: true est OBLIGATOIRE pour les cookies cross-origin
+   * - En prod, les requêtes sans origin sont rejetées (protection contre certaines attaques)
+   * - Headers X-CSRF-Token autorisé pour la protection CSRF
    */
-  const corsOrigins = configService.get<string>('app.corsOrigin');
+  const frontendOrigins = configService.get<string[]>('app.frontendOrigins') || [
+    'http://localhost:3000',
+  ];
+  const adminOrigin = configService.get<string>('app.adminOrigin');
 
-  // Supporter plusieurs origines séparées par des virgules
-  // Ex: CORS_ORIGIN=http://localhost:3000,https://app.example.com
-  const allowedOrigins = corsOrigins
-    ? corsOrigins.split(',').map((origin) => origin.trim())
-    : ['http://localhost:3000'];
+  // Construire la liste complète des origines autorisées
+  const allowedOrigins = [...frontendOrigins];
+  if (adminOrigin && !allowedOrigins.includes(adminOrigin)) {
+    allowedOrigins.push(adminOrigin);
+  }
+
+  const isProduction = configService.get<string>('app.nodeEnv') === 'production';
 
   app.use(
     cors({
       origin: (origin, callback) => {
-        // Autoriser les requêtes sans origin (ex: Postman, curl)
+        // En production, rejeter les requêtes sans origin (protection renforcée)
+        // En dev, autoriser pour faciliter le développement avec Postman/curl
         if (!origin) {
+          if (isProduction) {
+            console.warn('[CORS] Requête sans origin rejetée en production');
+            return callback(new Error('Origin header required in production'));
+          }
+          // En dev, autoriser les requêtes sans origin
           return callback(null, true);
         }
-        // Vérifier si l'origine est dans la liste autorisée
+
+        // Vérifier si l'origine est dans la whitelist
         if (allowedOrigins.includes(origin)) {
           return callback(null, true);
         }
-        // Log pour debug (ne pas exposer en prod)
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn(`[CORS] Origine rejetée: ${origin}`);
-        }
+
+        // Log de sécurité (sans données sensibles)
+        console.warn(
+          `[CORS] Origine rejetée: ${origin.substring(0, 50)}... (whitelist: ${allowedOrigins.length} origin(s))`,
+        );
         callback(new Error('Not allowed by CORS'));
       },
       credentials: true, // OBLIGATOIRE pour les cookies cross-origin
-      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+      methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], // PUT retiré (utiliser PATCH)
+      allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'X-Requested-With',
+        'X-CSRF-Token', // Header pour protection CSRF
+      ],
+      exposedHeaders: ['X-CSRF-Token'], // Permettre au client de lire ce header
     }),
   );
 
@@ -201,7 +223,9 @@ async function bootstrap() {
    */
   console.log(`🚀 Backend démarré sur le port ${port}`);
   console.log(`📚 API disponible sur http://localhost:${port}/api/v1`);
-  console.log(`🔒 CORS configuré pour: ${allowedOrigins.join(', ')}`);
+  console.log(
+    `🔒 CORS configuré pour ${allowedOrigins.length} origine(s): ${allowedOrigins.join(', ')}`,
+  );
   console.log(`🍪 Cookie-parser activé pour auth httpOnly`);
 }
 
