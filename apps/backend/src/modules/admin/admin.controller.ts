@@ -26,6 +26,34 @@ import { ResolveReportDto } from './dtos/report.dto';
 import { CreateThemeDto } from '../themes/dtos/create-theme.dto';
 import { UpdateThemeDto } from '../themes/dtos/update-theme.dto';
 import { GenerateThemeSuggestionsDto } from './dtos/theme-admin.dto';
+import {
+  AdminGetUsersQueryDto,
+  AdminGetItemsQueryDto,
+  AdminGetReportsQueryDto,
+  AdminGetThemeSuggestionsQueryDto,
+  AdminGetEcoContentQueryDto,
+  AdminGetExchangesQueryDto,
+  AdminGetThreadsQueryDto,
+  AdminGetPostsQueryDto,
+  AdminGetAnalyticsQueryDto,
+  AdminGetLogsQueryDto,
+} from './dtos/admin-query.dto';
+import {
+  CreateEcoContentDto,
+  UpdateEcoContentDto,
+} from '../eco/dtos/eco-content.dto';
+import { IsOptional, IsString } from 'class-validator';
+
+/**
+ * DTO: GenerateMonthlyThemesDto
+ *
+ * Paramètres pour générer les thèmes mensuels
+ */
+class GenerateMonthlyThemesDto {
+  @IsOptional()
+  @IsString()
+  month?: string;
+}
 
 @ApiTags('Admin')
 @ApiBearerAuth()
@@ -44,15 +72,11 @@ export class AdminController {
   // Users
   @Get('users')
   @ApiOperation({ summary: 'Liste des utilisateurs' })
-  async getUsers(
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-    @Query('search') search?: string,
-  ) {
+  async getUsers(@Query() query: AdminGetUsersQueryDto) {
     return this.adminService.getUsers(
-      page ? parseInt(page) : 1,
-      limit ? parseInt(limit) : 20,
-      search,
+      query.page || 1,
+      query.limit || 20,
+      query.search,
     );
   }
 
@@ -81,17 +105,11 @@ export class AdminController {
   // Items
   @Get('items')
   @ApiOperation({ summary: 'Liste des objets' })
-  async getItems(
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-    @Query('ownerId') ownerId?: string,
-    @Query('category') category?: string,
-    @Query('status') status?: string,
-  ) {
+  async getItems(@Query() query: AdminGetItemsQueryDto) {
     return this.adminService.getItems(
-      page ? parseInt(page) : 1,
-      limit ? parseInt(limit) : 20,
-      { ownerId, category, status },
+      query.page || 1,
+      query.limit || 20,
+      { ownerId: query.ownerId, category: query.category, status: query.status },
     );
   }
 
@@ -116,15 +134,11 @@ export class AdminController {
   // Reports
   @Get('reports')
   @ApiOperation({ summary: 'Liste des signalements' })
-  async getReports(
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-    @Query('resolved') resolved?: string,
-  ) {
+  async getReports(@Query() query: AdminGetReportsQueryDto) {
     return this.adminService.getReports(
-      page ? parseInt(page) : 1,
-      limit ? parseInt(limit) : 20,
-      resolved === 'true' ? true : resolved === 'false' ? false : undefined,
+      query.page || 1,
+      query.limit || 20,
+      query.resolved,
     );
   }
 
@@ -168,7 +182,7 @@ export class AdminController {
   @ApiOperation({ summary: 'Générer les 4 thèmes du mois avec l\'IA' })
   async generateMonthlyThemes(
     @Request() req: any,
-    @Body() body?: { month?: string },
+    @Body() body?: GenerateMonthlyThemesDto,
   ) {
     const monthDate = body?.month ? new Date(body.month + '-01') : undefined;
     return this.adminService.generateMonthlyThemes(req.user.id, monthDate);
@@ -222,15 +236,13 @@ export class AdminController {
   @ApiOperation({ summary: 'Liste des suggestions pour un thème' })
   async getThemeSuggestions(
     @Param('id') id: string,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-    @Query('sort') sort?: string,
+    @Query() query: AdminGetThemeSuggestionsQueryDto,
   ) {
     return this.adminService.getThemeSuggestions(
       id,
-      page ? parseInt(page) : 1,
-      limit ? parseInt(limit) : 20,
-      sort || '-createdAt',
+      query.page || 1,
+      query.limit || 20,
+      query.sort || '-createdAt',
     );
   }
 
@@ -243,13 +255,10 @@ export class AdminController {
   // Eco Content
   @Get('eco')
   @ApiOperation({ summary: 'Liste du contenu éco' })
-  async getEcoContent(
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-  ) {
+  async getEcoContent(@Query() query: AdminGetEcoContentQueryDto) {
     return this.adminService.getEcoContent(
-      page ? parseInt(page) : 1,
-      limit ? parseInt(limit) : 20,
+      query.page || 1,
+      query.limit || 20,
     );
   }
 
@@ -261,14 +270,25 @@ export class AdminController {
 
   @Post('eco')
   @ApiOperation({ summary: 'Créer un contenu éco' })
-  async createEcoContent(@Body() data: any, @Request() req: any) {
-    return this.adminService.createEcoContent(data, req.user.id);
+  async createEcoContent(
+    @Body() createEcoContentDto: CreateEcoContentDto,
+    @Request() req: any,
+  ) {
+    return this.adminService.createEcoContent(createEcoContentDto, req.user.id);
   }
 
   @Patch('eco/:id')
   @ApiOperation({ summary: 'Mettre à jour un contenu éco' })
-  async updateEcoContent(@Param('id') id: string, @Body() data: any, @Request() req: any) {
-    return this.adminService.updateEcoContent(id, data, req.user.id);
+  async updateEcoContent(
+    @Param('id') id: string,
+    @Body() updateEcoContentDto: UpdateEcoContentDto,
+    @Request() req: any,
+  ) {
+    return this.adminService.updateEcoContent(
+      id,
+      updateEcoContentDto,
+      req.user.id,
+    );
   }
 
   @Delete('eco/:id')
@@ -280,17 +300,15 @@ export class AdminController {
   // Exchanges
   @Get('exchanges')
   @ApiOperation({ summary: 'Liste des échanges' })
-  async getExchanges(
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-    @Query('status') status?: string,
-    @Query('requesterId') requesterId?: string,
-    @Query('responderId') responderId?: string,
-  ) {
+  async getExchanges(@Query() query: AdminGetExchangesQueryDto) {
     return this.adminService.getExchanges(
-      page ? parseInt(page) : 1,
-      limit ? parseInt(limit) : 20,
-      { status, requesterId, responderId },
+      query.page || 1,
+      query.limit || 20,
+      {
+        status: query.status,
+        requesterId: query.requesterId,
+        responderId: query.responderId,
+      },
     );
   }
 
@@ -309,15 +327,11 @@ export class AdminController {
   // Community Management
   @Get('community/threads')
   @ApiOperation({ summary: 'Liste des threads' })
-  async getThreads(
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-    @Query('scope') scope?: string,
-  ) {
+  async getThreads(@Query() query: AdminGetThreadsQueryDto) {
     return this.adminService.getThreads(
-      page ? parseInt(page) : 1,
-      limit ? parseInt(limit) : 20,
-      scope,
+      query.page || 1,
+      query.limit || 20,
+      query.scope,
     );
   }
 
@@ -335,16 +349,11 @@ export class AdminController {
 
   @Get('community/posts')
   @ApiOperation({ summary: 'Liste des posts' })
-  async getPosts(
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-    @Query('threadId') threadId?: string,
-    @Query('authorId') authorId?: string,
-  ) {
+  async getPosts(@Query() query: AdminGetPostsQueryDto) {
     return this.adminService.getPosts(
-      page ? parseInt(page) : 1,
-      limit ? parseInt(limit) : 20,
-      { threadId, authorId },
+      query.page || 1,
+      query.limit || 20,
+      { threadId: query.threadId, authorId: query.authorId },
     );
   }
 
@@ -363,13 +372,10 @@ export class AdminController {
   // Analytics
   @Get('analytics/overview')
   @ApiOperation({ summary: 'Statistiques avancées de la plateforme' })
-  async getAnalyticsOverview(
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-  ) {
+  async getAnalyticsOverview(@Query() query: AdminGetAnalyticsQueryDto) {
     return this.adminService.getAnalyticsOverview(
-      startDate ? new Date(startDate) : undefined,
-      endDate ? new Date(endDate) : undefined,
+      query.startDate ? new Date(query.startDate) : undefined,
+      query.endDate ? new Date(query.endDate) : undefined,
     );
   }
 
@@ -394,15 +400,11 @@ export class AdminController {
   // Logs
   @Get('logs')
   @ApiOperation({ summary: 'Logs des actions admin' })
-  async getLogs(
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-    @Query('adminId') adminId?: string,
-  ) {
+  async getLogs(@Query() query: AdminGetLogsQueryDto) {
     return this.adminService.getLogs(
-      page ? parseInt(page) : 1,
-      limit ? parseInt(limit) : 50,
-      adminId,
+      query.page || 1,
+      query.limit || 50,
+      query.adminId,
     );
   }
 

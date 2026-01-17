@@ -123,17 +123,60 @@ export class UploadsService {
    * SÉCURITÉ:
    * - La signature empêche la modification des paramètres d'upload
    * - Le timestamp permet d'expirer les signatures après un certain temps
+   * - Validation stricte du folder (doit être autorisé)
+   * - Validation de la taille max (5MB max)
+   * - Formats autorisés verrouillés (jpg, jpeg, png, webp uniquement)
    *
-   * @param folder - Dossier de destination sur Cloudinary (ex: "items")
-   * @param maxBytes - Taille maximale du fichier (défaut: depuis config)
-   * @param allowedFormats - Formats autorisés (défaut: depuis config)
+   * @param folder - Dossier de destination sur Cloudinary (ex: "items", "profiles")
+   * @param maxBytes - Taille maximale du fichier (défaut: depuis config, max 5MB)
+   * @param allowedFormats - Formats autorisés (défaut: depuis config, verrouillés)
    * @returns Paramètres de signature pour l'upload
+   * @throws BadRequestException si folder invalide ou taille trop grande
    */
   getSignedUploadParams(
     folder: string,
     maxBytes: number = this.cloudinaryConfig.maxFileSize,
     allowedFormats: string[] = this.cloudinaryConfig.allowedFormats,
   ): SignedUploadParams {
+    // ============================================
+    // VALIDATION STRICTE DU FOLDER
+    // ============================================
+    // Whitelist des folders autorisés pour éviter les uploads non autorisés
+    const allowedFolders = ['items', 'profiles', 'eco-content'];
+    if (!allowedFolders.includes(folder)) {
+      throw new BadRequestException(
+        `Dossier non autorisé. Dossiers autorisés: ${allowedFolders.join(', ')}`,
+      );
+    }
+
+    // ============================================
+    // VALIDATION DE LA TAILLE MAX (5MB)
+    // ============================================
+    const maxSizeBytes = 5 * 1024 * 1024; // 5MB
+    if (maxBytes > maxSizeBytes) {
+      throw new BadRequestException(
+        `Taille maximale dépassée. Maximum: 5MB (${maxSizeBytes} octets)`,
+      );
+    }
+
+    // Forcer maxBytes à la valeur config si elle est supérieure
+    if (maxBytes > this.cloudinaryConfig.maxFileSize) {
+      maxBytes = this.cloudinaryConfig.maxFileSize;
+    }
+
+    // ============================================
+    // VALIDATION DES FORMATS AUTORISÉS
+    // ============================================
+    // Formats strictement autorisés (whitelist)
+    const validFormats = ['jpg', 'jpeg', 'png', 'webp'];
+    const invalidFormats = allowedFormats.filter(
+      (f) => !validFormats.includes(f.toLowerCase()),
+    );
+    if (invalidFormats.length > 0) {
+      throw new BadRequestException(
+        `Formats non autorisés: ${invalidFormats.join(', ')}. Formats autorisés: ${validFormats.join(', ')}`,
+      );
+    }
     const timestamp = Math.round(new Date().getTime() / 1000);
     const publicId = `${folder}/${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -166,16 +209,31 @@ export class UploadsService {
   /**
    * Attache une photo à un item après upload réussi sur Cloudinary.
    *
-   * VALIDATION:
+   * VALIDATION STRICTE:
    * - Vérifie que l'item existe
-   * - Vérifie que le nombre maximum de photos n'est pas atteint
+   * - Vérifie que le nombre maximum de photos n'est pas atteint (5 max)
+   * - Valide l'URL Cloudinary (doit provenir de Cloudinary)
+   * - Valide le publicId (ne doit pas être vide)
    *
    * @param itemId - ID de l'item
    * @param photoData - Données de la photo (URL, publicId, dimensions)
    * @throws NotFoundException si l'item n'existe pas
-   * @throws BadRequestException si le nombre maximum de photos est atteint
+   * @throws BadRequestException si validation échoue ou limite atteinte
    */
   async attachPhoto(itemId: string, photoData: AttachPhotoDto): Promise<void> {
+    // ============================================
+    // VALIDATION DES DONNÉES DE LA PHOTO
+    // ============================================
+    if (!photoData.url || !photoData.publicId) {
+      throw new BadRequestException('URL ou publicId manquant');
+    }
+
+    // Valider que l'URL provient bien de Cloudinary
+    const cloudinaryUrlPattern =
+      /^https?:\/\/res\.cloudinary\.com\/[^\/]+\/image\/upload\//;
+    if (!cloudinaryUrlPattern.test(photoData.url)) {
+      throw new BadRequestException('URL invalide: doit provenir de Cloudinary');
+    }
     // Vérifier que l'item existe
     const item = await this.prisma.item.findUnique({
       where: { id: itemId },
@@ -226,8 +284,33 @@ export class UploadsService {
    * @throws NotFoundException si l'item n'existe pas
    */
   async attachPhotos(itemId: string, photos: AttachPhotoDto[]): Promise<void> {
+    // ============================================
+    // VALIDATION DU TABLEAU DE PHOTOS
+    // ============================================
     if (!Array.isArray(photos) || photos.length === 0) {
       throw new BadRequestException('Aucune photo fournie');
+    }
+
+    // Limite stricte: maximum 5 photos par batch
+    const maxPhotosPerBatch = 5;
+    if (photos.length > maxPhotosPerBatch) {
+      throw new BadRequestException(
+        `Nombre maximum de photos par requête: ${maxPhotosPerBatch}`,
+      );
+    }
+
+    // Valider chaque photo
+    const cloudinaryUrlPattern =
+      /^https?:\/\/res\.cloudinary\.com\/[^\/]+\/image\/upload\//;
+    for (const photo of photos) {
+      if (!photo.url || !photo.publicId) {
+        throw new BadRequestException('URL ou publicId manquant pour une photo');
+      }
+      if (!cloudinaryUrlPattern.test(photo.url)) {
+        throw new BadRequestException(
+          'URL invalide: doit provenir de Cloudinary',
+        );
+      }
     }
 
     // Vérifier l'item
@@ -236,12 +319,13 @@ export class UploadsService {
       throw new NotFoundException('Item non trouvé');
     }
 
-    // Vérifier la limite
+    // Vérifier la limite totale (5 photos max par item)
+    const maxPhotosPerItem = 5;
     const existing = await this.prisma.itemPhoto.count({ where: { itemId } });
-    const remaining = this.cloudinaryConfig.maxPhotosPerItem - existing;
+    const remaining = maxPhotosPerItem - existing;
     if (remaining <= 0) {
       throw new BadRequestException(
-        `Nombre maximum de photos atteint (${this.cloudinaryConfig.maxPhotosPerItem})`,
+        `Nombre maximum de photos atteint (${maxPhotosPerItem})`,
       );
     }
     const toInsert = photos.slice(0, remaining);

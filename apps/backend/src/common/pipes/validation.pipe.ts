@@ -18,13 +18,24 @@
  */
 
 // Import du ValidationPipe de base de NestJS
-import { ValidationPipe as NestValidationPipe } from '@nestjs/common';
+import {
+  ValidationPipe as NestValidationPipe,
+  HttpStatus,
+  HttpException,
+} from '@nestjs/common';
 
 /**
  * PIPE: ValidationPipe
  *
  * Ce pipe personnalisé étend le ValidationPipe de NestJS avec une configuration
  * stricte pour la sécurité et la validation des données.
+ *
+ * SÉCURITÉ:
+ * - whitelist: supprime les propriétés non définies dans le DTO
+ * - forbidNonWhitelisted: rejette les requêtes avec propriétés non autorisées
+ * - forbidUnknownValues: rejette les valeurs inconnues (enum, etc.)
+ * - transform: convertit les objets en instances DTO
+ * - Codes HTTP normalisés: 422 (Unprocessable Entity) pour erreurs de validation
  */
 export class ValidationPipe extends NestValidationPipe {
   /**
@@ -45,6 +56,10 @@ export class ValidationPipe extends NestValidationPipe {
       // Cela protège contre les attaques où on envoie des données supplémentaires
       forbidNonWhitelisted: true,
 
+      // forbidUnknownValues: true rejette les valeurs inconnues pour les enums, etc.
+      // Protège contre les tentatives d'injection de valeurs invalides
+      forbidUnknownValues: true,
+
       // transform: true transforme automatiquement les objets JavaScript
       // en instances des classes DTO (pour utiliser les décorateurs de validation)
       transform: true,
@@ -54,6 +69,27 @@ export class ValidationPipe extends NestValidationPipe {
         // enableImplicitConversion: true convertit automatiquement les types
         // Exemple: "123" (string) devient 123 (number) si le DTO attend un number
         enableImplicitConversion: true,
+      },
+
+      // exceptionFactory: personnalise les exceptions de validation
+      // Retourne 422 (Unprocessable Entity) au lieu de 400 pour les erreurs de validation
+      exceptionFactory: (errors) => {
+        const messages = errors.map((error) => {
+          const constraints = error.constraints;
+          if (constraints) {
+            return Object.values(constraints).join(', ');
+          }
+          return `${error.property} a une valeur invalide`;
+        });
+
+        return new HttpException(
+          {
+            statusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+            message: 'Erreurs de validation',
+            errors: messages,
+          },
+          HttpStatus.UNPROCESSABLE_ENTITY,
+        );
       },
     });
   }
