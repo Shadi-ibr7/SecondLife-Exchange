@@ -3,15 +3,11 @@
  * Route: /a-propos/equipe
  */
 
-import { Metadata } from 'next';
+'use client';
+
 import { Users, Linkedin, Github, Mail, Heart } from 'lucide-react';
 import { PageHero } from '@/components/public/page-hero';
 import { CTASection } from '@/components/public/cta-section';
-
-export const metadata: Metadata = {
-  title: 'Notre Équipe | SecondLife Exchange',
-  description: 'Découvrez l\'équipe passionnée derrière SecondLife Exchange, unis par la volonté de créer un monde plus durable.',
-};
 
 export default function EquipePage() {
   const team = [

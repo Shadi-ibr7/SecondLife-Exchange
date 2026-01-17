@@ -3,15 +3,11 @@
  * Route: /communaute/regles
  */
 
-import { Metadata } from 'next';
+'use client';
+
 import { Scale, Heart, ShieldCheck, Ban, AlertTriangle, CheckCircle, XCircle, Flag } from 'lucide-react';
 import { PageHero } from '@/components/public/page-hero';
 import { CTASection } from '@/components/public/cta-section';
-
-export const metadata: Metadata = {
-  title: 'Règles de la communauté | SecondLife Exchange',
-  description: 'Découvrez les règles de notre communauté pour garantir des échanges respectueux, sécurisés et bienveillants sur SecondLife Exchange.',
-};
 
 export default function ReglesPage() {
   const principles = [

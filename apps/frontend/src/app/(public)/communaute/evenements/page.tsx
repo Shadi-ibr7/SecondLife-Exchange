@@ -3,15 +3,11 @@
  * Route: /communaute/evenements
  */
 
-import { Metadata } from 'next';
+'use client';
+
 import { Calendar, MapPin, Users, Clock, ArrowRight, Filter, Sparkles } from 'lucide-react';
 import { PageHero } from '@/components/public/page-hero';
 import { CTASection } from '@/components/public/cta-section';
-
-export const metadata: Metadata = {
-  title: 'Événements | SecondLife Exchange',
-  description: 'Découvrez les événements SecondLife Exchange : ateliers, rencontres, webinaires et journées de troc près de chez vous.',
-};
 
 export default function EvenementsPage() {
   const upcomingEvents = [

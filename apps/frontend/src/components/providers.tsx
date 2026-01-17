@@ -4,15 +4,19 @@
  * DESCRIPTION:
  * Ce composant enveloppe l'application avec tous les providers nécessaires.
  * Il configure React Query, vérifie l'authentification au démarrage,
- * et gère le thème (dark/light/system).
+ * gère le thème (dark/light/system), et fournit la gestion des cookies RGPD.
  *
  * PROVIDERS:
  * - QueryClientProvider: Pour React Query (gestion du cache et des requêtes)
+ * - CookieProvider: Pour la gestion du consentement cookies (RGPD)
+ * - AnalyticsProvider: Pour les scripts analytics conditionnels
+ * - MarketingProvider: Pour les pixels marketing conditionnels
  *
  * FONCTIONNALITÉS:
  * - Vérification automatique de l'authentification au montage
  * - Gestion du thème (dark/light/system) avec écoute des changements système
  * - Application du thème sur l'élément HTML
+ * - Bannière de consentement cookies conforme RGPD
  */
 
 'use client';
@@ -29,6 +33,11 @@ import { getQueryClient } from '@/lib/query-client';
 // Import des stores
 import { useAuthStore } from '@/store/auth';
 import { useThemeStore } from '@/store/theme';
+
+// Import des providers cookies et analytics
+import { CookieProvider } from '@/components/cookies';
+import { AnalyticsProvider } from '@/providers/AnalyticsProvider';
+import { MarketingProvider } from '@/providers/MarketingProvider';
 
 /**
  * COMPOSANT: Providers
@@ -124,10 +133,18 @@ export function Providers({ children }: { children: React.ReactNode }) {
   // RENDU
   // ============================================
   /**
-   * Envelopper les enfants avec QueryClientProvider.
-   * Cela permet à tous les composants enfants d'utiliser React Query.
+   * Envelopper les enfants avec les providers nécessaires.
+   * Ordre: QueryClient > Cookie > Analytics > Marketing > children
    */
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <CookieProvider>
+        <AnalyticsProvider>
+          <MarketingProvider>
+            {children}
+          </MarketingProvider>
+        </AnalyticsProvider>
+      </CookieProvider>
+    </QueryClientProvider>
   );
 }

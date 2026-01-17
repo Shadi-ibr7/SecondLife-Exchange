@@ -3,15 +3,11 @@
  * Route: /a-propos/notre-mission
  */
 
-import { Metadata } from 'next';
+'use client';
+
 import { Target, Heart, Leaf, Users, Sparkles, Globe } from 'lucide-react';
 import { PageHero } from '@/components/public/page-hero';
 import { CTASection } from '@/components/public/cta-section';
-
-export const metadata: Metadata = {
-  title: 'Notre Mission | SecondLife Exchange',
-  description: 'Découvrez la mission de SecondLife Exchange : promouvoir l\'économie circulaire et donner une seconde vie aux objets grâce à l\'IA.',
-};
 
 export default function NotreMissionPage() {
   const values = [

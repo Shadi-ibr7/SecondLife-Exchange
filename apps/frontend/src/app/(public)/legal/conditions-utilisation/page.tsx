@@ -3,14 +3,10 @@
  * Route: /legal/conditions-utilisation
  */
 
-import { Metadata } from 'next';
+'use client';
+
 import { FileText, ArrowRight } from 'lucide-react';
 import { PageHero } from '@/components/public/page-hero';
-
-export const metadata: Metadata = {
-  title: 'Conditions d\'utilisation | SecondLife Exchange',
-  description: 'Consultez les conditions générales d\'utilisation de SecondLife Exchange.',
-};
 
 export default function ConditionsUtilisationPage() {
   const lastUpdated = '15 janvier 2026';

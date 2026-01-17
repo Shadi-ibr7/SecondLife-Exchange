@@ -3,17 +3,16 @@
  * Route: /legal/cookies
  */
 
-import { Metadata } from 'next';
-import { Cookie, FileText, ArrowRight, Settings } from 'lucide-react';
-import { PageHero } from '@/components/public/page-hero';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'Politique des cookies | SecondLife Exchange',
-  description: 'Découvrez comment SecondLife Exchange utilise les cookies et comment gérer vos préférences.',
-};
+import { Cookie, FileText, ArrowRight, Settings, CheckCircle } from 'lucide-react';
+import { PageHero } from '@/components/public/page-hero';
+import { useCookieConsent } from '@/components/cookies';
+import { Button } from '@/components/ui/button';
 
 export default function CookiesPage() {
-  const lastUpdated = '15 janvier 2026';
+  const lastUpdated = '17 janvier 2026';
+  const { openPreferences, consent, hasGivenConsent } = useCookieConsent();
 
   const cookieTypes = [
     {
@@ -96,7 +95,17 @@ Nous n'utilisons pas de cookies publicitaires ni de cookies de réseaux sociaux 
 Vous pouvez à tout moment supprimer les cookies stockés sur votre appareil via les paramètres de votre navigateur.`,
     },
     {
-      title: '5. Vos choix concernant les cookies',
+      title: '5. Comment modifier votre choix',
+      content: `Vous pouvez modifier vos préférences de cookies à tout moment :
+
+**Via notre panneau de préférences**
+Cliquez sur le bouton "Gérer mes préférences" ci-dessous ou sur le lien "Gestion des cookies" en bas de chaque page du site.
+
+**Vos choix actuels**
+Votre consentement est enregistré et peut être modifié à tout moment. Le cookie de consentement est conservé pendant 6 mois.`,
+    },
+    {
+      title: '6. Vos choix concernant les cookies',
       content: `Vous avez plusieurs options pour gérer les cookies :
 
 **Via notre bandeau de consentement**
@@ -112,13 +121,13 @@ Tous les navigateurs permettent de bloquer ou supprimer les cookies :
 **Attention** : le blocage de certains cookies peut affecter le fonctionnement de la plateforme.`,
     },
     {
-      title: '6. Modifications de cette politique',
+      title: '7. Modifications de cette politique',
       content: `Nous pouvons mettre à jour cette politique des cookies à tout moment. La date de dernière mise à jour est indiquée en haut de cette page.
 
 En cas de changement significatif, nous vous en informerons via un nouveau bandeau de consentement.`,
     },
     {
-      title: '7. Contact',
+      title: '8. Contact',
       content: `Pour toute question concernant notre utilisation des cookies :
 
 **Email** : privacy@secondlife-exchange.com
@@ -144,12 +153,57 @@ Vous pouvez également contacter notre DPO pour exercer vos droits relatifs à l
           <span className="text-sm text-[#71717a] dark:text-[#a1a1aa]">
             Dernière mise à jour : <strong className="text-[#0b0b0d] dark:text-[#ededee]">{lastUpdated}</strong>
           </span>
-          <button className="flex items-center gap-2 rounded-lg bg-[#10b981] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#10b981]/90">
+          <Button
+            onClick={openPreferences}
+            className="flex items-center gap-2 bg-[#10b981] text-white hover:bg-[#10b981]/90"
+          >
             <Settings className="h-4 w-4" />
             Gérer mes préférences
-          </button>
+          </Button>
         </div>
       </section>
+
+      {/* État actuel du consentement */}
+      {hasGivenConsent && (
+        <section className="mx-auto w-full max-w-[800px] px-4 py-4 sm:px-8">
+          <div className="rounded-xl border border-[#10b981]/30 bg-[rgba(16,185,129,0.05)] p-6">
+            <h3 className="mb-4 flex items-center gap-2 font-semibold text-[#0b0b0d] dark:text-[#ededee]">
+              <CheckCircle className="h-5 w-5 text-[#10b981]" />
+              Vos préférences actuelles
+            </h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="flex items-center justify-between rounded-lg bg-white p-3 dark:bg-[#121216]">
+                <span className="text-sm text-[#71717a] dark:text-[#a1a1aa]">Cookies nécessaires</span>
+                <span className="rounded-full bg-[#10b981] px-2 py-0.5 text-xs font-medium text-white">Actifs</span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-white p-3 dark:bg-[#121216]">
+                <span className="text-sm text-[#71717a] dark:text-[#a1a1aa]">Cookies de préférences</span>
+                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${consent.preferences ? 'bg-[#10b981] text-white' : 'bg-[#f4f4f5] text-[#71717a] dark:bg-[#27272a]'}`}>
+                  {consent.preferences ? 'Actifs' : 'Inactifs'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-white p-3 dark:bg-[#121216]">
+                <span className="text-sm text-[#71717a] dark:text-[#a1a1aa]">Cookies statistiques</span>
+                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${consent.analytics ? 'bg-[#10b981] text-white' : 'bg-[#f4f4f5] text-[#71717a] dark:bg-[#27272a]'}`}>
+                  {consent.analytics ? 'Actifs' : 'Inactifs'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-white p-3 dark:bg-[#121216]">
+                <span className="text-sm text-[#71717a] dark:text-[#a1a1aa]">Cookies marketing</span>
+                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${consent.marketing ? 'bg-[#10b981] text-white' : 'bg-[#f4f4f5] text-[#71717a] dark:bg-[#27272a]'}`}>
+                  {consent.marketing ? 'Actifs' : 'Inactifs'}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={openPreferences}
+              className="mt-4 text-sm font-medium text-[#10b981] hover:underline"
+            >
+              Modifier mes préférences →
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* Tableau des cookies */}
       <section className="mx-auto w-full max-w-[800px] px-4 py-8 sm:px-8">

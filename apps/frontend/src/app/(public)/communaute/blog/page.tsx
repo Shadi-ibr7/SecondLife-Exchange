@@ -3,16 +3,12 @@
  * Route: /communaute/blog
  */
 
-import { Metadata } from 'next';
+'use client';
+
 import Link from 'next/link';
 import { Newspaper, Clock, ArrowRight, Tag, User, Sparkles } from 'lucide-react';
 import { PageHero } from '@/components/public/page-hero';
 import { CTASection } from '@/components/public/cta-section';
-
-export const metadata: Metadata = {
-  title: 'Blog | SecondLife Exchange',
-  description: 'Découvrez nos articles sur l\'économie circulaire, les conseils d\'échange, les témoignages de notre communauté et les actualités SecondLife Exchange.',
-};
 
 export default function BlogPage() {
   // Articles mock pour le placeholder

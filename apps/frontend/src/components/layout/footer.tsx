@@ -1,6 +1,9 @@
+'use client';
+
 import { Leaf, Users, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { CookieSettingsButton } from '@/components/cookies';
 
 export function Footer() {
   const footerLinks = {
@@ -84,9 +87,13 @@ export function Footer() {
         </div>
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 sm:flex-row">
-          <p className="text-sm text-muted-foreground">
-            © 2025 SecondLife Exchange. Tous droits réservés.
-          </p>
+          <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-4">
+            <p className="text-sm text-muted-foreground">
+              © 2026 SecondLife Exchange. Tous droits réservés.
+            </p>
+            {/* Bouton Gestion des cookies - RGPD */}
+            <CookieSettingsButton />
+          </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Users className="h-4 w-4 text-primary" />
             <span>Plus de 50,000 objets échangés</span>

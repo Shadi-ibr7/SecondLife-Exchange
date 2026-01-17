@@ -3,14 +3,10 @@
  * Route: /legal/confidentialite
  */
 
-import { Metadata } from 'next';
+'use client';
+
 import { Shield, FileText, ArrowRight, Mail } from 'lucide-react';
 import { PageHero } from '@/components/public/page-hero';
-
-export const metadata: Metadata = {
-  title: 'Politique de confidentialité | SecondLife Exchange',
-  description: 'Découvrez comment SecondLife Exchange protège vos données personnelles et respecte votre vie privée.',
-};
 
 export default function ConfidentialitePage() {
   const lastUpdated = '15 janvier 2026';

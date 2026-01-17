@@ -6,7 +6,6 @@
 'use client';
 
 import { useState } from 'react';
-import { Metadata } from 'next';
 import { HelpCircle, ChevronDown, Search, MessageCircle, ArrowRight } from 'lucide-react';
 import { PageHero } from '@/components/public/page-hero';
 import { CTASection } from '@/components/public/cta-section';

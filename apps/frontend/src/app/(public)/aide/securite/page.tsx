@@ -3,15 +3,11 @@
  * Route: /aide/securite
  */
 
-import { Metadata } from 'next';
+'use client';
+
 import { Shield, Lock, Eye, AlertTriangle, CheckCircle, UserCheck, MapPin, MessageSquare, CreditCard, Flag } from 'lucide-react';
 import { PageHero } from '@/components/public/page-hero';
 import { CTASection } from '@/components/public/cta-section';
-
-export const metadata: Metadata = {
-  title: 'Sécurité | SecondLife Exchange',
-  description: 'Découvrez nos conseils de sécurité pour des échanges en toute confiance sur SecondLife Exchange.',
-};
 
 export default function SecuritePage() {
   const securityFeatures = [

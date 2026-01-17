@@ -3,15 +3,11 @@
  * Route: /communaute/guide-echange
  */
 
-import { Metadata } from 'next';
+'use client';
+
 import { BookOpen, Camera, MessageSquare, Truck, Star, Shield, CheckCircle2, ArrowRight } from 'lucide-react';
 import { PageHero } from '@/components/public/page-hero';
 import { CTASection } from '@/components/public/cta-section';
-
-export const metadata: Metadata = {
-  title: 'Guide d\'échange | SecondLife Exchange',
-  description: 'Apprenez à réaliser des échanges réussis sur SecondLife Exchange : de la publication de votre objet à la finalisation de l\'échange.',
-};
 
 export default function GuideEchangePage() {
   const steps = [

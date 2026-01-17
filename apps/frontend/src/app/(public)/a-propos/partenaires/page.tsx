@@ -3,15 +3,11 @@
  * Route: /a-propos/partenaires
  */
 
-import { Metadata } from 'next';
-import { Handshake, Building2, Award, Globe, Mail, ArrowRight } from 'lucide-react';
+'use client';
+
+import { Users2, Building2, Award, Globe, Mail, ArrowRight } from 'lucide-react';
 import { PageHero } from '@/components/public/page-hero';
 import { CTASection } from '@/components/public/cta-section';
-
-export const metadata: Metadata = {
-  title: 'Nos Partenaires | SecondLife Exchange',
-  description: 'Découvrez les partenaires qui soutiennent SecondLife Exchange dans sa mission pour une économie plus circulaire et durable.',
-};
 
 export default function PartenairesPage() {
   const mainPartners = [
@@ -70,7 +66,7 @@ export default function PartenairesPage() {
   return (
     <>
       <PageHero
-        icon={Handshake}
+        icon={Users2}
         badge="Ensemble pour la planète"
         badgeColor="primary"
         title="Nos partenaires"
@@ -204,7 +200,7 @@ export default function PartenairesPage() {
       </section>
 
       <CTASection
-        icon={Handshake}
+        icon={Users2}
         title="Rejoignez l'aventure"
         description="Que vous soyez une entreprise, une association ou un média, construisons ensemble un monde plus circulaire."
         primaryAction={{ label: 'Proposer un partenariat', href: 'mailto:partenaires@secondlife-exchange.com' }}

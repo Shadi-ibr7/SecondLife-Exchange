@@ -3,15 +3,11 @@
  * Route: /a-propos/impact-ecologique
  */
 
-import { Metadata } from 'next';
+'use client';
+
 import { Leaf, TrendingDown, Recycle, TreePine, Droplets, Factory, ArrowRight } from 'lucide-react';
 import { PageHero } from '@/components/public/page-hero';
 import { CTASection } from '@/components/public/cta-section';
-
-export const metadata: Metadata = {
-  title: 'Impact Écologique | SecondLife Exchange',
-  description: 'Découvrez l\'impact environnemental positif de SecondLife Exchange : CO₂ économisé, ressources préservées, et notre engagement pour la planète.',
-};
 
 export default function ImpactEcologiquePage() {
   const stats = [
