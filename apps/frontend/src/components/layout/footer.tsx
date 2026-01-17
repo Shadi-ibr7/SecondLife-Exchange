@@ -5,27 +5,27 @@ import Image from 'next/image';
 export function Footer() {
   const footerLinks = {
     'À propos': [
-      { name: 'Notre mission', href: '/about' },
-      { name: "L'équipe", href: '/team' },
-      { name: 'Impact écologique', href: '/impact' },
-      { name: 'Partenaires', href: '/partners' },
+      { name: 'Notre mission', href: '/a-propos/notre-mission' },
+      { name: "L'équipe", href: '/a-propos/equipe' },
+      { name: 'Impact écologique', href: '/a-propos/impact-ecologique' },
+      { name: 'Partenaires', href: '/a-propos/partenaires' },
     ],
     Communauté: [
-      { name: "Guide d'échange", href: '/guide' },
-      { name: 'Règles', href: '/rules' },
-      { name: 'Blog', href: '/blog' },
-      { name: 'Événements', href: '/events' },
+      { name: "Guide d'échange", href: '/communaute/guide-echange' },
+      { name: 'Règles', href: '/communaute/regles' },
+      { name: 'Blog', href: '/communaute/blog' },
+      { name: 'Événements', href: '/communaute/evenements' },
     ],
     Aide: [
-      { name: 'FAQ', href: '/faq' },
-      { name: 'Contact', href: '/contact' },
-      { name: 'Sécurité', href: '/security' },
-      { name: 'Signaler', href: '/report' },
+      { name: 'FAQ', href: '/aide/faq' },
+      { name: 'Contact', href: '/aide/contact' },
+      { name: 'Sécurité', href: '/aide/securite' },
+      { name: 'Signaler', href: '/aide/signaler' },
     ],
     Légal: [
-      { name: "Conditions d'utilisation", href: '/terms' },
-      { name: 'Confidentialité', href: '/privacy' },
-      { name: 'Cookies', href: '/cookies' },
+      { name: "Conditions d'utilisation", href: '/legal/conditions-utilisation' },
+      { name: 'Confidentialité', href: '/legal/confidentialite' },
+      { name: 'Cookies', href: '/legal/cookies' },
     ],
   };
 
