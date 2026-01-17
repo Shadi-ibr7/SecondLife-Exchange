@@ -3,10 +3,9 @@
  *
  * DESCRIPTION:
  * Layout partagé pour toutes les pages publiques (À propos, Aide, Légal, Communauté).
- * Inclut le header (Navbar) et le footer communs.
+ * La Navbar est déjà gérée par le layout principal, on ajoute seulement le Footer.
  */
 
-import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 
 export default function PublicLayout({
@@ -16,7 +15,6 @@ export default function PublicLayout({
 }) {
   return (
     <div className="min-h-screen bg-[#fafafa] text-[#0b0b0d] dark:bg-[#0b0b0d] dark:text-[#ededee]">
-      <Navbar />
       {children}
       <Footer />
     </div>
