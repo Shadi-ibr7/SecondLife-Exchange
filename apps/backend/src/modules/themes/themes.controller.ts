@@ -3,21 +3,21 @@
  *
  * DESCRIPTION:
  * Ce contrôleur expose les endpoints HTTP pour la gestion des thèmes hebdomadaires.
- * Les routes de création/modification nécessitent une authentification JWT (admin).
+ * Les routes de création/modification nécessitent une authentification JWT et le rôle ADMIN.
  *
  * ROUTES:
  * - GET /api/v1/themes/active - Récupérer le thème actif (public)
  * - GET /api/v1/themes - Lister les thèmes avec pagination (public)
  * - GET /api/v1/themes/calendar - Calendrier des thèmes (public)
  * - GET /api/v1/themes/:id - Récupérer un thème par ID (public)
- * - POST /api/v1/themes - Créer un thème (admin)
- * - PATCH /api/v1/themes/:id - Mettre à jour un thème (admin)
- * - PATCH /api/v1/themes/:id/activate - Activer un thème (admin)
- * - DELETE /api/v1/themes/:id - Supprimer un thème (admin)
+ * - POST /api/v1/themes - Créer un thème (ADMIN uniquement)
+ * - PATCH /api/v1/themes/:id - Mettre à jour un thème (ADMIN uniquement)
+ * - PATCH /api/v1/themes/:id/activate - Activer un thème (ADMIN uniquement)
+ * - DELETE /api/v1/themes/:id - Supprimer un thème (ADMIN uniquement)
  *
  * SÉCURITÉ:
- * - Routes de création/modification nécessitent JwtAccessGuard
- * - Devrait également nécessiter AdminGuard (à ajouter si nécessaire)
+ * - Routes de création/modification nécessitent JwtAccessGuard + RolesGuard
+ * - Rôle ADMIN requis pour les opérations d'écriture
  */
 
 // Import des décorateurs NestJS
@@ -51,8 +51,11 @@ import { ThemesService } from './themes.service';
 import { CreateThemeDto } from './dtos/create-theme.dto';
 import { UpdateThemeDto } from './dtos/update-theme.dto';
 
-// Import des guards
+// Import des guards et décorateurs RBAC
 import { JwtAccessGuard } from '../../common/guards/jwt-access.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { UserRole } from '@prisma/client';
 
 /**
  * CONTRÔLEUR: ThemesController
@@ -235,16 +238,18 @@ export class ThemesController {
    * Code HTTP: 201 (CREATED)
    *
    * SÉCURITÉ:
-   * - Nécessite une authentification JWT
-   * - Devrait nécessiter AdminGuard (à ajouter si nécessaire)
+   * - Nécessite une authentification JWT + rôle ADMIN
+   * - Protégé par RolesGuard avec @Roles(UserRole.ADMIN)
    */
   @Post()
-  @UseGuards(JwtAccessGuard)
+  @UseGuards(JwtAccessGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Créer un nouveau thème (Admin)' })
   @ApiResponse({ status: 201, description: 'Thème créé avec succès' })
   @ApiResponse({ status: 400, description: 'Données invalides' })
   @ApiResponse({ status: 401, description: 'Non authentifié' })
+  @ApiResponse({ status: 403, description: 'Accès non autorisé (Admin requis)' })
   async createTheme(@Body() createThemeDto: CreateThemeDto) {
     return this.themesService.createTheme(createThemeDto);
   }
@@ -263,16 +268,18 @@ export class ThemesController {
    * Code HTTP: 200 (OK)
    *
    * SÉCURITÉ:
-   * - Nécessite une authentification JWT
-   * - Devrait nécessiter AdminGuard (à ajouter si nécessaire)
+   * - Nécessite une authentification JWT + rôle ADMIN
+   * - Protégé par RolesGuard avec @Roles(UserRole.ADMIN)
    */
   @Patch(':id')
-  @UseGuards(JwtAccessGuard)
+  @UseGuards(JwtAccessGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Mettre à jour un thème (Admin)' })
   @ApiResponse({ status: 200, description: 'Thème mis à jour avec succès' })
   @ApiResponse({ status: 400, description: 'Données invalides' })
   @ApiResponse({ status: 401, description: 'Non authentifié' })
+  @ApiResponse({ status: 403, description: 'Accès non autorisé (Admin requis)' })
   @ApiResponse({ status: 404, description: 'Thème non trouvé' })
   async updateTheme(
     @Param('id') id: string,
@@ -298,15 +305,17 @@ export class ThemesController {
    * Code HTTP: 200 (OK)
    *
    * SÉCURITÉ:
-   * - Nécessite une authentification JWT
-   * - Devrait nécessiter AdminGuard (à ajouter si nécessaire)
+   * - Nécessite une authentification JWT + rôle ADMIN
+   * - Protégé par RolesGuard avec @Roles(UserRole.ADMIN)
    */
   @Patch(':id/activate')
-  @UseGuards(JwtAccessGuard)
+  @UseGuards(JwtAccessGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Activer un thème (Admin)' })
   @ApiResponse({ status: 200, description: 'Thème activé avec succès' })
   @ApiResponse({ status: 401, description: 'Non authentifié' })
+  @ApiResponse({ status: 403, description: 'Accès non autorisé (Admin requis)' })
   @ApiResponse({ status: 404, description: 'Thème non trouvé' })
   async activateTheme(@Param('id') id: string) {
     return this.themesService.activateTheme(id);
@@ -324,16 +333,18 @@ export class ThemesController {
    * Code HTTP: 204 (NO_CONTENT)
    *
    * SÉCURITÉ:
-   * - Nécessite une authentification JWT
-   * - Devrait nécessiter AdminGuard (à ajouter si nécessaire)
+   * - Nécessite une authentification JWT + rôle ADMIN
+   * - Protégé par RolesGuard avec @Roles(UserRole.ADMIN)
    */
   @Delete(':id')
-  @UseGuards(JwtAccessGuard)
+  @UseGuards(JwtAccessGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Supprimer un thème (Admin)' })
   @ApiResponse({ status: 204, description: 'Thème supprimé avec succès' })
   @ApiResponse({ status: 401, description: 'Non authentifié' })
+  @ApiResponse({ status: 403, description: 'Accès non autorisé (Admin requis)' })
   @ApiResponse({ status: 404, description: 'Thème non trouvé' })
   async deleteTheme(@Param('id') id: string) {
     await this.themesService.deleteTheme(id);

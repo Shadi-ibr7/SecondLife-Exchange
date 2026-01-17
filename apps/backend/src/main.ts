@@ -32,6 +32,9 @@ import helmet from 'helmet';
 // Import de CORS: middleware pour gérer les requêtes cross-origin
 import cors from 'cors';
 
+// Import de cookie-parser: middleware pour parser les cookies
+import cookieParser from 'cookie-parser';
+
 // Import du module principal de l'application
 import { AppModule } from './app.module';
 
@@ -93,20 +96,55 @@ async function bootstrap() {
   );
 
   // ============================================
+  // CONFIGURATION COOKIE PARSER
+  // ============================================
+  /**
+   * Cookie-parser permet de parser les cookies des requêtes entrantes.
+   * Nécessaire pour l'authentification via cookies httpOnly.
+   */
+  app.use(cookieParser());
+
+  // ============================================
   // CONFIGURATION CORS (Cross-Origin Resource Sharing)
   // ============================================
   /**
-   * CORS permet au frontend (qui tourne sur un autre port) de faire des requêtes
+   * CORS permet au frontend (qui tourne sur un autre port/domaine) de faire des requêtes
    * vers le backend. Sans CORS, le navigateur bloquerait ces requêtes.
    *
-   * origin: l'URL du frontend autorisée (ex: http://localhost:3000)
-   * credentials: true permet d'envoyer les cookies et tokens d'authentification
+   * CONFIGURATION MULTI-ORIGINES:
+   * - En dev: http://localhost:3000
+   * - En prod: URL Vercel du frontend
+   *
+   * credentials: true est OBLIGATOIRE pour envoyer/recevoir des cookies
    */
-  const corsOrigin = configService.get<string>('app.corsOrigin');
+  const corsOrigins = configService.get<string>('app.corsOrigin');
+
+  // Supporter plusieurs origines séparées par des virgules
+  // Ex: CORS_ORIGIN=http://localhost:3000,https://app.example.com
+  const allowedOrigins = corsOrigins
+    ? corsOrigins.split(',').map((origin) => origin.trim())
+    : ['http://localhost:3000'];
+
   app.use(
     cors({
-      origin: corsOrigin, // URL du frontend autorisée
-      credentials: true, // Autorise l'envoi de cookies/tokens
+      origin: (origin, callback) => {
+        // Autoriser les requêtes sans origin (ex: Postman, curl)
+        if (!origin) {
+          return callback(null, true);
+        }
+        // Vérifier si l'origine est dans la liste autorisée
+        if (allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+        // Log pour debug (ne pas exposer en prod)
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(`[CORS] Origine rejetée: ${origin}`);
+        }
+        callback(new Error('Not allowed by CORS'));
+      },
+      credentials: true, // OBLIGATOIRE pour les cookies cross-origin
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     }),
   );
 
@@ -163,7 +201,8 @@ async function bootstrap() {
    */
   console.log(`🚀 Backend démarré sur le port ${port}`);
   console.log(`📚 API disponible sur http://localhost:${port}/api/v1`);
-  console.log(`🔒 CORS configuré pour: ${corsOrigin}`);
+  console.log(`🔒 CORS configuré pour: ${allowedOrigins.join(', ')}`);
+  console.log(`🍪 Cookie-parser activé pour auth httpOnly`);
 }
 
 // ============================================

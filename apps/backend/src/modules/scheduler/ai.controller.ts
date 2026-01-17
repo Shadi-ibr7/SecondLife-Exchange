@@ -6,7 +6,7 @@
  * la génération de suggestions via l'IA.
  *
  * ROUTES:
- * - POST /api/v1/ai/themes/:id/generate - Déclencher la génération de suggestions (authentifié)
+ * - POST /api/v1/ai/themes/:id/generate - Déclencher la génération de suggestions (ADMIN uniquement)
  *
  * UTILISATION:
  * - Tests et développement
@@ -14,8 +14,8 @@
  * - Appelée par les administrateurs pour forcer la génération
  *
  * SÉCURITÉ:
- * - Nécessite une authentification JWT
- * - Devrait nécessiter AdminGuard (à ajouter si nécessaire)
+ * - Nécessite une authentification JWT + rôle ADMIN
+ * - Protégé par RolesGuard avec @Roles(UserRole.ADMIN)
  */
 
 // Import des décorateurs NestJS
@@ -32,8 +32,11 @@ import {
 // Import du service
 import { WeeklyCronService } from './weekly-cron.service';
 
-// Import des guards
+// Import des guards et décorateurs RBAC
 import { JwtAccessGuard } from '../../common/guards/jwt-access.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { UserRole } from '@prisma/client';
 
 /**
  * CONTRÔLEUR: AiController
@@ -70,11 +73,12 @@ export class AiController {
    * Code HTTP: 200 (OK)
    *
    * SÉCURITÉ:
-   * - Nécessite une authentification JWT
-   * - Devrait nécessiter AdminGuard (à ajouter si nécessaire)
+   * - Nécessite une authentification JWT + rôle ADMIN
+   * - Protégé par RolesGuard avec @Roles(UserRole.ADMIN)
    */
   @Post('themes/:id/generate')
-  @UseGuards(JwtAccessGuard)
+  @UseGuards(JwtAccessGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Déclencher manuellement la génération de suggestions (Admin)',
@@ -84,6 +88,7 @@ export class AiController {
     description: 'Génération déclenchée avec succès',
   })
   @ApiResponse({ status: 401, description: 'Non authentifié' })
+  @ApiResponse({ status: 403, description: 'Accès non autorisé (Admin requis)' })
   @ApiResponse({ status: 404, description: 'Thème non trouvé' })
   async generateSuggestions(
     @Param('id') themeId: string,

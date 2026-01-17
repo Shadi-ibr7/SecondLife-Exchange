@@ -2,118 +2,259 @@
  * FICHIER: admin.api.ts
  *
  * DESCRIPTION:
- * Client API pour les routes admin.
+ * Client API pour les routes admin avec authentification par cookies httpOnly.
+ *
+ * SÉCURITÉ:
+ * - Les tokens sont stockés dans des cookies httpOnly (pas accessible en JS)
+ * - withCredentials: true pour envoyer/recevoir les cookies cross-origin
+ * - Plus de localStorage pour les tokens (vulnérable XSS)
+ *
+ * COMPATIBILITÉ:
+ * - SSR: Les requêtes côté serveur ne peuvent pas accéder aux cookies du navigateur
+ * - CSR: Les cookies sont automatiquement envoyés avec withCredentials: true
  */
 
 import axios from 'axios';
 import type { AxiosError } from 'axios';
-import { ADMIN_API_BASE } from './admin.config';
-import { clearAdminToken, getAdminToken, setAdminToken } from './admin.token';
+import { ADMIN_API_BASE, ADMIN_BASE_PATH } from './admin.config';
 
+/**
+ * Réponse du login admin
+ */
 type LoginResponse = {
+  user: {
+    id: string;
+    email: string;
+    displayName: string;
+    roles: string;
+    avatarUrl: string | null;
+  };
+  // Tokens inclus pour rétrocompatibilité (période de transition)
   accessToken?: string;
-  [key: string]: unknown;
+  refreshToken?: string;
+};
+
+/**
+ * Réponse de l'endpoint /auth/admin/me
+ */
+type AdminMeResponse = {
+  id: string;
+  email: string;
+  displayName: string;
+  roles: string;
+  avatarUrl: string | null;
+  createdAt: string;
 };
 
 // Construire l'URL de base de l'API
 const getApiBaseURL = () => {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-  // Le backend a un préfixe global /api/v1, donc on doit l'inclure
-  // Si l'URL contient déjà /api/v1, ne pas l'ajouter deux fois
+  // Le backend a un préfixe global /api/v1
   if (apiUrl.includes('/api/v1')) {
     return apiUrl;
   }
-  // Sinon, ajouter /api/v1
   return `${apiUrl}${ADMIN_API_BASE}`;
 };
 
-console.log('🔧 Admin API Base URL:', getApiBaseURL());
+if (typeof window !== 'undefined') {
+  console.log('🔧 Admin API Base URL:', getApiBaseURL());
+}
 
 export const ADMIN_LOGIN_ENDPOINT = '/auth/admin/login';
+export const ADMIN_REFRESH_ENDPOINT = '/auth/admin/refresh';
+export const ADMIN_LOGOUT_ENDPOINT = '/auth/admin/logout';
+export const ADMIN_ME_ENDPOINT = '/auth/admin/me';
 export const getAdminApiBaseUrl = getApiBaseURL;
 
+/**
+ * Client Axios configuré pour l'API admin
+ *
+ * IMPORTANT: withCredentials: true est OBLIGATOIRE pour:
+ * - Envoyer les cookies au backend
+ * - Recevoir les Set-Cookie du backend
+ */
 const adminApiClient = axios.create({
   baseURL: getApiBaseURL(),
   timeout: 10000,
-  withCredentials: true,
+  withCredentials: true, // OBLIGATOIRE pour cookies cross-origin
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Intercepteur pour ajouter le token admin
-adminApiClient.interceptors.request.use((config) => {
-  const token = getAdminToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('🔑 Token admin injecté');
-    }
-  }
-  return config;
-});
-
-// Intercepteur pour gérer les erreurs
+/**
+ * Intercepteur de réponse pour gérer les erreurs d'authentification
+ * - 401: Token expiré ou invalide → tenter refresh ou rediriger vers login
+ */
 adminApiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      clearAdminToken();
-      if (typeof window !== 'undefined') {
-        window.location.href = `/${process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7'}/login`;
+  async (error: AxiosError) => {
+    const originalRequest = error.config as typeof error.config & {
+      _retry?: boolean;
+    };
+
+    // Si erreur 401 et pas déjà en retry
+    if (error.response?.status === 401 && !originalRequest?._retry) {
+      // Ne pas retry pour les endpoints d'auth eux-mêmes
+      if (
+        originalRequest?.url?.includes('/auth/admin/login') ||
+        originalRequest?.url?.includes('/auth/admin/refresh')
+      ) {
+        return Promise.reject(error);
+      }
+
+      originalRequest._retry = true;
+
+      try {
+        // Tenter de rafraîchir le token
+        await adminApiClient.post(ADMIN_REFRESH_ENDPOINT);
+        // Réessayer la requête originale
+        return adminApiClient(originalRequest);
+      } catch (refreshError) {
+        // Refresh échoué → rediriger vers login
+        if (typeof window !== 'undefined') {
+          const adminBasePath =
+            process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
+          window.location.href = `/${adminBasePath}/login`;
+        }
+        return Promise.reject(refreshError);
       }
     }
+
     return Promise.reject(error);
   }
 );
 
 export const adminApi = {
-  // Auth
+  // ============================================
+  // AUTH
+  // ============================================
+
+  /**
+   * Connexion admin
+   *
+   * Le backend va:
+   * 1. Valider les identifiants
+   * 2. Générer access + refresh tokens
+   * 3. Les stocker dans des cookies httpOnly
+   *
+   * @param email - Email de l'admin
+   * @param password - Mot de passe
+   * @returns Infos utilisateur (tokens dans cookies)
+   */
   login: async (
     email: string,
     password: string
   ): Promise<{ data: LoginResponse; status: number }> => {
     try {
-      const url = ADMIN_LOGIN_ENDPOINT;
-      console.log('LOGIN REQUEST', `${adminApiClient.defaults.baseURL}${url}`, {
-        email,
-      });
-
-      const response = await adminApiClient.post(url, {
-        email,
-        password,
-      });
-      console.log('LOGIN RESPONSE', response.status, response.data);
-
-      if (response.data.accessToken) {
-        setAdminToken(response.data.accessToken);
-        console.log('✅ Connexion réussie, token sauvegardé');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('LOGIN REQUEST', `${adminApiClient.defaults.baseURL}${ADMIN_LOGIN_ENDPOINT}`, {
+          email,
+        });
       }
+
+      const response = await adminApiClient.post<LoginResponse>(
+        ADMIN_LOGIN_ENDPOINT,
+        { email, password }
+      );
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('LOGIN RESPONSE', response.status, response.data);
+        console.log('✅ Connexion réussie, cookies définis par le backend');
+      }
+
       return { data: response.data, status: response.status };
     } catch (error: unknown) {
       const err = error as AxiosError;
       console.error('❌ Erreur de connexion admin:', err);
       if (err.code === 'ECONNREFUSED' || err.message === 'Network Error') {
         throw new Error(
-          'Impossible de contacter le serveur. Vérifiez que le backend est démarré sur http://localhost:4000'
+          'Impossible de contacter le serveur. Vérifiez que le backend est démarré.'
         );
       }
       throw err;
     }
   },
 
-  // Dashboard
+  /**
+   * Rafraîchir les tokens
+   *
+   * Le refresh token est envoyé automatiquement via cookie.
+   * Le backend effectue une rotation et met à jour les cookies.
+   */
+  refresh: async (): Promise<void> => {
+    await adminApiClient.post(ADMIN_REFRESH_ENDPOINT);
+  },
+
+  /**
+   * Déconnexion admin
+   *
+   * Le backend va:
+   * 1. Révoquer le refresh token en base
+   * 2. Supprimer les cookies
+   */
+  logout: async (): Promise<void> => {
+    try {
+      await adminApiClient.post(ADMIN_LOGOUT_ENDPOINT);
+    } catch (error) {
+      // Ignorer les erreurs de logout (peut échouer si déjà déconnecté)
+      console.warn('Logout error (ignoré):', error);
+    }
+    // Rediriger vers login
+    if (typeof window !== 'undefined') {
+      const adminBasePath =
+        process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
+      window.location.href = `/${adminBasePath}/login`;
+    }
+  },
+
+  /**
+   * Vérifier la session / Obtenir les infos de l'admin connecté
+   *
+   * Utilisé pour:
+   * - Vérifier si la session est valide au chargement
+   * - Obtenir les infos utilisateur pour le header/sidebar
+   *
+   * @returns Infos de l'admin ou null si non authentifié
+   */
+  getMe: async (): Promise<AdminMeResponse | null> => {
+    try {
+      const response = await adminApiClient.get<AdminMeResponse>(ADMIN_ME_ENDPOINT);
+      return response.data;
+    } catch (error) {
+      // 401 = non authentifié (géré par l'intercepteur)
+      return null;
+    }
+  },
+
+  /**
+   * Vérifier si l'admin est authentifié
+   *
+   * @returns true si authentifié, false sinon
+   */
+  isAuthenticated: async (): Promise<boolean> => {
+    const me = await adminApi.getMe();
+    return me !== null;
+  },
+
+  // ============================================
+  // DASHBOARD
+  // ============================================
+
   getDashboardStats: async () => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.get(`/${adminBasePath}/dashboard`);
     return response.data;
   },
 
-  // Users
+  // ============================================
+  // USERS
+  // ============================================
+
   getUsers: async (page = 1, limit = 20, search?: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
@@ -127,14 +268,14 @@ export const adminApi = {
 
   getUserById: async (id: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.get(`/${adminBasePath}/users/${id}`);
     return response.data;
   },
 
   banUser: async (id: string, reason?: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.patch(
       `/${adminBasePath}/users/${id}/ban`,
       { reason }
@@ -144,21 +285,24 @@ export const adminApi = {
 
   unbanUser: async (id: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.patch(
       `/${adminBasePath}/users/${id}/unban`
     );
     return response.data;
   },
 
-  // Items
+  // ============================================
+  // ITEMS
+  // ============================================
+
   getItems: async (
     page = 1,
     limit = 20,
     filters?: { ownerId?: string; category?: string; status?: string }
   ) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
@@ -174,14 +318,14 @@ export const adminApi = {
 
   getItemById: async (id: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.get(`/${adminBasePath}/items/${id}`);
     return response.data;
   },
 
   archiveItem: async (id: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.patch(
       `/${adminBasePath}/items/${id}/archive`
     );
@@ -190,17 +334,20 @@ export const adminApi = {
 
   deleteItem: async (id: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.delete(
       `/${adminBasePath}/items/${id}`
     );
     return response.data;
   },
 
-  // Reports
+  // ============================================
+  // REPORTS
+  // ============================================
+
   getReports: async (page = 1, limit = 20, resolved?: boolean) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
@@ -214,14 +361,14 @@ export const adminApi = {
 
   getReportById: async (id: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.get(`/${adminBasePath}/reports/${id}`);
     return response.data;
   },
 
   resolveReport: async (id: string, banUser = false) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.patch(
       `/${adminBasePath}/reports/${id}/resolve`,
       { banUser }
@@ -231,24 +378,26 @@ export const adminApi = {
 
   deleteReport: async (id: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.delete(`/${adminBasePath}/reports/${id}`);
     return response.data;
   },
 
-  // Themes
+  // ============================================
+  // THEMES
+  // ============================================
+
   getThemes: async () => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.get(`/${adminBasePath}/themes`);
-    // S'assurer qu'on retourne toujours un tableau
     const data = response.data;
     return Array.isArray(data) ? data : [];
   },
 
   getThemeById: async (id: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.get(`/${adminBasePath}/themes/${id}`);
     return response.data;
   },
@@ -261,7 +410,7 @@ export const adminApi = {
     isActive?: boolean;
   }) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.post(
       `/${adminBasePath}/themes`,
       payload
@@ -280,7 +429,7 @@ export const adminApi = {
     }>
   ) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.patch(
       `/${adminBasePath}/themes/${id}`,
       payload
@@ -290,7 +439,7 @@ export const adminApi = {
 
   activateTheme: async (id: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.patch(
       `/${adminBasePath}/themes/${id}/activate`
     );
@@ -299,7 +448,7 @@ export const adminApi = {
 
   deleteTheme: async (id: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.delete(
       `/${adminBasePath}/themes/${id}`
     );
@@ -308,12 +457,10 @@ export const adminApi = {
 
   generateThemeSuggestions: async (id: string, locales?: string[]) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.post(
       `/${adminBasePath}/themes/${id}/suggestions`,
-      {
-        locales,
-      }
+      { locales }
     );
     return response.data;
   },
@@ -325,7 +472,7 @@ export const adminApi = {
     sort = '-createdAt'
   ) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
@@ -339,7 +486,7 @@ export const adminApi = {
 
   getThemeSuggestionStats: async (id: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.get(
       `/${adminBasePath}/themes/${id}/suggestions/stats`
     );
@@ -348,13 +495,7 @@ export const adminApi = {
 
   generateTheme: async () => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
-    const token = getAdminToken();
-    console.log('🔑 Token admin présent:', !!token);
-    console.log(
-      '📍 URL complète:',
-      `${adminApiClient.defaults.baseURL}/${adminBasePath}/themes/generate`
-    );
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     try {
       const response = await adminApiClient.post(
         `/${adminBasePath}/themes/generate`
@@ -363,19 +504,13 @@ export const adminApi = {
     } catch (error: unknown) {
       const err = error as AxiosError;
       console.error('❌ Erreur génération thème:', err);
-      console.error(
-        '📍 URL tentée:',
-        `${adminApiClient.defaults.baseURL}/${adminBasePath}/themes/generate`
-      );
-      console.error('📊 Status:', err.response?.status);
-      console.error('📊 Headers envoyés:', err.config?.headers);
       throw err;
     }
   },
 
   generateMonthlyThemes: async (month?: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     try {
       const response = await adminApiClient.post(
         `/${adminBasePath}/themes/generate-monthly`,
@@ -389,10 +524,13 @@ export const adminApi = {
     }
   },
 
-  // Eco Content
+  // ============================================
+  // ECO CONTENT
+  // ============================================
+
   getEcoContent: async (page = 1, limit = 20) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
@@ -405,7 +543,7 @@ export const adminApi = {
 
   getEcoContentById: async (id: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.get(`/${adminBasePath}/eco/${id}`);
     return response.data;
   },
@@ -421,7 +559,7 @@ export const adminApi = {
     published?: boolean;
   }) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.post(`/${adminBasePath}/eco`, data);
     return response.data;
   },
@@ -440,26 +578,29 @@ export const adminApi = {
     }
   ) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.patch(`/${adminBasePath}/eco/${id}`, data);
     return response.data;
   },
 
   deleteEcoContent: async (id: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.delete(`/${adminBasePath}/eco/${id}`);
     return response.data;
   },
 
-  // Exchanges
+  // ============================================
+  // EXCHANGES
+  // ============================================
+
   getExchanges: async (
     page = 1,
     limit = 20,
     filters?: { status?: string; requesterId?: string; responderId?: string }
   ) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
@@ -475,24 +616,27 @@ export const adminApi = {
 
   getExchangeById: async (id: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.get(`/${adminBasePath}/exchanges/${id}`);
     return response.data;
   },
 
   deleteExchange: async (id: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.delete(
       `/${adminBasePath}/exchanges/${id}`
     );
     return response.data;
   },
 
-  // Community
+  // ============================================
+  // COMMUNITY
+  // ============================================
+
   getThreads: async (page = 1, limit = 20, scope?: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
@@ -506,7 +650,7 @@ export const adminApi = {
 
   getThreadById: async (id: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.get(
       `/${adminBasePath}/community/threads/${id}`
     );
@@ -515,7 +659,7 @@ export const adminApi = {
 
   deleteThread: async (id: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.delete(
       `/${adminBasePath}/community/threads/${id}`
     );
@@ -528,7 +672,7 @@ export const adminApi = {
     filters?: { threadId?: string; authorId?: string }
   ) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
@@ -543,7 +687,7 @@ export const adminApi = {
 
   getPostById: async (id: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.get(
       `/${adminBasePath}/community/posts/${id}`
     );
@@ -552,17 +696,20 @@ export const adminApi = {
 
   deletePost: async (id: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.delete(
       `/${adminBasePath}/community/posts/${id}`
     );
     return response.data;
   },
 
-  // Analytics
+  // ============================================
+  // ANALYTICS
+  // ============================================
+
   getAnalyticsOverview: async (startDate?: string, endDate?: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
@@ -574,29 +721,32 @@ export const adminApi = {
 
   getUserAnalytics: async () => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.get(`/${adminBasePath}/analytics/users`);
     return response.data;
   },
 
   getItemAnalytics: async () => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.get(`/${adminBasePath}/analytics/items`);
     return response.data;
   },
 
   getExchangeAnalytics: async () => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.get(`/${adminBasePath}/analytics/exchanges`);
     return response.data;
   },
 
-  // Logs
+  // ============================================
+  // LOGS
+  // ============================================
+
   getLogs: async (page = 1, limit = 50, adminId?: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
@@ -610,7 +760,7 @@ export const adminApi = {
 
   getLogById: async (id: string) => {
     const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || 'greenroom-core-qlf18scha7';
+      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.get(`/${adminBasePath}/logs/${id}`);
     return response.data;
   },

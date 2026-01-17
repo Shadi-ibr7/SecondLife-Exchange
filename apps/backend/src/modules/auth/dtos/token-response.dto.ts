@@ -44,7 +44,7 @@ export const TokenResponseSchema = z.object({
     email: z.string(), // Email de l'utilisateur
     displayName: z.string(), // Nom d'affichage
     avatarUrl: z.string().nullable(), // URL de l'avatar (peut être null)
-    roles: z.array(z.enum(['USER', 'ADMIN'])), // Rôles de l'utilisateur
+    roles: z.array(z.enum(['USER', 'MODERATOR', 'ADMIN'])), // Rôles de l'utilisateur
     createdAt: z.date(), // Date de création du compte
   }),
 });

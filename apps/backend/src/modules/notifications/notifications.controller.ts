@@ -61,7 +61,9 @@ import {
   WebPushUnsubscribeDto,
 } from './dtos/notifications.dto';
 import { JwtAccessGuard } from '../../common/guards/jwt-access.guard';
-import { AdminGuard } from '../../common/guards/admin.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { UserRole } from '@prisma/client';
 import { LoggingInterceptor } from '../../common/interceptors/logging.interceptor';
 
 @ApiTags('Notifications')
@@ -237,7 +239,8 @@ export class NotificationsController {
   }
 
   @Post('test')
-  @UseGuards(JwtAccessGuard, AdminGuard)
+  @UseGuards(JwtAccessGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

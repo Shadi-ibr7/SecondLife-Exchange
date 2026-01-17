@@ -16,7 +16,7 @@
  * - POST /api/v1/eco/:id/enrich - Enrichir un contenu avec IA (admin)
  *
  * SÉCURITÉ:
- * - Routes de création/modification nécessitent JwtAccessGuard + AdminGuard
+ * - Routes de création/modification nécessitent JwtAccessGuard + RolesGuard avec @Roles(ADMIN)
  */
 
 // Import des décorateurs NestJS
@@ -58,9 +58,11 @@ import {
   EnrichEcoContentResponse,
 } from './dtos/eco-content.dto';
 
-// Import des guards et intercepteurs
+// Import des guards, décorateurs RBAC et intercepteurs
 import { JwtAccessGuard } from '../../common/guards/jwt-access.guard';
-import { AdminGuard } from '../../common/guards/admin.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { UserRole } from '@prisma/client';
 import { LoggingInterceptor } from '../../common/interceptors/logging.interceptor';
 
 /**
@@ -189,7 +191,8 @@ export class EcoController {
   }
 
   @Post()
-  @UseGuards(JwtAccessGuard, AdminGuard)
+  @UseGuards(JwtAccessGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
@@ -219,7 +222,8 @@ export class EcoController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAccessGuard, AdminGuard)
+  @UseGuards(JwtAccessGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Mettre à jour un contenu éco (Admin)',
@@ -257,7 +261,8 @@ export class EcoController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAccessGuard, AdminGuard)
+  @UseGuards(JwtAccessGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
@@ -289,7 +294,8 @@ export class EcoController {
   }
 
   @Post(':id/enrich')
-  @UseGuards(JwtAccessGuard, AdminGuard)
+  @UseGuards(JwtAccessGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Enrichir un contenu éco avec IA (Admin)',

@@ -51,7 +51,6 @@ import {
 
 // Import des guards et intercepteurs
 import { JwtAccessGuard } from '../../common/guards/jwt-access.guard';
-import { AdminGuard } from '../../common/guards/admin.guard';
 import { LoggingInterceptor } from '../../common/interceptors/logging.interceptor';
 
 /**

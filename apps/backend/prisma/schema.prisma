@@ -64,11 +64,16 @@ model RefreshToken {
   createdAt DateTime  @default(now())
   revokedAt DateTime?
   tokenHash String    @unique
+  // Token family pour détecter les replay attacks
+  // Tous les tokens d'une même session partagent le même familyId
+  // Si un token révoqué est réutilisé, on révoque toute la famille
+  familyId  String?
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([tokenHash])
   @@index([expiresAt])
+  @@index([familyId])
   @@map("refresh_tokens")
 }
 
@@ -295,6 +300,7 @@ enum NotificationType {
 
 enum UserRole {
   USER
+  MODERATOR
   ADMIN
 }
 
