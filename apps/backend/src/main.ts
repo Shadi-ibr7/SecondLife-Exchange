@@ -49,6 +49,7 @@ import { validateEnv } from './config/env.validation';
 
 // Import du service health pour les routes sans préfixe
 import { HealthService } from './modules/health/health.service';
+import { HealthModule } from './modules/health/health.module';
 
 /**
  * VALIDATION DES VARIABLES D'ENVIRONNEMENT
@@ -216,14 +217,27 @@ async function bootstrap() {
    * Routes health accessibles directement sans préfixe /api/v1
    * pour faciliter l'intégration avec les orchestrateurs (PM2, Kubernetes, Nginx, etc.)
    */
-  const healthService = app.get(HealthService);
+  const healthModule = app.select(HealthModule);
+  const healthService = healthModule.get(HealthService, { strict: false });
+  
   app.getHttpAdapter().get('/health', (req, res) => {
-    const response = healthService.getHealth();
-    res.json(response);
+    try {
+      const response = healthService.getHealth();
+      res.json(response);
+    } catch (error) {
+      console.error('Health check error:', error);
+      res.status(500).json({ status: 'error', message: 'Health check failed' });
+    }
   });
+  
   app.getHttpAdapter().get('/health/ready', async (req, res) => {
-    const response = await healthService.getReady();
-    res.json(response);
+    try {
+      const response = await healthService.getReady();
+      res.json(response);
+    } catch (error) {
+      console.error('Readiness check error:', error);
+      res.status(500).json({ status: 'error', message: 'Readiness check failed' });
+    }
   });
 
   // ============================================
