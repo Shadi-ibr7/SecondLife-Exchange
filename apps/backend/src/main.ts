@@ -184,7 +184,13 @@ async function bootstrap() {
   // CORS conditionnel : appliquer seulement pour les routes qui ne sont pas /health
   app.use((req, res, next) => {
     // Skip CORS pour les routes health (elles sont accessibles publiquement)
-    if (req.path === '/health' || req.path === '/health/ready') {
+    // Supporte à la fois /health et /api/v1/health pour compatibilité
+    if (
+      req.path === '/health' ||
+      req.path === '/health/ready' ||
+      req.path === '/api/v1/health' ||
+      req.path === '/api/v1/health/ready'
+    ) {
       return next();
     }
     // Appliquer CORS pour les autres routes
