@@ -204,9 +204,10 @@ adminApiClient.interceptors.response.use(
     }
 
     // Gérer les erreurs CSRF (403 avec message spécifique)
+    const errorData = error.response?.data as { message?: string } | undefined;
     if (
       error.response?.status === 403 &&
-      error.response?.data?.message?.includes('CSRF')
+      errorData?.message?.includes('CSRF')
     ) {
       const originalRequest = error.config as typeof error.config & {
         _retry?: boolean;
