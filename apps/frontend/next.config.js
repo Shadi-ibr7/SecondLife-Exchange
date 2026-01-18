@@ -159,8 +159,11 @@ const nextConfig = {
     NEXT_PUBLIC_APP_DESCRIPTION: process.env.NEXT_PUBLIC_APP_DESCRIPTION,
     NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME:
       process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+    // NOTE: NEXT_PUBLIC_CLOUDINARY_API_KEY est nécessaire pour l'upload direct côté client
+    // La sécurité est garantie par la signature générée côté serveur
     NEXT_PUBLIC_CLOUDINARY_API_KEY: process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY,
     NEXT_PUBLIC_ADMIN_BASE_PATH: process.env.NEXT_PUBLIC_ADMIN_BASE_PATH,
+    // NOTE: NEXT_PUBLIC_UNSPLASH_ACCESS_KEY a été retiré - utilisation du backend proxy
   },
 };
 

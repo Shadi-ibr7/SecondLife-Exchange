@@ -88,6 +88,48 @@ export class UnsplashService {
   }
 
   /**
+   * Recherche plusieurs photos sur Unsplash avec pagination.
+   * Utilisé par le frontend pour la galerie d'images.
+   *
+   * @param query - Terme de recherche
+   * @param page - Numéro de page (défaut: 1)
+   * @param perPage - Nombre de résultats par page (défaut: 12)
+   * @returns Liste de photos Unsplash
+   */
+  async searchPhotos(
+    query: string,
+    page: number = 1,
+    perPage: number = 12,
+  ): Promise<{ results: UnsplashPhoto[]; total: number; total_pages: number }> {
+    if (!this.accessKey) {
+      this.logger.warn('Clé API Unsplash non configurée, impossible de rechercher des photos');
+      return { results: [], total: 0, total_pages: 0 };
+    }
+
+    try {
+      const response = await axios.get(`${this.apiUrl}/search/photos`, {
+        params: {
+          query,
+          page,
+          per_page: perPage,
+        },
+        headers: {
+          Authorization: `Client-ID ${this.accessKey}`,
+        },
+      });
+
+      return {
+        results: response.data.results || [],
+        total: response.data.total || 0,
+        total_pages: response.data.total_pages || 0,
+      };
+    } catch (error: any) {
+      this.logger.error(`Erreur lors de la recherche Unsplash: ${error.message}`);
+      throw new Error(`Erreur API Unsplash: ${error.message}`);
+    }
+  }
+
+  /**
    * Récupère les informations d'une photo par son ID, puis déclenche le téléchargement.
    *
    * @param photoId - ID de la photo Unsplash

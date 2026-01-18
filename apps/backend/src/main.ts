@@ -44,6 +44,18 @@ import { ValidationPipe as CustomValidationPipe } from './common/pipes/validatio
 // Import de l'intercepteur de logging (enregistre toutes les requêtes)
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
+// Import de la validation des variables d'environnement
+import { validateEnv } from './config/env.validation';
+
+/**
+ * VALIDATION DES VARIABLES D'ENVIRONNEMENT
+ *
+ * Valide les variables d'environnement AVANT de démarrer l'application.
+ * Si une variable requise est manquante ou invalide, l'application crash
+ * avec un message d'erreur clair.
+ */
+validateEnv();
+
 /**
  * FONCTION PRINCIPALE: bootstrap
  *
