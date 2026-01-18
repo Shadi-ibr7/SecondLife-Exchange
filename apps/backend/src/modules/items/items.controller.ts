@@ -262,9 +262,13 @@ export class ItemsController {
   ): Promise<SignedUploadParams> {
     /**
      * Permet au frontend d'uploader directement sur Cloudinary sans transiter par le backend.
-     * On pourrait ici vérifier que `folder` respecte certains patterns (ex: items/<userId>).
+     * Valide que le folder respecte les patterns autorisés et que l'user a les droits.
      */
-    return this.uploadsService.getSignedUploadParams(folder, maxBytes);
+    return this.uploadsService.getSignedUploadParams(
+      folder,
+      req.user?.id,
+      maxBytes,
+    );
   }
 
   @Post(':id/photos')

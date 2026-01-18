@@ -25,6 +25,7 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 
 // Import des services
@@ -127,27 +128,71 @@ export class UploadsService {
    * - Validation de la taille max (5MB max)
    * - Formats autorisés verrouillés (jpg, jpeg, png, webp uniquement)
    *
-   * @param folder - Dossier de destination sur Cloudinary (ex: "items", "profiles")
+   * @param folder - Dossier de destination sur Cloudinary (ex: "items/<itemId>", "profiles")
+   * @param userId - ID de l'utilisateur authentifié (pour validation ownership)
    * @param maxBytes - Taille maximale du fichier (défaut: depuis config, max 5MB)
    * @param allowedFormats - Formats autorisés (défaut: depuis config, verrouillés)
    * @returns Paramètres de signature pour l'upload
    * @throws BadRequestException si folder invalide ou taille trop grande
+   * @throws ForbiddenException si l'utilisateur n'a pas le droit d'uploader dans ce folder
    */
-  getSignedUploadParams(
+  async getSignedUploadParams(
     folder: string,
+    userId?: string,
     maxBytes: number = this.cloudinaryConfig.maxFileSize,
     allowedFormats: string[] = this.cloudinaryConfig.allowedFormats,
-  ): SignedUploadParams {
+  ): Promise<SignedUploadParams> {
     // ============================================
     // VALIDATION STRICTE DU FOLDER
     // ============================================
-    // Whitelist des folders autorisés pour éviter les uploads non autorisés
-    const allowedFolders = ['items', 'profiles', 'eco-content'];
-    if (!allowedFolders.includes(folder)) {
+    /**
+     * Patterns autorisés:
+     * - items/<itemId> : doit vérifier que l'item appartient à l'user
+     * - profiles : dossier public pour les avatars
+     * - eco-content : contenu écologique (public)
+     */
+    const folderParts = folder.split('/');
+    const baseFolder = folderParts[0];
+
+    // Whitelist des folders de base autorisés
+    const allowedBaseFolders = ['items', 'profiles', 'eco-content'];
+    if (!allowedBaseFolders.includes(baseFolder)) {
       throw new BadRequestException(
-        `Dossier non autorisé. Dossiers autorisés: ${allowedFolders.join(', ')}`,
+        `Dossier de base non autorisé. Dossiers autorisés: ${allowedBaseFolders.join(', ')}`,
       );
     }
+
+    // ============================================
+    // VALIDATION OWNERSHIP POUR items/<itemId>
+    // ============================================
+    if (baseFolder === 'items' && folderParts.length === 2) {
+      const itemId = folderParts[1];
+      
+      if (!userId) {
+        throw new BadRequestException(
+          'Authentification requise pour uploader dans un dossier items',
+        );
+      }
+
+      // Vérifier que l'item existe et appartient à l'utilisateur
+      const item = await this.prisma.item.findUnique({
+        where: { id: itemId },
+        select: { ownerId: true },
+      });
+
+      if (!item) {
+        throw new NotFoundException('Item non trouvé');
+      }
+
+      if (item.ownerId !== userId) {
+        throw new ForbiddenException(
+          'Vous ne pouvez uploader des photos que pour vos propres items',
+        );
+      }
+    }
+
+    // Pour 'profiles', on accepte sans vérification supplémentaire car
+    // l'authentification est déjà vérifiée par le guard JWT
 
     // ============================================
     // VALIDATION DE LA TAILLE MAX (5MB)
@@ -319,8 +364,8 @@ export class UploadsService {
       throw new NotFoundException('Item non trouvé');
     }
 
-    // Vérifier la limite totale (5 photos max par item)
-    const maxPhotosPerItem = 5;
+    // Vérifier la limite totale (depuis la config: 5 photos max par item par défaut)
+    const maxPhotosPerItem = this.cloudinaryConfig.maxPhotosPerItem;
     const existing = await this.prisma.itemPhoto.count({ where: { itemId } });
     const remaining = maxPhotosPerItem - existing;
     if (remaining <= 0) {

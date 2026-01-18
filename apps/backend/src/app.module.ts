@@ -39,6 +39,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AdminModule } from './modules/admin/admin.module'; // Administration
 import { SecurityModule } from './modules/security/security.module'; // Sécurité (CSRF)
 import { HealthModule } from './modules/health/health.module'; // Health checks
+import { UploadsModule } from './modules/uploads/uploads.module'; // Uploads Cloudinary sécurisés
 
 // Import des fichiers de configuration
 import appConfig from './config/app.config'; // Configuration générale de l'app
@@ -180,6 +181,7 @@ import prismaConfig from './config/prisma.config'; // Configuration de la base d
     AdminModule,
     SecurityModule,
     HealthModule,
+    UploadsModule,
   ],
 })
 /**

@@ -68,9 +68,9 @@ export default registerAs('cloudinary', () => ({
 
   /**
    * Nombre maximum de photos par item.
-   * Défaut: 6 photos
+   * Défaut: 5 photos
    *
    * Limite le nombre de photos pour éviter les abus et limiter les coûts de stockage.
    */
-  maxPhotosPerItem: parseInt(process.env.CLOUDINARY_MAX_PHOTOS_PER_ITEM || '6'),
+  maxPhotosPerItem: parseInt(process.env.CLOUDINARY_MAX_PHOTOS_PER_ITEM || '5'),
 }));

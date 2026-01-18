@@ -43,32 +43,37 @@ export const uploadApi = {
    * sans exposer la clé secrète côté client.
    *
    * FLUX:
-   * 1. Appeler l'endpoint POST /items/uploads/signature avec le dossier cible
-   * 2. Le serveur génère une signature signée avec la clé secrète Cloudinary
-   * 3. Retourner la signature avec les paramètres nécessaires (timestamp, etc.)
+   * 1. Appeler l'endpoint POST /uploads/cloudinary/sign avec le dossier cible
+   * 2. Le serveur valide que l'utilisateur a le droit d'uploader dans ce dossier
+   * 3. Le serveur génère une signature signée avec la clé secrète Cloudinary
+   * 4. Retourner la signature avec les paramètres nécessaires (timestamp, etc.)
    *
    * SÉCURITÉ:
    * - La signature est générée côté serveur (clé secrète jamais exposée)
-   * - La signature inclut un timestamp pour éviter la réutilisation
-   * - Validation de la taille maximale (3MB) côté serveur
+   * - Validation de l'ownership: pour items/<itemId>, vérifie que l'item appartient à l'user
+   * - La signature inclut un timestamp pour éviter la réutilisation (expire après 5 min)
+   * - Validation de la taille maximale (5MB) côté serveur
+   * - Formats autorisés: jpg, png, webp uniquement
    *
    * @param payload - Paramètres pour la signature (dossier, publicId optionnel)
    * @returns Promise qui se résout avec la signature Cloudinary
    */
   async getUploadSignature(payload: {
-    folder: string; // Dossier Cloudinary où stocker l'image (ex: 'profiles', 'items')
+    folder: string; // Dossier Cloudinary où stocker l'image (ex: 'profiles', 'items/<itemId>')
     publicId?: string; // ID public optionnel pour remplacer une image existante
   }): Promise<UploadSignature> {
     /**
-     * Appeler l'endpoint POST /items/uploads/signature
-     * Cet endpoint génère une signature sécurisée côté serveur
-     *
-     * NOTE: On utilise l'endpoint items car il gère tous les types d'uploads
-     * (profiles, items, etc.) de manière centralisée
+     * Appeler l'endpoint POST /uploads/cloudinary/sign
+     * Cet endpoint génère une signature sécurisée côté serveur avec validation d'ownership
+     * 
+     * Le backend valide automatiquement:
+     * - Que l'utilisateur est authentifié (JWT)
+     * - Pour items/<itemId>: que l'item appartient à l'utilisateur
+     * - Que le folder respecte les patterns autorisés
+     * - La taille maximale (5MB) et les formats autorisés
      */
-    const response = await apiClient.client.post('/items/uploads/signature', {
+    const response = await apiClient.client.post('/uploads/cloudinary/sign', {
       folder: payload.folder, // Dossier Cloudinary où stocker l'image
-      maxBytes: 3000000, // Taille maximale: 3MB (3 * 1024 * 1024 octets)
     });
 
     /**
