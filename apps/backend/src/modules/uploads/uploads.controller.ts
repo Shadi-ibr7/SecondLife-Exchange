@@ -31,6 +31,9 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 
+// Import des décorateurs de validation
+import { IsString, IsOptional } from 'class-validator';
+
 // Import des services
 import {
   UploadsService,
@@ -45,7 +48,11 @@ import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
  * DTO pour la requête de signature
  */
 class SignUploadDto {
+  @IsString()
   folder: string;
+
+  @IsOptional()
+  @IsString()
   publicId?: string;
 }
 

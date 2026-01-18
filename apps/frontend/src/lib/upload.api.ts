@@ -65,7 +65,7 @@ export const uploadApi = {
     /**
      * Appeler l'endpoint POST /uploads/cloudinary/sign
      * Cet endpoint génère une signature sécurisée côté serveur avec validation d'ownership
-     * 
+     *
      * Le backend valide automatiquement:
      * - Que l'utilisateur est authentifié (JWT)
      * - Pour items/<itemId>: que l'item appartient à l'utilisateur
