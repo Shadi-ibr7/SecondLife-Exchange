@@ -34,17 +34,26 @@ module.exports = {
         // Les variables d'environnement sont chargées depuis .env
         // PM2 charge automatiquement .env si présent dans le répertoire de travail
       },
-      // Configuration des logs
+      // Configuration des logs avec rotation
       error_file: './logs/pm2-error.log',
       out_file: './logs/pm2-out.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
       merge_logs: true,
+      // Rotation des logs (PM2 gère automatiquement avec pm2-logrotate)
+      // Installer: pm2 install pm2-logrotate
+      // Configurer: pm2 set pm2-logrotate:max_size 10M
+      //             pm2 set pm2-logrotate:retain 30
       // Configuration du redémarrage automatique
       autorestart: true,
       max_restarts: 10,
       min_uptime: '10s',
       // Configuration du monitoring
       pmx: true,
+      // Health check PM2 (optionnel)
+      // PM2 peut surveiller un endpoint pour redémarrer si l'app ne répond plus
+      // Installez pm2-http-health pour utiliser cette fonctionnalité
+      // health_check_url: 'http://localhost:4000/health',
+      // health_check_grace_period: 3000,
       // Variables d'environnement supplémentaires (optionnel)
       // PM2 charge automatiquement .env depuis le répertoire de travail
       // Si vous avez besoin de spécifier un chemin différent:

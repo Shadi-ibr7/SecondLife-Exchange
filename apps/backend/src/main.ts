@@ -41,8 +41,14 @@ import { AppModule } from './app.module';
 // Import du pipe de validation personnalisé (utilise Zod pour la validation)
 import { ValidationPipe as CustomValidationPipe } from './common/pipes/validation.pipe';
 
-// Import de l'intercepteur de logging (enregistre toutes les requêtes)
-import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+// Import de l'intercepteur de logging HTTP (enregistre toutes les requêtes avec requestId)
+import { HttpLoggingInterceptor } from './common/interceptors/http-logging.interceptor';
+
+// Import du middleware RequestId (génère un UUID pour chaque requête)
+import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
+
+// Import du logger structuré
+import { StructuredLoggerService } from './common/logger/structured-logger.service';
 
 // Import de la validation des variables d'environnement
 import { validateEnv } from './config/env.validation';
@@ -78,6 +84,9 @@ async function bootstrap() {
 
   // Récupération du service de configuration pour accéder aux variables d'environnement
   const configService = app.get(ConfigService);
+
+  // Logger structuré pour le bootstrap
+  const logger = StructuredLoggerService.create('Bootstrap');
 
   // ============================================
   // CONFIGURATION DE LA SÉCURITÉ (HELMET)
@@ -126,8 +135,8 @@ async function bootstrap() {
     try {
       const response = healthService.getHealth();
       res.json(response);
-    } catch (error) {
-      console.error('Health check error:', error);
+    } catch (error: any) {
+      logger.error('Health check error', error?.stack, 'HealthCheck');
       res.status(500).json({ status: 'error', message: 'Health check failed' });
     }
   });
@@ -135,12 +144,28 @@ async function bootstrap() {
   app.getHttpAdapter().get('/health/ready', async (req, res) => {
     try {
       const response = await healthService.getReady();
-      res.json(response);
-    } catch (error) {
-      console.error('Readiness check error:', error);
+      // Retourner 503 si non ready, 200 si ready
+      const statusCode = response.status === 'ready' ? 200 : 503;
+      res.status(statusCode).json(response);
+    } catch (error: any) {
+      logger.error('Readiness check error', error?.stack, 'HealthCheck');
       res.status(500).json({ status: 'error', message: 'Readiness check failed' });
     }
   });
+
+  // ============================================
+  // MIDDLEWARE REQUEST ID
+  // ============================================
+  /**
+   * Middleware RequestId génère un UUID unique pour chaque requête HTTP.
+   * Permet de tracer toutes les opérations liées à une même requête dans les logs.
+   * 
+   * - Génère un UUID si le header X-Request-Id est absent
+   * - Utilise le header X-Request-Id existant s'il est présent
+   * - Ajoute X-Request-Id dans la réponse HTTP
+   * - Attache requestId à req pour utilisation dans les services/intercepteurs
+   */
+  app.use(new RequestIdMiddleware().use.bind(new RequestIdMiddleware()));
 
   // ============================================
   // CONFIGURATION COOKIE PARSER
@@ -200,7 +225,7 @@ async function bootstrap() {
         // En dev, autoriser pour faciliter le développement avec Postman/curl
         if (!origin) {
           if (isProduction) {
-            console.warn('[CORS] Requête sans origin rejetée en production');
+            logger.warn('[CORS] Requête sans origin rejetée en production', 'CORS');
             return callback(new Error('Origin header required in production'));
           }
           // En dev, autoriser les requêtes sans origin
@@ -213,8 +238,9 @@ async function bootstrap() {
         }
 
         // Log de sécurité (sans données sensibles)
-        console.warn(
+        logger.warn(
           `[CORS] Origine rejetée: ${origin.substring(0, 50)}... (whitelist: ${allowedOrigins.length} origin(s))`,
+          'CORS',
         );
         callback(new Error('Not allowed by CORS'));
       },
@@ -241,18 +267,20 @@ async function bootstrap() {
   app.useGlobalPipes(new CustomValidationPipe());
 
   // ============================================
-  // INTERCEPTEUR DE LOGGING
+  // INTERCEPTEUR DE LOGGING HTTP
   // ============================================
   /**
-   * L'intercepteur de logging enregistre toutes les requêtes HTTP:
-   * - Méthode HTTP (GET, POST, etc.)
-   * - URL de la requête
-   * - Temps de réponse
-   * - Code de statut
+   * L'intercepteur de logging HTTP enregistre toutes les requêtes HTTP avec:
+   * - RequestId unique pour tracer la requête
+   * - Méthode HTTP, route, code de statut
+   * - Durée de traitement en millisecondes
+   * - UserId si l'utilisateur est authentifié
+   * - Niveaux: info (2xx, 3xx), warn (4xx), error (5xx)
+   * - Format JSON structuré en production
    *
    * Utile pour le débogage et le monitoring en production.
    */
-  app.useGlobalInterceptors(new LoggingInterceptor());
+  app.useGlobalInterceptors(new HttpLoggingInterceptor());
 
   // ============================================
   // PRÉFIXE GLOBAL DE L'API
@@ -283,14 +311,15 @@ async function bootstrap() {
   // MESSAGES DE CONFIRMATION
   // ============================================
   /**
-   * Affichage de messages informatifs dans la console pour confirmer le démarrage
+   * Affichage de messages informatifs pour confirmer le démarrage
    */
-  console.log(`🚀 Backend démarré sur le port ${port}`);
-  console.log(`📚 API disponible sur http://localhost:${port}/api/v1`);
-  console.log(
+  logger.log(`🚀 Backend démarré sur le port ${port}`, 'Bootstrap');
+  logger.log(`📚 API disponible sur http://localhost:${port}/api/v1`, 'Bootstrap');
+  logger.log(
     `🔒 CORS configuré pour ${allowedOrigins.length} origine(s): ${allowedOrigins.join(', ')}`,
+    'Bootstrap',
   );
-  console.log(`🍪 Cookie-parser activé pour auth httpOnly`);
+  logger.log(`🍪 Cookie-parser activé pour auth httpOnly`, 'Bootstrap');
 }
 
 // ============================================

@@ -13,8 +13,9 @@ import { RedisService } from '../../common/redis/redis.service';
 
 export interface HealthResponse {
   status: 'ok' | 'error';
-  timestamp: string;
   uptime: number;
+  version: string;
+  timestamp: string;
 }
 
 export interface ReadyResponse {
@@ -40,24 +41,32 @@ export interface ReadyResponse {
 export class HealthService {
   private readonly logger = new Logger(HealthService.name);
   private readonly startTime = Date.now();
+  private readonly version: string;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    // Récupérer la version depuis package.json ou variable d'environnement
+    // En prod, on peut utiliser une variable d'environnement pour la version
+    this.version = process.env.APP_VERSION || '1.0.0';
+  }
 
   /**
    * GET /health
    *
    * Vérifie que le process tourne.
    * Retourne toujours 200 si le serveur répond.
+   *
+   * Format standardisé: { status, uptime, version, timestamp }
    */
   getHealth(): HealthResponse {
     return {
       status: 'ok',
-      timestamp: new Date().toISOString(),
       uptime: Math.floor((Date.now() - this.startTime) / 1000), // Uptime en secondes
+      version: this.version,
+      timestamp: new Date().toISOString(),
     };
   }
 

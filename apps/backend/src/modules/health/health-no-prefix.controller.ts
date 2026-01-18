@@ -11,7 +11,8 @@
  * - GET /health/ready: Vérifie que l'application est prête (DB, Redis, Cloudinary)
  */
 
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { HealthService, HealthResponse, ReadyResponse } from './health.service';
 
 @Controller() // Pas de préfixe, routes accessibles directement
@@ -34,9 +35,12 @@ export class HealthNoPrefixController {
    *
    * Endpoint pour vérifier que l'application est prête à recevoir du trafic.
    * Accessible directement sans préfixe /api/v1
+   * Retourne 503 si non ready.
    */
   @Get('health/ready')
-  async getReady(): Promise<ReadyResponse> {
-    return this.healthService.getReady();
+  async getReady(@Res() res: Response): Promise<void> {
+    const response = await this.healthService.getReady();
+    const statusCode = response.status === 'ready' ? 200 : 503;
+    res.status(statusCode).json(response);
   }
 }

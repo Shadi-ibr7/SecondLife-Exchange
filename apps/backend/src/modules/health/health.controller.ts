@@ -11,7 +11,8 @@
  * - GET /ready: Vérifie que l'application est prête (DB, Redis, Cloudinary)
  */
 
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { HealthService, HealthResponse, ReadyResponse } from './health.service';
 
@@ -59,7 +60,9 @@ export class HealthController {
   @ApiOperation({ summary: 'Readiness check (services disponibles)' })
   @ApiResponse({ status: 200, description: 'Application prête à recevoir du trafic' })
   @ApiResponse({ status: 503, description: 'Service requis indisponible' })
-  async getReady(): Promise<ReadyResponse> {
-    return this.healthService.getReady();
+  async getReady(@Res() res: Response): Promise<void> {
+    const response = await this.healthService.getReady();
+    const statusCode = response.status === 'ready' ? 200 : 503;
+    res.status(statusCode).json(response);
   }
 }
