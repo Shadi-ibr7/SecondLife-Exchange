@@ -214,6 +214,10 @@ async function bootstrap() {
    * Exemple: /api/v1/users, /api/v1/items, etc.
    *
    * Le "v1" permet de versionner l'API pour faciliter les mises à jour futures.
+   *
+   * NOTE: Les routes /health et /health/ready sont accessibles
+   * à la fois avec et sans préfixe (/health et /api/v1/health)
+   * grâce à un contrôleur séparé sans préfixe.
    */
   app.setGlobalPrefix('api/v1');
 
