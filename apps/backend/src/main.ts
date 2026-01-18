@@ -47,6 +47,9 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 // Import de la validation des variables d'environnement
 import { validateEnv } from './config/env.validation';
 
+// Import du service health pour les routes sans préfixe
+import { HealthService } from './modules/health/health.service';
+
 /**
  * VALIDATION DES VARIABLES D'ENVIRONNEMENT
  *
@@ -207,6 +210,23 @@ async function bootstrap() {
   app.useGlobalInterceptors(new LoggingInterceptor());
 
   // ============================================
+  // ROUTES HEALTH SANS PRÉFIXE (avant setGlobalPrefix)
+  // ============================================
+  /**
+   * Routes health accessibles directement sans préfixe /api/v1
+   * pour faciliter l'intégration avec les orchestrateurs (PM2, Kubernetes, Nginx, etc.)
+   */
+  const healthService = app.get(HealthService);
+  app.getHttpAdapter().get('/health', (req, res) => {
+    const response = healthService.getHealth();
+    res.json(response);
+  });
+  app.getHttpAdapter().get('/health/ready', async (req, res) => {
+    const response = await healthService.getReady();
+    res.json(response);
+  });
+
+  // ============================================
   // PRÉFIXE GLOBAL DE L'API
   // ============================================
   /**
@@ -216,8 +236,7 @@ async function bootstrap() {
    * Le "v1" permet de versionner l'API pour faciliter les mises à jour futures.
    *
    * NOTE: Les routes /health et /health/ready sont accessibles
-   * à la fois avec et sans préfixe (/health et /api/v1/health)
-   * grâce à un contrôleur séparé sans préfixe.
+   * directement sans préfixe grâce aux routes Express définies ci-dessus.
    */
   app.setGlobalPrefix('api/v1');
 
