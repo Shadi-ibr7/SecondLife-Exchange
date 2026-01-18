@@ -91,9 +91,7 @@ export class AdminGetReportsQueryDto extends PaginationDto {
  * Paramètres de requête pour GET /admin/themes/:id/suggestions
  */
 export class AdminGetThemeSuggestionsQueryDto extends PaginationDto {
-  @IsOptional()
-  @IsString()
-  sort?: string;
+  // La propriété 'sort' est héritée de PaginationDto
 }
 
 // ============================================
