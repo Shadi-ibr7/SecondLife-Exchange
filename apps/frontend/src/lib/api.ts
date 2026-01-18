@@ -566,39 +566,62 @@ class ApiClient {
          * - Requêtes marquées comme silencieuses (_skipErrorToast)
          *
          * PRIORITÉ DES MESSAGES:
-         * 1. error.response?.data?.message: message d'erreur du serveur (prioritaire)
-         * 2. error.message: message d'erreur générique (fallback)
+         * 1. error.response?.data?.message: message d'erreur standardisé du serveur (prioritaire)
+         * 2. Erreur réseau (pas de response) → "API inaccessible"
+         * 3. error.message: message d'erreur générique (fallback)
+         *
+         * FORMAT BACKEND STANDARDISÉ:
+         * Le backend retourne toujours un format standardisé:
+         * {
+         *   "statusCode": number,
+         *   "error": string,
+         *   "message": string,
+         *   "path": string,
+         *   "timestamp": string,
+         *   "requestId": string
+         * }
+         * On extrait toujours message pour l'afficher à l'utilisateur.
          */
         if (
           error.response?.status !== 401 || // Ne pas afficher pour les 401 (gérées par le rafraîchissement)
           !originalRequest?.url?.includes('/auth/refresh') // Ne pas afficher pour les erreurs de refresh
         ) {
-          /**
-           * Si le serveur a retourné un message d'erreur personnalisé,
-           * l'utiliser pour le toast
-           */
+          // Ne pas afficher les erreurs pour les requêtes marquées comme silencieuses
+          if (!originalRequest?._skipErrorToast) {
+            let userMessage: string;
+
+            // Cas 1: Erreur avec réponse du serveur (format standardisé backend)
           if (error.response?.data?.message) {
-            /**
-             * Ne pas afficher les erreurs pour les requêtes marquées comme silencieuses
-             * _skipErrorToast est utilisé pour les requêtes où on ne veut pas afficher de toast
-             * (ex: vérifications en arrière-plan, requêtes de polling, etc.)
-             */
-            if (!originalRequest?._skipErrorToast) {
+              // Extraire le message standardisé du backend
+              userMessage = error.response.data.message;
+            }
+            // Cas 2: Erreur réseau (pas de response) → API inaccessible
+            else if (!error.response && error.request) {
+              // Pas de réponse du serveur = erreur réseau (connexion impossible, timeout, etc.)
+              userMessage = 'API inaccessible. Veuillez vérifier votre connexion.';
+            }
+            // Cas 3: Message d'erreur générique (fallback)
+            else if (error.message) {
+              // Utiliser le message d'erreur générique seulement si ce n'est pas un message technique
+              // Éviter d'afficher des messages techniques comme "Network Error" brut
+              const technicalMessages = ['Network Error', 'timeout', 'ECONNREFUSED', 'ENOTFOUND'];
+              const isTechnical = technicalMessages.some((msg) =>
+                error.message.toLowerCase().includes(msg.toLowerCase()),
+              );
+              userMessage = isTechnical
+                ? 'API inaccessible. Veuillez vérifier votre connexion.'
+                : error.message;
+            }
+            // Cas 4: Aucun message disponible
+            else {
+              userMessage = 'Une erreur est survenue. Veuillez réessayer.';
+            }
+
               /**
-               * Afficher un toast d'erreur avec le message du serveur
+             * Afficher un toast d'erreur avec le message utilisateur-friendly
                * toast.error() affiche une notification rouge en bas de l'écran
                */
-              toast.error(error.response.data.message);
-            }
-          } else if (error.message && !originalRequest?._skipErrorToast) {
-          /**
-           * Si pas de message du serveur, utiliser le message d'erreur générique
-           * (ex: "Network Error", "Timeout", etc.)
-           */
-            /**
-             * Afficher un toast d'erreur avec le message générique
-             */
-            toast.error(error.message);
+            toast.error(userMessage);
           }
         }
 

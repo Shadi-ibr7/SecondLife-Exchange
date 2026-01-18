@@ -44,6 +44,9 @@ import { ValidationPipe as CustomValidationPipe } from './common/pipes/validatio
 // Import de l'intercepteur de logging HTTP (enregistre toutes les requêtes avec requestId)
 import { HttpLoggingInterceptor } from './common/interceptors/http-logging.interceptor';
 
+// Import du filtre global d'exception (standardise les réponses d'erreur)
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+
 // Import du middleware RequestId (génère un UUID pour chaque requête)
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 
@@ -281,6 +284,25 @@ async function bootstrap() {
    * Utile pour le débogage et le monitoring en production.
    */
   app.useGlobalInterceptors(new HttpLoggingInterceptor());
+
+  // ============================================
+  // FILTRE GLOBAL D'EXCEPTION
+  // ============================================
+  /**
+   * Le filtre global d'exception intercepte toutes les exceptions et les formate:
+   * - Format standardisé (statusCode, error, message, path, timestamp, requestId)
+   * - Gestion des erreurs Prisma (P2002 → 409, P2025 → 404, etc.)
+   * - Gestion des HttpException de NestJS
+   * - Pas de stacktrace exposée en production (uniquement en dev)
+   * - Messages utilisateur-friendly pour toutes les erreurs
+   * - Détails techniques loggés mais jamais exposés au client
+   *
+   * SÉCURITÉ:
+   * - Ne jamais exposer les stacktraces en production
+   * - Ne jamais exposer les messages d'erreur techniques en production
+   * - Tous les détails techniques sont dans les logs uniquement
+   */
+  app.useGlobalFilters(new HttpExceptionFilter(configService));
 
   // ============================================
   // PRÉFIXE GLOBAL DE L'API
