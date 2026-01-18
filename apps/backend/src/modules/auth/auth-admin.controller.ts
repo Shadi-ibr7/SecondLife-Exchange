@@ -30,6 +30,7 @@ import {
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Response, Request } from 'express';
+import { ForbiddenException } from '@nestjs/common';
 import { AuthAdminService } from './auth-admin.service';
 import { AdminLoginDto } from './dtos/admin-login.dto';
 import { AdminJwtGuard } from '../../common/guards/admin-jwt.guard';
@@ -37,6 +38,11 @@ import {
   AUTH_COOKIES,
   extractRefreshToken,
 } from '../../common/utils/cookie.utils';
+import { TwoFactorService } from './services/two-factor.service';
+import {
+  TwoFactorEnableDto,
+  TwoFactorVerifyDto,
+} from './dtos/two-factor.dto';
 
 /**
  * Interface pour la requête avec user injecté par le guard
@@ -54,7 +60,10 @@ interface AuthenticatedRequest extends Request {
 @ApiTags('Admin Auth')
 @Controller('auth/admin')
 export class AuthAdminController {
-  constructor(private readonly authAdminService: AuthAdminService) {}
+  constructor(
+    private readonly authAdminService: AuthAdminService,
+    private readonly twoFactorService: TwoFactorService,
+  ) {}
 
   /**
    * Connexion admin
@@ -83,7 +92,17 @@ export class AuthAdminController {
     const ip = req.ip || req.socket.remoteAddress || 'unknown';
     const userAgent = req.get('user-agent') || undefined;
     
-    return this.authAdminService.login(loginDto, res, ip, userAgent);
+    try {
+      return await this.authAdminService.login(loginDto, res, ip, userAgent, req);
+    } catch (error: any) {
+      // Logger ADMIN_LOGIN_LOCKED si le compte est bloqué (ForbiddenException)
+      if (error instanceof ForbiddenException && error.message.includes('tentatives')) {
+        await this.authAdminService.logLoginLocked(loginDto.email, req).catch(() => {
+          // Ignorer les erreurs d'audit (non-bloquant)
+        });
+      }
+      throw error;
+    }
   }
 
   /**
@@ -168,5 +187,120 @@ export class AuthAdminController {
   @ApiResponse({ status: 401, description: 'Non authentifié ou token expiré' })
   async getMe(@Req() req: AuthenticatedRequest) {
     return this.authAdminService.getMe(req.user.id);
+  }
+
+  // ============================================
+  // ENDPOINTS 2FA TOTP
+  // ============================================
+
+  /**
+   * Setup 2FA - Génère un secret TOTP et un QR code
+   *
+   * Endpoint protégé par JWT. Génère un secret temporaire et un QR code
+   * pour permettre à l'utilisateur de configurer son authenticator.
+   *
+   * @param req - Request avec user injecté par AdminJwtGuard
+   * @returns QR code en base64, secret temporaire, et URL otpauth
+   */
+  @Post('2fa/setup')
+  @UseGuards(AdminJwtGuard)
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ '2fa-setup': { limit: 5, ttl: 60000 } }) // 5 tentatives par minute
+  @ApiOperation({ summary: 'Générer un secret 2FA et un QR code pour l\'activation' })
+  @ApiResponse({ status: 200, description: 'QR code et secret générés' })
+  @ApiResponse({ status: 401, description: 'Non authentifié' })
+  @ApiResponse({ status: 400, description: '2FA déjà activé' })
+  async setupTwoFactor(@Req() req: AuthenticatedRequest) {
+    return this.twoFactorService.setup(req.user.id);
+  }
+
+  /**
+   * Activer 2FA - Valide le code TOTP et active le 2FA
+   *
+   * Endpoint protégé par JWT. Après avoir scanné le QR code dans un authenticator,
+   * l'utilisateur doit fournir un code TOTP pour activer définitivement le 2FA.
+   *
+   * @param req - Request avec user injecté par AdminJwtGuard
+   * @param body - Code TOTP et secret temporaire du setup
+   * @returns Confirmation d'activation
+   */
+  @Post('2fa/enable')
+  @UseGuards(AdminJwtGuard)
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ '2fa-enable': { limit: 5, ttl: 60000 } }) // 5 tentatives par minute
+  @ApiOperation({ summary: 'Activer le 2FA après vérification du code TOTP' })
+  @ApiResponse({ status: 200, description: '2FA activé avec succès' })
+  @ApiResponse({ status: 401, description: 'Code TOTP invalide' })
+  @ApiResponse({ status: 400, description: '2FA déjà activé ou données invalides' })
+  async enableTwoFactor(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: TwoFactorEnableDto,
+  ) {
+    return this.twoFactorService.enable(req.user.id, body.code, body.secret);
+  }
+
+  /**
+   * Vérifier code 2FA après login - Crée la session complète
+   *
+   * Endpoint NON protégé (appelé après login email+password).
+   * Valide le code TOTP et crée les tokens JWT (access + refresh) dans les cookies.
+   *
+   * Flow:
+   * 1. POST /auth/admin/login (email+password) => retourne "2FA_REQUIRED" si activé
+   * 2. POST /auth/admin/2fa/verify (code TOTP) => crée session complète
+   *
+   * @param body - Code TOTP à 6 chiffres
+   * @param res - Response Express pour set cookies
+   * @returns Informations utilisateur (tokens dans cookies)
+   */
+  @Post('2fa/verify')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ '2fa-verify': { limit: 10, ttl: 60000 } }) // 10 tentatives par minute
+  @ApiOperation({ summary: 'Vérifier le code 2FA après login et créer la session complète' })
+  @ApiResponse({ status: 200, description: 'Code valide, session créée, cookies définis' })
+  @ApiResponse({ status: 401, description: 'Code TOTP invalide ou utilisateur non trouvé' })
+  @ApiResponse({ status: 400, description: '2FA non activé ou données invalides' })
+  async verifyTwoFactor(
+    @Body() body: TwoFactorVerifyDto & { userId: string },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    // Note: userId doit être fourni dans le body ou via un token temporaire
+    // Pour simplifier, on le demande dans le body (sécurisé car le code 2FA est requis)
+    if (!body.userId) {
+      return {
+        statusCode: HttpStatus.BAD_REQUEST,
+        message: 'userId requis',
+      };
+    }
+
+    return this.authAdminService.verifyTwoFactorAndCreateSession(
+      body.userId,
+      body.code,
+      res,
+    );
+  }
+
+  /**
+   * Désactiver 2FA
+   *
+   * Endpoint protégé par JWT. Désactive le 2FA pour l'utilisateur connecté.
+   *
+   * @param req - Request avec user injecté par AdminJwtGuard
+   * @returns Confirmation de désactivation
+   */
+  @Post('2fa/disable')
+  @UseGuards(AdminJwtGuard)
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ '2fa-disable': { limit: 5, ttl: 60000 } }) // 5 tentatives par minute
+  @ApiOperation({ summary: 'Désactiver le 2FA' })
+  @ApiResponse({ status: 200, description: '2FA désactivé avec succès' })
+  @ApiResponse({ status: 400, description: '2FA non activé' })
+  @ApiResponse({ status: 401, description: 'Non authentifié' })
+  async disableTwoFactor(@Req() req: AuthenticatedRequest) {
+    return this.twoFactorService.disable(req.user.id, req);
   }
 }

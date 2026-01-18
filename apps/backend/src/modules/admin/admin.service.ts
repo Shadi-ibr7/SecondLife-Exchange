@@ -16,6 +16,9 @@ import {
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateThemeDto } from '../themes/dtos/create-theme.dto';
 import { UpdateThemeDto } from '../themes/dtos/update-theme.dto';
+import { AuditService } from './services/audit.service';
+import { AdminActionType } from './enums/admin-action-type.enum';
+import { Request } from 'express';
 
 @Injectable()
 export class AdminService {
@@ -24,6 +27,7 @@ export class AdminService {
     private themesService: ThemesService,
     private suggestionsService: SuggestionsService,
     private notificationsService: NotificationsService,
+    private auditService: AuditService,
   ) {}
 
   // Dashboard Stats
@@ -801,7 +805,7 @@ export class AdminService {
     }
   }
 
-  async updateEcoContent(id: string, data: any, adminId: string) {
+  async updateEcoContent(id: string, data: any, adminId: string, req?: Request) {
     const existing = await this.prisma.ecoContent.findUnique({ where: { id } });
     if (!existing) {
       throw new NotFoundException('Contenu éco non trouvé');
@@ -816,8 +820,15 @@ export class AdminService {
     if (data.summary !== undefined) updateData.summary = data.summary;
     if (data.kpis !== undefined) updateData.kpis = data.kpis;
     if (data.kind !== undefined) updateData.kind = data.kind;
+    
+    // Détecter les changements de publication
+    const wasPublished = !!existing.publishedAt;
+    let publicationChanged = false;
+    
     if (data.published !== undefined) {
-      updateData.publishedAt = data.published ? new Date() : null;
+      const willBePublished = data.published;
+      publicationChanged = wasPublished !== willBePublished;
+      updateData.publishedAt = willBePublished ? new Date() : null;
     }
 
     const content = await this.prisma.ecoContent.update({
@@ -825,9 +836,21 @@ export class AdminService {
       data: updateData,
     });
 
-    await this.logAction(adminId, 'UPDATE_ECO_CONTENT', 'EcoContent', id, {
-      title: content.title,
-    });
+    // Logger PUBLISH_ECO_CONTENT ou UNPUBLISH_ECO_CONTENT si le statut de publication change
+    if (publicationChanged) {
+      const actionType = content.publishedAt 
+        ? AdminActionType.PUBLISH_ECO_CONTENT 
+        : AdminActionType.UNPUBLISH_ECO_CONTENT;
+      
+      await this.logAction(adminId, actionType, 'EcoContent', id, {
+        title: content.title,
+      }, req);
+    } else {
+      // Sinon logger UPDATE_ECO_CONTENT
+      await this.logAction(adminId, 'UPDATE_ECO_CONTENT', 'EcoContent', id, {
+        title: content.title,
+      }, req);
+    }
 
     return content;
   }
@@ -844,10 +867,55 @@ export class AdminService {
     return { success: true };
   }
 
-  // Logs
-  async getLogs(page = 1, limit = 50, adminId?: string) {
+  // Logs (Audit Trail)
+  async getLogs(
+    page = 1,
+    limit = 50,
+    filters?: {
+      adminId?: string;
+      actionType?: string;
+      targetType?: string;
+      startDate?: string;
+      endDate?: string;
+      requestId?: string;
+    },
+  ) {
     const skip = (page - 1) * limit;
-    const where = adminId ? { adminId } : {};
+    const where: any = {};
+
+    // Filtrer par adminId
+    if (filters?.adminId) {
+      where.adminId = filters.adminId;
+    }
+
+    // Filtrer par actionType
+    if (filters?.actionType) {
+      where.action = filters.actionType;
+    }
+
+    // Filtrer par targetType (resourceType)
+    if (filters?.targetType) {
+      where.resourceType = filters.targetType;
+    }
+
+    // Filtrer par requestId
+    if (filters?.requestId) {
+      where.requestId = filters.requestId;
+    }
+
+    // Filtrer par date range
+    if (filters?.startDate || filters?.endDate) {
+      where.createdAt = {};
+      if (filters.startDate) {
+        where.createdAt.gte = new Date(filters.startDate);
+      }
+      if (filters.endDate) {
+        // Ajouter 23h59m59s à la date de fin pour inclure toute la journée
+        const endDateObj = new Date(filters.endDate);
+        endDateObj.setHours(23, 59, 59, 999);
+        where.createdAt.lte = endDateObj;
+      }
+    }
 
     const [logs, total] = await Promise.all([
       this.prisma.adminLog.findMany({
@@ -1421,22 +1489,27 @@ export class AdminService {
     };
   }
 
-  // Helper: Log admin actions
+  // Helper: Log admin actions (wrapper vers AuditService pour compatibilité)
   private async logAction(
     adminId: string,
     action: string,
     resourceType: string,
     resourceId?: string,
     meta?: any,
+    req?: Request,
   ) {
-    await this.prisma.adminLog.create({
-      data: {
-        adminId,
-        action,
-        resourceType,
-        resourceId,
-        meta: meta ? JSON.parse(JSON.stringify(meta)) : null,
-      },
+    // Convertir action string en enum si possible
+    const actionType = Object.values(AdminActionType).includes(action as AdminActionType)
+      ? (action as AdminActionType)
+      : (action as AdminActionType); // Fallback si pas dans l'enum
+
+    await this.auditService.log({
+      actionType: actionType,
+      actorId: adminId,
+      targetType: resourceType,
+      targetId: resourceId,
+      metadata: meta,
+      request: req,
     });
   }
 }

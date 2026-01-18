@@ -33,6 +33,9 @@ type LoginResponse = {
   // Tokens inclus pour rétrocompatibilité (période de transition)
   accessToken?: string;
   refreshToken?: string;
+  // 2FA: si activé, retourne '2FA_REQUIRED' au lieu des tokens
+  requiresTwoFactor?: boolean;
+  message?: string;
 };
 
 /**
@@ -45,6 +48,7 @@ type AdminMeResponse = {
   roles: string;
   avatarUrl: string | null;
   createdAt: string;
+  twoFactorEnabled?: boolean;
 };
 
 // Construire l'URL de base de l'API
@@ -65,6 +69,10 @@ export const ADMIN_LOGIN_ENDPOINT = '/auth/admin/login';
 export const ADMIN_REFRESH_ENDPOINT = '/auth/admin/refresh';
 export const ADMIN_LOGOUT_ENDPOINT = '/auth/admin/logout';
 export const ADMIN_ME_ENDPOINT = '/auth/admin/me';
+export const ADMIN_2FA_SETUP_ENDPOINT = '/auth/admin/2fa/setup';
+export const ADMIN_2FA_ENABLE_ENDPOINT = '/auth/admin/2fa/enable';
+export const ADMIN_2FA_VERIFY_ENDPOINT = '/auth/admin/2fa/verify';
+export const ADMIN_2FA_DISABLE_ENDPOINT = '/auth/admin/2fa/disable';
 export const CSRF_ENDPOINT = '/security/csrf';
 export const getAdminApiBaseUrl = getApiBaseURL;
 
@@ -393,6 +401,72 @@ export const adminApi = {
         process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
       window.location.href = `/${adminBasePath}/login`;
     }
+  },
+
+  /**
+   * Vérifier code 2FA après login - Crée la session complète
+   *
+   * @param userId - ID de l'utilisateur (obtenu depuis le login précédent)
+   * @param code - Code TOTP à 6 chiffres
+   * @returns Informations utilisateur (tokens dans cookies)
+   */
+  verifyTwoFactor: async (
+    userId: string,
+    code: string
+  ): Promise<{ data: LoginResponse; status: number }> => {
+    const response = await adminApiClient.post(ADMIN_2FA_VERIFY_ENDPOINT, {
+      userId,
+      code,
+    });
+    return { data: response.data, status: response.status };
+  },
+
+  /**
+   * Setup 2FA - Génère un secret TOTP et un QR code
+   *
+   * @returns QR code en base64, secret temporaire, et URL otpauth
+   */
+  setupTwoFactor: async (): Promise<{
+    data: {
+      qrCode: string;
+      secret: string;
+      otpAuthUrl: string;
+    };
+    status: number;
+  }> => {
+    const response = await adminApiClient.post(ADMIN_2FA_SETUP_ENDPOINT);
+    return { data: response.data, status: response.status };
+  },
+
+  /**
+   * Activer 2FA - Valide le code TOTP et active le 2FA
+   *
+   * @param code - Code TOTP à 6 chiffres
+   * @param secret - Secret temporaire du setup (base32)
+   * @returns Confirmation d'activation
+   */
+  enableTwoFactor: async (
+    code: string,
+    secret: string
+  ): Promise<{ data: { enabled: boolean }; status: number }> => {
+    const response = await adminApiClient.post(ADMIN_2FA_ENABLE_ENDPOINT, {
+      code,
+      secret,
+    });
+    return { data: response.data, status: response.status };
+  },
+
+  /**
+   * Désactiver 2FA
+   *
+   * @returns Confirmation de désactivation
+   */
+  disableTwoFactor: async (): Promise<{
+    data: { disabled: boolean };
+    status: number;
+  }> => {
+    const response = await adminApiClient.post(ADMIN_2FA_DISABLE_ENDPOINT);
+    return { data: response.data, status: response.status };
   },
 
   /**
@@ -931,14 +1005,30 @@ export const adminApi = {
   // LOGS
   // ============================================
 
-  getLogs: async (page = 1, limit = 50, adminId?: string) => {
+  getLogs: async (
+    page = 1,
+    limit = 50,
+    filters?: {
+      adminId?: string;
+      actionType?: string;
+      targetType?: string;
+      startDate?: string;
+      endDate?: string;
+      requestId?: string;
+    },
+  ) => {
     const adminBasePath =
       process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
     });
-    if (adminId) params.append('adminId', adminId);
+    if (filters?.adminId) params.append('adminId', filters.adminId);
+    if (filters?.actionType) params.append('actionType', filters.actionType);
+    if (filters?.targetType) params.append('targetType', filters.targetType);
+    if (filters?.startDate) params.append('startDate', filters.startDate);
+    if (filters?.endDate) params.append('endDate', filters.endDate);
+    if (filters?.requestId) params.append('requestId', filters.requestId);
     const response = await adminApiClient.get(
       `/${adminBasePath}/logs?${params.toString()}`
     );

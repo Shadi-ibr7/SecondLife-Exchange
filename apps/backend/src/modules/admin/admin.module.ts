@@ -9,6 +9,7 @@ import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
+import { AuditService } from './services/audit.service';
 import { PrismaModule } from '../../common/prisma/prisma.module';
 import { AdminJwtStrategy } from '../auth/strategies/admin-jwt.strategy';
 import { AdminMiddleware } from './admin.middleware';
@@ -19,8 +20,8 @@ import { NotificationsModule } from '../notifications/notifications.module';
 @Module({
   imports: [PrismaModule, ConfigModule, ThemesModule, SuggestionsModule, NotificationsModule],
   controllers: [AdminController],
-  providers: [AdminService, AdminJwtStrategy],
-  exports: [AdminService],
+  providers: [AdminService, AuditService, AdminJwtStrategy],
+  exports: [AdminService, AuditService],
 })
 export class AdminModule implements NestModule {
   constructor(private configService: ConfigService) {}

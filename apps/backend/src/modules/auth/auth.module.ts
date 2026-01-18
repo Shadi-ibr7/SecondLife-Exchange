@@ -32,10 +32,12 @@ import { AuthAdminController } from './auth-admin.controller';
 import { AuthAdminService } from './auth-admin.service';
 import { AdminJwtStrategy } from './strategies/admin-jwt.strategy';
 import { LoginAttemptService } from './services/login-attempt.service';
+import { TwoFactorService } from './services/two-factor.service';
 
 // Import des modules nécessaires
 import { RedisModule } from '../../common/redis/redis.module';
 import { PrismaModule } from '../../common/prisma/prisma.module';
+import { AdminModule } from '../admin/admin.module';
 
 /**
  * MODULE: AuthModule
@@ -56,6 +58,9 @@ import { PrismaModule } from '../../common/prisma/prisma.module';
 
     // PrismaModule: Module pour accéder à la base de données
     PrismaModule,
+
+    // AdminModule: Importé pour utiliser AuditService pour les logs admin
+    AdminModule,
 
     // JwtModule: Module pour générer et vérifier les tokens JWT
     // registerAsync permet de charger la configuration depuis ConfigService
@@ -88,6 +93,7 @@ import { PrismaModule } from '../../common/prisma/prisma.module';
     AuthAdminService, // Service d'authentification admin
     AdminJwtStrategy, // Stratégie JWT pour les admins
     LoginAttemptService, // Service pour gérer les tentatives de login et blocages
+    TwoFactorService, // Service pour gérer l'authentification à deux facteurs (2FA) TOTP
   ],
 
   // ============================================

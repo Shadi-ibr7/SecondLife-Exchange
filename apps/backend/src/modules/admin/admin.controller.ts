@@ -288,6 +288,7 @@ export class AdminController {
       id,
       updateEcoContentDto,
       req.user.id,
+      req,
     );
   }
 
@@ -397,15 +398,18 @@ export class AdminController {
     return this.adminService.getExchangeAnalytics();
   }
 
-  // Logs
+  // Logs (Audit Trail)
   @Get('logs')
-  @ApiOperation({ summary: 'Logs des actions admin' })
+  @ApiOperation({ summary: 'Logs d\'audit des actions admin (avec filtres)' })
   async getLogs(@Query() query: AdminGetLogsQueryDto) {
-    return this.adminService.getLogs(
-      query.page || 1,
-      query.limit || 50,
-      query.adminId,
-    );
+    return this.adminService.getLogs(query.page || 1, query.limit || 50, {
+      adminId: query.adminId,
+      actionType: query.actionType,
+      targetType: query.targetType,
+      startDate: query.startDate,
+      endDate: query.endDate,
+      requestId: query.requestId,
+    });
   }
 
   @Get('logs/:id')

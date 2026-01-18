@@ -8,7 +8,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Settings,
   Shield,
@@ -23,8 +23,13 @@ import {
   RefreshCw,
   Moon,
   Sun,
+  QrCode,
+  Loader2,
+  X,
+  CheckCircle,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { adminApi } from '@/lib/admin.api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -39,10 +44,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  
+  // 2FA state
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [twoFactorLoading, setTwoFactorLoading] = useState(false);
+  const [setupModalOpen, setSetupModalOpen] = useState(false);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [setupSecret, setSetupSecret] = useState<string | null>(null);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verifying, setVerifying] = useState(false);
 
   // Settings state
   const [platformSettings, setPlatformSettings] = useState({
@@ -60,11 +81,88 @@ export default function AdminSettingsPage() {
   });
 
   const [securitySettings, setSecuritySettings] = useState({
-    twoFactorEnabled: true,
     sessionTimeout: '30',
     maxLoginAttempts: '5',
     passwordExpiration: '90',
   });
+
+  // Charger l'état 2FA au montage
+  useEffect(() => {
+    const loadTwoFactorStatus = async () => {
+      try {
+        const user = await adminApi.getMe();
+        if (user && 'twoFactorEnabled' in user) {
+          setTwoFactorEnabled(user.twoFactorEnabled || false);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement de l\'état 2FA:', error);
+      }
+    };
+    loadTwoFactorStatus();
+  }, []);
+
+  // Gérer l'activation/désactivation du 2FA
+  const handleTwoFactorToggle = async (enabled: boolean) => {
+    if (enabled) {
+      // Activer → ouvrir modal de setup
+      setTwoFactorLoading(true);
+      try {
+        const { data } = await adminApi.setupTwoFactor();
+        setQrCode(data.qrCode);
+        setSetupSecret(data.secret);
+        setSetupModalOpen(true);
+      } catch (error: any) {
+        toast.error(error.response?.data?.message || 'Erreur lors du setup 2FA');
+      } finally {
+        setTwoFactorLoading(false);
+      }
+    } else {
+      // Désactiver → confirmation puis désactivation
+      if (confirm('Êtes-vous sûr de vouloir désactiver l\'authentification à deux facteurs ?')) {
+        setTwoFactorLoading(true);
+        try {
+          await adminApi.disableTwoFactor();
+          setTwoFactorEnabled(false);
+          toast.success('2FA désactivé avec succès');
+        } catch (error: any) {
+          toast.error(error.response?.data?.message || 'Erreur lors de la désactivation du 2FA');
+        } finally {
+          setTwoFactorLoading(false);
+        }
+      }
+    }
+  };
+
+  // Vérifier le code et activer le 2FA
+  const handleEnableTwoFactor = async () => {
+    if (!verificationCode || verificationCode.length !== 6 || !setupSecret) {
+      toast.error('Veuillez entrer un code à 6 chiffres');
+      return;
+    }
+
+    setVerifying(true);
+    try {
+      await adminApi.enableTwoFactor(verificationCode, setupSecret);
+      setTwoFactorEnabled(true);
+      setSetupModalOpen(false);
+      setQrCode(null);
+      setSetupSecret(null);
+      setVerificationCode('');
+      toast.success('2FA activé avec succès');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Code invalide. Vérifiez votre authenticator.');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  // Fermer le modal de setup
+  const handleCloseSetupModal = () => {
+    setSetupModalOpen(false);
+    setQrCode(null);
+    setSetupSecret(null);
+    setVerificationCode('');
+  };
 
   const [moderationSettings, setModerationSettings] = useState({
     autoModeration: true,
@@ -383,21 +481,33 @@ export default function AdminSettingsPage() {
                 <div className="flex items-center gap-2">
                   <Shield className="w-4 h-4 text-foreground" />
                   <Label htmlFor="twoFactor" className="text-sm font-medium text-foreground">
-                    Authentification à deux facteurs
+                    Authentification à deux facteurs (2FA)
                   </Label>
+                  {twoFactorEnabled && (
+                    <Badge variant="default" className="ml-2">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Activé
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Sécuriser l'accès administrateur avec 2FA
+                  Sécuriser l'accès administrateur avec authentification TOTP (Google Authenticator, Authy, etc.)
                 </p>
               </div>
               <Switch
                 id="twoFactor"
-                checked={securitySettings.twoFactorEnabled}
-                onCheckedChange={(checked) =>
-                  setSecuritySettings({ ...securitySettings, twoFactorEnabled: checked })
-                }
+                checked={twoFactorEnabled}
+                disabled={twoFactorLoading}
+                onCheckedChange={handleTwoFactorToggle}
               />
             </div>
+            {twoFactorEnabled && (
+              <div className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">
+                <p>
+                  ✅ Le 2FA est actif. Vous devrez entrer un code depuis votre authenticator à chaque connexion.
+                </p>
+              </div>
+            )}
             <Separator className="bg-border" />
             <div className="space-y-2">
               <Label htmlFor="sessionTimeout" className="text-sm font-medium text-foreground">
@@ -630,6 +740,102 @@ export default function AdminSettingsPage() {
           Enregistrer toutes les modifications
         </Button>
       </div>
+
+      {/* Modal 2FA Setup */}
+      <Dialog open={setupModalOpen} onOpenChange={handleCloseSetupModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Configurer l'authentification à deux facteurs</DialogTitle>
+            <DialogDescription>
+              Scannez ce QR code avec votre application d'authentification (Google Authenticator, Authy, etc.)
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* QR Code */}
+            {qrCode && (
+              <div className="flex flex-col items-center space-y-4">
+                <div className="rounded-lg border-2 border-border p-4 bg-white">
+                  <img
+                    src={qrCode}
+                    alt="QR Code 2FA"
+                    className="w-64 h-64"
+                  />
+                </div>
+                {setupSecret && (
+                  <div className="w-full space-y-2">
+                    <Label className="text-xs text-muted-foreground">
+                      Secret de secours (gardez-le en lieu sûr) :
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 rounded-md bg-muted p-2 text-xs font-mono break-all">
+                        {setupSecret}
+                      </code>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(setupSecret);
+                          toast.success('Secret copié');
+                        }}
+                      >
+                        Copier
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Code de vérification */}
+            <div className="space-y-2">
+              <Label htmlFor="verifyCode">
+                Entrez le code à 6 chiffres pour activer le 2FA
+              </Label>
+              <Input
+                id="verifyCode"
+                type="text"
+                placeholder="123456"
+                value={verificationCode}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                  setVerificationCode(value);
+                }}
+                maxLength={6}
+                className="text-center text-2xl tracking-widest font-mono"
+                disabled={verifying}
+              />
+              <p className="text-xs text-muted-foreground">
+                Le code change toutes les 30 secondes dans votre authenticator
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={handleCloseSetupModal}
+                disabled={verifying}
+              >
+                Annuler
+              </Button>
+              <Button
+                onClick={handleEnableTwoFactor}
+                disabled={verifying || verificationCode.length !== 6}
+              >
+                {verifying ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Vérification...
+                  </>
+                ) : (
+                  'Activer 2FA'
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

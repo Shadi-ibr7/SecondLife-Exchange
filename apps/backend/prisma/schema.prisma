@@ -15,6 +15,10 @@ model User {
   displayName        String
   passwordHash       String
   roles              UserRole            @default(USER)
+  // 2FA TOTP fields (for ADMIN/MODERATOR)
+  twoFactorEnabled   Boolean             @default(false)
+  twoFactorSecret    String? // Secret chiffré avec APP_ENCRYPTION_KEY
+  twoFactorVerifiedAt DateTime? // Date de vérification du setup 2FA
   exchangesRequested Exchange[]          @relation("ExchangeRequester")
   exchangesResponded Exchange[]          @relation("ExchangeResponder")
   items              Item[]
@@ -381,12 +385,15 @@ model AdminLog {
   meta         Json?
   ip           String?
   userAgent    String?
+  requestId    String?
   createdAt    DateTime @default(now())
   admin        User     @relation("AdminLogs", fields: [adminId], references: [id], onDelete: Cascade)
 
   @@index([adminId])
+  @@index([action])
   @@index([resourceType, resourceId])
   @@index([createdAt])
+  @@index([requestId])
   @@map("admin_logs")
 }
 

@@ -68,6 +68,16 @@ export default function AdminLoginPage() {
     try {
       const { data } = await adminApi.login(email, password);
 
+      // Si le 2FA est requis, rediriger vers la page de vérification 2FA
+      if (data.requiresTwoFactor) {
+        // Stocker temporairement l'ID utilisateur pour la vérification 2FA
+        sessionStorage.setItem('2fa_userId', data.user.id);
+        sessionStorage.setItem('2fa_email', data.user.email);
+        // Rediriger vers la page 2FA
+        router.push(`/${ADMIN_BASE_PATH}/login/2fa`);
+        return;
+      }
+
       if (process.env.NODE_ENV !== 'production') {
         console.log('✅ Connexion réussie:', data.user.email);
       }

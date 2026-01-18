@@ -188,10 +188,30 @@ export class AdminGetAnalyticsQueryDto {
 /**
  * DTO: AdminGetLogsQueryDto
  *
- * Paramètres de requête pour GET /admin/logs
+ * Paramètres de requête pour GET /admin/logs (audit logs)
  */
 export class AdminGetLogsQueryDto extends PaginationDto {
   @IsOptional()
   @IsString()
   adminId?: string;
+
+  @IsOptional()
+  @IsString()
+  actionType?: string; // Filtrer par type d'action (ex: "BAN_USER", "ADMIN_LOGIN_SUCCESS")
+
+  @IsOptional()
+  @IsString()
+  targetType?: string; // Filtrer par type de ressource (ex: "User", "EcoContent")
+
+  @IsOptional()
+  @IsString()
+  startDate?: string; // Date de début (ISO string ou YYYY-MM-DD)
+
+  @IsOptional()
+  @IsString()
+  endDate?: string; // Date de fin (ISO string ou YYYY-MM-DD)
+
+  @IsOptional()
+  @IsString()
+  requestId?: string; // Filtrer par requestId pour traçabilité
 }

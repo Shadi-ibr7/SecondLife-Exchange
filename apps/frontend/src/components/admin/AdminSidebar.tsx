@@ -22,6 +22,7 @@ import {
   Settings,
   MessageCircle,
   BarChart3,
+  Shield,
 } from 'lucide-react';
 import { ADMIN_BASE_PATH } from '@/lib/admin.config';
 import { cn } from '@/lib/utils';
@@ -37,6 +38,7 @@ const menuItems = [
   { id: 'ai-themes', label: 'Thèmes IA', icon: Sparkles, href: `/${ADMIN_BASE_PATH}/themes` },
   { id: 'eco-content', label: 'Contenu Écologique', icon: Leaf, href: `/${ADMIN_BASE_PATH}/eco` },
   { id: 'logs', label: 'Logs', icon: FileText, href: `/${ADMIN_BASE_PATH}/logs` },
+  { id: 'audit-logs', label: 'Audit Trail', icon: Shield, href: `/${ADMIN_BASE_PATH}/audit-logs` },
   { id: 'settings', label: 'Paramètres', icon: Settings, href: `/${ADMIN_BASE_PATH}/settings` },
 ];
 
