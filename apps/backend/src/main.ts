@@ -112,6 +112,37 @@ async function bootstrap() {
   );
 
   // ============================================
+  // ROUTES HEALTH SANS PRÉFIXE (AVANT CORS pour éviter les blocages)
+  // ============================================
+  /**
+   * Routes health accessibles directement sans préfixe /api/v1
+   * Créées AVANT CORS pour permettre les health checks sans origin header
+   * pour faciliter l'intégration avec les orchestrateurs (PM2, Kubernetes, Nginx, etc.)
+   */
+  const healthModule = app.select(HealthModule);
+  const healthService = healthModule.get(HealthService, { strict: false });
+  
+  app.getHttpAdapter().get('/health', (req, res) => {
+    try {
+      const response = healthService.getHealth();
+      res.json(response);
+    } catch (error) {
+      console.error('Health check error:', error);
+      res.status(500).json({ status: 'error', message: 'Health check failed' });
+    }
+  });
+  
+  app.getHttpAdapter().get('/health/ready', async (req, res) => {
+    try {
+      const response = await healthService.getReady();
+      res.json(response);
+    } catch (error) {
+      console.error('Readiness check error:', error);
+      res.status(500).json({ status: 'error', message: 'Readiness check failed' });
+    }
+  });
+
+  // ============================================
   // CONFIGURATION COOKIE PARSER
   // ============================================
   /**
@@ -135,6 +166,7 @@ async function bootstrap() {
    * - credentials: true est OBLIGATOIRE pour les cookies cross-origin
    * - En prod, les requêtes sans origin sont rejetées (protection contre certaines attaques)
    * - Headers X-CSRF-Token autorisé pour la protection CSRF
+   * - Les routes /health et /health/ready bypassent CORS (créées avant)
    */
   const frontendOrigins = configService.get<string[]>('app.frontendOrigins') || [
     'http://localhost:3000',
@@ -149,8 +181,14 @@ async function bootstrap() {
 
   const isProduction = configService.get<string>('app.nodeEnv') === 'production';
 
-  app.use(
-    cors({
+  // CORS conditionnel : appliquer seulement pour les routes qui ne sont pas /health
+  app.use((req, res, next) => {
+    // Skip CORS pour les routes health (elles sont accessibles publiquement)
+    if (req.path === '/health' || req.path === '/health/ready') {
+      return next();
+    }
+    // Appliquer CORS pour les autres routes
+    return cors({
       origin: (origin, callback) => {
         // En production, rejeter les requêtes sans origin (protection renforcée)
         // En dev, autoriser pour faciliter le développement avec Postman/curl
@@ -183,8 +221,8 @@ async function bootstrap() {
         'X-CSRF-Token', // Header pour protection CSRF
       ],
       exposedHeaders: ['X-CSRF-Token'], // Permettre au client de lire ce header
-    }),
-  );
+    })(req, res, next);
+  });
 
   // ============================================
   // VALIDATION GLOBALE DES DONNÉES
@@ -211,38 +249,9 @@ async function bootstrap() {
   app.useGlobalInterceptors(new LoggingInterceptor());
 
   // ============================================
-  // ROUTES HEALTH SANS PRÉFIXE (avant setGlobalPrefix)
-  // ============================================
-  /**
-   * Routes health accessibles directement sans préfixe /api/v1
-   * pour faciliter l'intégration avec les orchestrateurs (PM2, Kubernetes, Nginx, etc.)
-   */
-  const healthModule = app.select(HealthModule);
-  const healthService = healthModule.get(HealthService, { strict: false });
-  
-  app.getHttpAdapter().get('/health', (req, res) => {
-    try {
-      const response = healthService.getHealth();
-      res.json(response);
-    } catch (error) {
-      console.error('Health check error:', error);
-      res.status(500).json({ status: 'error', message: 'Health check failed' });
-    }
-  });
-  
-  app.getHttpAdapter().get('/health/ready', async (req, res) => {
-    try {
-      const response = await healthService.getReady();
-      res.json(response);
-    } catch (error) {
-      console.error('Readiness check error:', error);
-      res.status(500).json({ status: 'error', message: 'Readiness check failed' });
-    }
-  });
-
-  // ============================================
   // PRÉFIXE GLOBAL DE L'API
   // ============================================
+  // NOTE: Les routes /health sont créées AVANT ce préfixe (ligne 122), donc elles sont accessibles sans /api/v1
   /**
    * Toutes les routes de l'API commenceront par /api/v1
    * Exemple: /api/v1/users, /api/v1/items, etc.
