@@ -161,6 +161,7 @@ export class TwoFactorService {
       where: { id: userId },
       select: {
         id: true,
+        email: true,
         roles: true,
         twoFactorEnabled: true,
       },
@@ -289,9 +290,10 @@ export class TwoFactorService {
    * Désactive le 2FA pour un utilisateur
    *
    * @param userId - ID de l'utilisateur
+   * @param req - Requête HTTP optionnelle (pour audit trail)
    * @returns true si désactivé avec succès
    */
-  async disable(userId: string): Promise<{ disabled: boolean }> {
+  async disable(userId: string, req?: Request): Promise<{ disabled: boolean }> {
     // Vérifier que l'utilisateur existe
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
