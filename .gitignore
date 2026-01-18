@@ -124,12 +124,7 @@ coverage/
 **/public/workbox-*.js.map
 **/public/worker-*.js.map
 
-# Documentation et scripts internes (ne pas tracker sur GitHub)
-CLAUDE.md
-ADMIN_*.md
-AUDIT_*.md
-DEPLOY_*.md
-*_DOC.md
-fix-*.sh
-reset-database.sh
-start.sh
+# Documentation et scripts (ne pas tracker sur GitHub, sauf README.md)
+*.md
+!README.md
+*.sh
