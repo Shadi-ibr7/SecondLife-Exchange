@@ -16,6 +16,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Request } from 'express';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { AdminActionType } from '../enums/admin-action-type.enum';
+import { UserRole } from '@prisma/client';
 
 /**
  * Options pour un log d'audit
@@ -25,13 +26,15 @@ export interface AuditLogOptions {
   actionType: AdminActionType;
   /** ID de l'admin qui effectue l'action (obligatoire) */
   actorId: string;
+  /** Rôle de l'acteur au moment de l'action (optionnel, sera récupéré depuis req.user ou la base si non fourni) */
+  actorRole?: UserRole;
   /** Type de ressource ciblée (ex: "User", "EcoContent") */
   targetType?: string;
   /** ID de la ressource ciblée */
   targetId?: string;
   /** Métadonnées supplémentaires (seront sanitizées automatiquement) */
   metadata?: Record<string, any>;
-  /** Requête HTTP (pour extraire ip, userAgent, requestId) */
+  /** Requête HTTP (pour extraire ip, userAgent, requestId, actorRole) */
   request?: Request;
 }
 
@@ -50,7 +53,7 @@ export class AuditService {
    * @param options - Options du log d'audit
    */
   async log(options: AuditLogOptions): Promise<void> {
-    const { actionType, actorId, targetType, targetId, metadata, request } = options;
+    const { actionType, actorId, actorRole, targetType, targetId, metadata, request } = options;
 
     try {
       // Sanitizer les métadonnées (enlever secrets)
@@ -61,10 +64,25 @@ export class AuditService {
       const userAgent = request?.get('user-agent') || undefined;
       const requestId = this.extractRequestId(request);
 
+      // Récupérer le rôle de l'acteur (priorité: paramètre > req.user > base de données)
+      let finalActorRole = actorRole;
+      if (!finalActorRole && request?.user && (request.user as any).roles) {
+        finalActorRole = (request.user as any).roles as UserRole;
+      }
+      if (!finalActorRole) {
+        // Fallback: récupérer depuis la base de données
+        const user = await this.prisma.user.findUnique({
+          where: { id: actorId },
+          select: { roles: true },
+        });
+        finalActorRole = user?.roles || UserRole.USER;
+      }
+
       // Créer le log en base
       await this.prisma.adminLog.create({
         data: {
           adminId: actorId,
+          actorRole: finalActorRole,
           action: actionType, // On stocke la valeur string de l'enum
           resourceType: targetType || 'System',
           resourceId: targetId || null,
@@ -76,7 +94,7 @@ export class AuditService {
       });
 
       this.logger.debug(
-        `Audit log created: ${actionType} by ${actorId} on ${targetType || 'System'}${targetId ? `:${targetId}` : ''}`,
+        `Audit log created: ${actionType} by ${actorId} (${finalActorRole}) on ${targetType || 'System'}${targetId ? `:${targetId}` : ''}`,
       );
     } catch (error: any) {
       // Log l'erreur mais ne bloque pas l'action principale

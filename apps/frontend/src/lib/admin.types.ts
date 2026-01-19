@@ -290,8 +290,12 @@ export interface AdminLog {
   resourceType?: string;
   resourceId?: string;
   adminId?: string;
+  actorRole?: 'USER' | 'MODERATOR' | 'ADMIN'; // Rôle de l'acteur au moment de l'action
   admin?: AdminUser;
   meta?: Record<string, unknown>;
+  ip?: string; // Adresse IP de la requête
+  userAgent?: string; // User-Agent de la requête
+  requestId?: string; // ID de la requête (traçabilité)
   createdAt: string;
 }
 

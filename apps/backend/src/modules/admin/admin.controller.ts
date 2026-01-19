@@ -93,13 +93,13 @@ export class AdminController {
     @Body() banDto: BanUserDto,
     @Request() req: any,
   ) {
-    return this.adminService.banUser(id, req.user.id, banDto.reason);
+    return this.adminService.banUser(id, req.user.id, banDto.reason, req);
   }
 
   @Patch('users/:id/unban')
   @ApiOperation({ summary: 'Débannir un utilisateur' })
   async unbanUser(@Param('id') id: string, @Request() req: any) {
-    return this.adminService.unbanUser(id, req.user.id);
+    return this.adminService.unbanUser(id, req.user.id, req);
   }
 
   // Items
@@ -122,13 +122,13 @@ export class AdminController {
   @Patch('items/:id/archive')
   @ApiOperation({ summary: 'Archiver un objet' })
   async archiveItem(@Param('id') id: string, @Request() req: any) {
-    return this.adminService.archiveItem(id, req.user.id);
+    return this.adminService.archiveItem(id, req.user.id, req);
   }
 
   @Delete('items/:id')
   @ApiOperation({ summary: 'Supprimer un objet' })
   async deleteItem(@Param('id') id: string, @Request() req: any) {
-    return this.adminService.deleteItem(id, req.user.id);
+    return this.adminService.deleteItem(id, req.user.id, req);
   }
 
   // Reports
@@ -155,13 +155,13 @@ export class AdminController {
     @Body() resolveDto: ResolveReportDto,
     @Request() req: any,
   ) {
-    return this.adminService.resolveReport(id, req.user.id, resolveDto.banUser);
+    return this.adminService.resolveReport(id, req.user.id, resolveDto.banUser, req);
   }
 
   @Delete('reports/:id')
   @ApiOperation({ summary: 'Supprimer un signalement' })
   async deleteReport(@Param('id') id: string, @Request() req: any) {
-    return this.adminService.deleteReport(id, req.user.id);
+    return this.adminService.deleteReport(id, req.user.id, req);
   }
 
   // Themes
@@ -274,7 +274,7 @@ export class AdminController {
     @Body() createEcoContentDto: CreateEcoContentDto,
     @Request() req: any,
   ) {
-    return this.adminService.createEcoContent(createEcoContentDto, req.user.id);
+    return this.adminService.createEcoContent(createEcoContentDto, req.user.id, req);
   }
 
   @Patch('eco/:id')
@@ -295,7 +295,7 @@ export class AdminController {
   @Delete('eco/:id')
   @ApiOperation({ summary: 'Supprimer un contenu éco' })
   async deleteEcoContent(@Param('id') id: string, @Request() req: any) {
-    return this.adminService.deleteEcoContent(id, req.user.id);
+    return this.adminService.deleteEcoContent(id, req.user.id, req);
   }
 
   // Exchanges
@@ -322,7 +322,7 @@ export class AdminController {
   @Delete('exchanges/:id')
   @ApiOperation({ summary: 'Supprimer un échange' })
   async deleteExchange(@Param('id') id: string, @Request() req: any) {
-    return this.adminService.deleteExchange(id, req.user.id);
+    return this.adminService.deleteExchange(id, req.user.id, req);
   }
 
   // Community Management
@@ -345,7 +345,7 @@ export class AdminController {
   @Delete('community/threads/:id')
   @ApiOperation({ summary: 'Supprimer un thread' })
   async deleteThread(@Param('id') id: string, @Request() req: any) {
-    return this.adminService.deleteThread(id, req.user.id);
+    return this.adminService.deleteThread(id, req.user.id, req);
   }
 
   @Get('community/posts')
@@ -367,7 +367,7 @@ export class AdminController {
   @Delete('community/posts/:id')
   @ApiOperation({ summary: 'Supprimer un post' })
   async deletePost(@Param('id') id: string, @Request() req: any) {
-    return this.adminService.deletePost(id, req.user.id);
+    return this.adminService.deletePost(id, req.user.id, req);
   }
 
   // Analytics

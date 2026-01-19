@@ -344,7 +344,14 @@ export default function AdminAuditLogsPage() {
                         <p className="text-sm font-medium text-foreground">
                           {log.admin?.displayName || 'N/A'}
                         </p>
-                        <p className="text-xs text-muted-foreground">{log.admin?.email || ''}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {log.admin?.email || ''}
+                          {log.actorRole && (
+                            <span className="ml-2 text-xs">
+                              ({log.actorRole})
+                            </span>
+                          )}
+                        </p>
                       </div>
                     ),
                   },

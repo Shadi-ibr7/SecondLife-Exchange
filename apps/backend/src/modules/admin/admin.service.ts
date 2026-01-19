@@ -168,7 +168,7 @@ export class AdminService {
     return user;
   }
 
-  async banUser(userId: string, adminId: string, reason?: string) {
+  async banUser(userId: string, adminId: string, reason?: string, req?: Request) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException('Utilisateur non trouvé');
@@ -183,14 +183,14 @@ export class AdminService {
       },
     });
 
-    await this.logAction(adminId, 'BAN_USER', 'User', userId, { reason });
+    await this.logAction(adminId, 'BAN_USER', 'User', userId, { reason }, req);
 
     return { success: true };
   }
 
-  async unbanUser(userId: string, adminId: string) {
+  async unbanUser(userId: string, adminId: string, req?: Request) {
     await this.prisma.ban.deleteMany({ where: { userId } });
-    await this.logAction(adminId, 'UNBAN_USER', 'User', userId);
+    await this.logAction(adminId, 'UNBAN_USER', 'User', userId, undefined, req);
     return { success: true };
   }
 
@@ -268,19 +268,19 @@ export class AdminService {
     return item;
   }
 
-  async archiveItem(itemId: string, adminId: string) {
+  async archiveItem(itemId: string, adminId: string, req?: Request) {
     await this.prisma.item.update({
       where: { id: itemId },
       data: { status: ItemStatus.ARCHIVED },
     });
 
-    await this.logAction(adminId, 'ARCHIVE_ITEM', 'Item', itemId);
+    await this.logAction(adminId, 'ARCHIVE_ITEM', 'Item', itemId, undefined, req);
     return { success: true };
   }
 
-  async deleteItem(itemId: string, adminId: string) {
+  async deleteItem(itemId: string, adminId: string, req?: Request) {
     await this.prisma.item.delete({ where: { id: itemId } });
-    await this.logAction(adminId, 'DELETE_ITEM', 'Item', itemId);
+    await this.logAction(adminId, 'DELETE_ITEM', 'Item', itemId, undefined, req);
     return { success: true };
   }
 
@@ -423,7 +423,7 @@ export class AdminService {
     };
   }
 
-  async resolveReport(reportId: string, adminId: string, banUser = false) {
+  async resolveReport(reportId: string, adminId: string, banUser = false, req?: Request) {
     const report = await this.prisma.report.findUnique({
       where: { id: reportId },
     });
@@ -445,16 +445,17 @@ export class AdminService {
         report.targetUserId,
         adminId,
         `Banni suite au signalement #${reportId}`,
+        req,
       );
     }
 
     await this.logAction(adminId, 'RESOLVE_REPORT', 'Report', reportId, {
       banUser,
-    });
+    }, req);
     return { success: true };
   }
 
-  async deleteReport(reportId: string, adminId: string) {
+  async deleteReport(reportId: string, adminId: string, req?: Request) {
     const report = await this.prisma.report.findUnique({
       where: { id: reportId },
     });
@@ -463,7 +464,7 @@ export class AdminService {
     }
 
     await this.prisma.report.delete({ where: { id: reportId } });
-    await this.logAction(adminId, 'DELETE_REPORT', 'Report', reportId);
+    await this.logAction(adminId, 'DELETE_REPORT', 'Report', reportId, undefined, req);
     return { success: true };
   }
 
@@ -747,7 +748,7 @@ export class AdminService {
     return content;
   }
 
-  async createEcoContent(data: any, adminId: string) {
+  async createEcoContent(data: any, adminId: string, req?: Request) {
     const content = await this.prisma.ecoContent.create({
       data: {
         kind: data.kind || 'article',
@@ -770,6 +771,7 @@ export class AdminService {
       {
         title: content.title,
       },
+      req,
     );
 
     // Si le contenu est publié, notifier les admins (non bloquant)
@@ -820,11 +822,11 @@ export class AdminService {
     if (data.summary !== undefined) updateData.summary = data.summary;
     if (data.kpis !== undefined) updateData.kpis = data.kpis;
     if (data.kind !== undefined) updateData.kind = data.kind;
-    
+
     // Détecter les changements de publication
     const wasPublished = !!existing.publishedAt;
     let publicationChanged = false;
-    
+
     if (data.published !== undefined) {
       const willBePublished = data.published;
       publicationChanged = wasPublished !== willBePublished;
@@ -838,10 +840,10 @@ export class AdminService {
 
     // Logger PUBLISH_ECO_CONTENT ou UNPUBLISH_ECO_CONTENT si le statut de publication change
     if (publicationChanged) {
-      const actionType = content.publishedAt 
-        ? AdminActionType.PUBLISH_ECO_CONTENT 
+      const actionType = content.publishedAt
+        ? AdminActionType.PUBLISH_ECO_CONTENT
         : AdminActionType.UNPUBLISH_ECO_CONTENT;
-      
+
       await this.logAction(adminId, actionType, 'EcoContent', id, {
         title: content.title,
       }, req);
@@ -855,14 +857,14 @@ export class AdminService {
     return content;
   }
 
-  async deleteEcoContent(id: string, adminId: string) {
+  async deleteEcoContent(id: string, adminId: string, req?: Request) {
     const existing = await this.prisma.ecoContent.findUnique({ where: { id } });
     if (!existing) {
       throw new NotFoundException('Contenu éco non trouvé');
     }
 
     await this.prisma.ecoContent.delete({ where: { id } });
-    await this.logAction(adminId, 'DELETE_ECO_CONTENT', 'EcoContent', id);
+    await this.logAction(adminId, 'DELETE_ECO_CONTENT', 'EcoContent', id, undefined, req);
 
     return { success: true };
   }
@@ -1063,9 +1065,9 @@ export class AdminService {
     return exchange;
   }
 
-  async deleteExchange(exchangeId: string, adminId: string) {
+  async deleteExchange(exchangeId: string, adminId: string, req?: Request) {
     await this.prisma.exchange.delete({ where: { id: exchangeId } });
-    await this.logAction(adminId, 'DELETE_EXCHANGE', 'Exchange', exchangeId);
+    await this.logAction(adminId, 'DELETE_EXCHANGE', 'Exchange', exchangeId, undefined, req);
     return { success: true };
   }
 
@@ -1148,7 +1150,7 @@ export class AdminService {
     return thread;
   }
 
-  async deleteThread(threadId: string, adminId: string) {
+  async deleteThread(threadId: string, adminId: string, req?: Request) {
     const thread = await this.prisma.thread.findUnique({
       where: { id: threadId },
     });
@@ -1157,7 +1159,7 @@ export class AdminService {
     }
 
     await this.prisma.thread.delete({ where: { id: threadId } });
-    await this.logAction(adminId, 'DELETE_THREAD', 'Thread', threadId);
+    await this.logAction(adminId, 'DELETE_THREAD', 'Thread', threadId, undefined, req);
     return { success: true };
   }
 
@@ -1257,14 +1259,14 @@ export class AdminService {
     return post;
   }
 
-  async deletePost(postId: string, adminId: string) {
+  async deletePost(postId: string, adminId: string, req?: Request) {
     const post = await this.prisma.post.findUnique({ where: { id: postId } });
     if (!post) {
       throw new NotFoundException('Post non trouvé');
     }
 
     await this.prisma.post.delete({ where: { id: postId } });
-    await this.logAction(adminId, 'DELETE_POST', 'Post', postId);
+    await this.logAction(adminId, 'DELETE_POST', 'Post', postId, undefined, req);
     return { success: true };
   }
 
@@ -1503,9 +1505,13 @@ export class AdminService {
       ? (action as AdminActionType)
       : (action as AdminActionType); // Fallback si pas dans l'enum
 
+    // Récupérer le rôle depuis req.user si disponible
+    const actorRole = req?.user ? (req.user as any).roles : undefined;
+
     await this.auditService.log({
       actionType: actionType,
       actorId: adminId,
+      actorRole: actorRole,
       targetType: resourceType,
       targetId: resourceId,
       metadata: meta,

@@ -383,6 +383,7 @@ model AdminLog {
   resourceType String
   resourceId   String?
   adminId      String
+  actorRole    UserRole // Rôle de l'acteur au moment de l'action (trace immuable)
   meta         Json?
   ip           String?
   userAgent    String?
@@ -395,6 +396,7 @@ model AdminLog {
   @@index([resourceType, resourceId])
   @@index([createdAt])
   @@index([requestId])
+  @@index([actorRole])
   @@map("admin_logs")
 }
 

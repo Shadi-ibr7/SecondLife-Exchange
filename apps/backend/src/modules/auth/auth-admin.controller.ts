@@ -168,7 +168,7 @@ export class AuthAdminController {
     const refreshToken =
       extractRefreshToken(req.cookies) || bodyRefreshToken;
 
-    await this.authAdminService.logout(refreshToken, res);
+    await this.authAdminService.logout(refreshToken, res, req);
   }
 
   /**

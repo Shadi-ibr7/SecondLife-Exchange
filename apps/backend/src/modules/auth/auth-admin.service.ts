@@ -468,17 +468,22 @@ export class AuthAdminService {
    *
    * @param refreshToken - Le refresh token à révoquer
    * @param res - Objet Response Express (optionnel, pour clear cookies)
+   * @param req - Objet Request Express (pour audit trail)
    */
-  async logout(refreshToken: string, res?: Response): Promise<void> {
+  async logout(refreshToken: string, res?: Response, req?: Request): Promise<void> {
+    let userId: string | null = null;
+
     if (refreshToken) {
       // Trouver et révoquer le token
       const allTokens = await this.prisma.refreshToken.findMany({
         where: { revokedAt: null },
+        include: { user: { select: { id: true } } },
       });
 
       for (const tokenRecord of allTokens) {
         const isMatch = await bcrypt.compare(refreshToken, tokenRecord.tokenHash);
         if (isMatch) {
+          userId = tokenRecord.userId;
           // Révoquer ce token
           await this.prisma.refreshToken.update({
             where: { id: tokenRecord.id },
@@ -492,6 +497,19 @@ export class AuthAdminService {
     // Supprimer les cookies si Response fournie
     if (res) {
       clearAuthCookies(res);
+    }
+
+    // Logger la déconnexion si on a trouvé l'userId
+    if (userId) {
+      await this.auditService.log({
+        actionType: AdminActionType.ADMIN_LOGOUT,
+        actorId: userId,
+        targetType: 'Auth',
+        metadata: {},
+        request: req,
+      }).catch(() => {
+        // Ignorer les erreurs d'audit (non-bloquant)
+      });
     }
   }
 

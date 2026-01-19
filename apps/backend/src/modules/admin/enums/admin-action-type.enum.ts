@@ -13,6 +13,7 @@ export enum AdminActionType {
   ADMIN_LOGIN_SUCCESS = 'ADMIN_LOGIN_SUCCESS',
   ADMIN_LOGIN_FAIL = 'ADMIN_LOGIN_FAIL',
   ADMIN_LOGIN_LOCKED = 'ADMIN_LOGIN_LOCKED',
+  ADMIN_LOGOUT = 'ADMIN_LOGOUT',
 
   // ============================================
   // GESTION UTILISATEURS
