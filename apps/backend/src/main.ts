@@ -335,19 +335,19 @@ async function bootstrap() {
   // Log de la variable d'environnement brute (pour déboguer)
   const rawFrontendOrigins = process.env.FRONTEND_ORIGINS;
   if (rawFrontendOrigins) {
-    logger.info(`📋 FRONTEND_ORIGINS brute: ${rawFrontendOrigins}`, 'CORS');
+    logger.log(`📋 FRONTEND_ORIGINS brute: ${rawFrontendOrigins}`, 'CORS');
   } else {
     logger.warn('⚠️ FRONTEND_ORIGINS non définie, utilisation des valeurs par défaut', 'CORS');
   }
 
   // Log du tableau parsé frontendOrigins
-  logger.info(
+  logger.log(
     `📋 frontendOrigins parsé (${frontendOrigins.length}): [${frontendOrigins.join(', ')}]`,
     'CORS',
   );
 
   // Log des origines autorisées au démarrage (pour déboguer CORS)
-  logger.info(
+  logger.log(
     `🔒 CORS configuré pour ${allowedOrigins.length} origine(s): ${allowedOrigins.join(', ')}`,
     'CORS',
   );
