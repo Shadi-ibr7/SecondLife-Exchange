@@ -150,9 +150,9 @@ const adminApiClient = axios.create({
   baseURL: getApiBaseURL(),
   timeout: 10000,
   withCredentials: true, // OBLIGATOIRE pour cookies cross-origin
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  // IMPORTANT: Ne pas définir Content-Type par défaut
+  // Il sera ajouté automatiquement pour POST/PATCH/PUT/DELETE par Axios
+  // Cela évite d'envoyer un body vide sur les GET qui pourrait causer des 422
 });
 
 /**
@@ -164,17 +164,29 @@ const adminApiClient = axios.create({
  */
 adminApiClient.interceptors.request.use(
   async (config) => {
-    // Log DEV uniquement
-    if (process.env.NODE_ENV !== 'production' && config.url && config.method) {
+    // Log en DEV et PROD (sans secrets)
+    if (config.url && config.method) {
       const fullUrl = `${adminApiClient.defaults.baseURL}${config.url}`;
-      console.info('Admin API request:', config.method.toUpperCase(), fullUrl);
+      if (process.env.NODE_ENV !== 'production') {
+        console.info('🔧 [Admin API] Request:', config.method.toUpperCase(), fullUrl);
+      } else {
+        // Log minimal en prod (pour debugging production)
+        // Utiliser console.log avec un préfixe pour faciliter le filtrage
+        console.log(`[Admin API] ${config.method.toUpperCase()} ${config.url}`);
+      }
     }
 
-    // Méthodes HTTP mutantes nécessitant CSRF
+    // Méthodes HTTP mutantes nécessitant CSRF et Content-Type
     const mutatingMethods = ['POST', 'PATCH', 'DELETE', 'PUT'];
 
-    // Ajouter CSRF uniquement sur les méthodes mutantes
+    // Ajouter Content-Type uniquement pour les méthodes mutantes
     if (config.method && mutatingMethods.includes(config.method.toUpperCase())) {
+      // Ajouter Content-Type pour les requêtes avec body
+      if (!config.headers['Content-Type']) {
+        config.headers['Content-Type'] = 'application/json';
+      }
+
+      // Ajouter CSRF token
       // Essayer de récupérer le token depuis le cookie
       let csrfToken = getCsrfTokenFromCookie();
 
@@ -186,6 +198,16 @@ adminApiClient.interceptors.request.use(
       // Ajouter le header CSRF si le token est disponible
       if (csrfToken && config.headers) {
         config.headers[CSRF_HEADER_NAME] = csrfToken;
+      }
+    } else {
+      // Pour les GET, s'assurer qu'on n'envoie pas Content-Type
+      // Cela évite que le backend essaie de parser un body vide
+      if (config.headers && 'Content-Type' in config.headers) {
+        delete config.headers['Content-Type'];
+      }
+      // S'assurer qu'aucun body n'est envoyé sur GET
+      if (config.data !== undefined && (config.data === null || (typeof config.data === 'object' && Object.keys(config.data).length === 0))) {
+        delete config.data;
       }
     }
 

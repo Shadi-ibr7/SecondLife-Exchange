@@ -109,32 +109,12 @@ const withPWA = require('next-pwa')({
         },
       },
     },
-    {
-      urlPattern: /^.*\/api\/.*$/i,
-      handler: 'NetworkFirst',
-      method: 'GET',
-      options: {
-        cacheName: 'apis',
-        expiration: {
-          maxEntries: 16,
-          maxAgeSeconds: 24 * 60 * 60, // 24 hours
-        },
-        networkTimeoutSeconds: 10, // fall back to cache if api does not response within 10 seconds
-      },
-    },
-    {
-      urlPattern: /^.*\/api\/.*$/i,
-      handler: 'NetworkFirst',
-      method: 'POST',
-      options: {
-        cacheName: 'apis',
-        expiration: {
-          maxEntries: 16,
-          maxAgeSeconds: 24 * 60 * 60, // 24 hours
-        },
-        networkTimeoutSeconds: 10,
-      },
-    },
+    // IMPORTANT: Exclure toutes les routes API du cache PWA
+    // Les requêtes API ne doivent JAMAIS être mises en cache pour éviter:
+    // - "Request body already used" (workbox)
+    // - Données obsolètes
+    // - Problèmes d'authentification (cookies non envoyés)
+    // Les routes API seront toujours fetchées depuis le réseau
   ],
 });
 

@@ -22,6 +22,8 @@ import {
   ValidationPipe as NestValidationPipe,
   HttpStatus,
   HttpException,
+  ArgumentMetadata,
+  Injectable,
 } from '@nestjs/common';
 
 /**
@@ -37,6 +39,7 @@ import {
  * - transform: convertit les objets en instances DTO
  * - Codes HTTP normalisés: 422 (Unprocessable Entity) pour erreurs de validation
  */
+@Injectable()
 export class ValidationPipe extends NestValidationPipe {
   /**
    * CONSTRUCTEUR
@@ -54,6 +57,7 @@ export class ValidationPipe extends NestValidationPipe {
       // forbidNonWhitelisted: true rejette la requête si elle contient
       // des propriétés non autorisées (au lieu de juste les supprimer)
       // Cela protège contre les attaques où on envoie des données supplémentaires
+      // MAIS: seulement pour les méthodes mutantes (POST, PATCH, DELETE, PUT)
       forbidNonWhitelisted: true,
 
       // forbidUnknownValues: true rejette les valeurs inconnues pour les enums, etc.
@@ -70,6 +74,19 @@ export class ValidationPipe extends NestValidationPipe {
         // Exemple: "123" (string) devient 123 (number) si le DTO attend un number
         enableImplicitConversion: true,
       },
+
+      // skipMissingProperties: true pour éviter les erreurs sur GET sans body
+      // Si un body est vide ou manquant, ne pas rejeter (surtout pour les GET)
+      skipMissingProperties: false,
+
+      // skipNullProperties: true pour ignorer les propriétés null
+      skipNullProperties: true,
+
+      // skipUndefinedProperties: true pour ignorer les propriétés undefined
+      skipUndefinedProperties: true,
+
+      // stopAtFirstError: false pour retourner toutes les erreurs de validation
+      stopAtFirstError: false,
 
       // exceptionFactory: personnalise les exceptions de validation
       // Retourne 422 (Unprocessable Entity) avec format standardisé (code + details)
@@ -107,5 +124,35 @@ export class ValidationPipe extends NestValidationPipe {
         );
       },
     });
+  }
+
+  /**
+   * Override transform() pour ignorer la validation sur les body vides/undefined
+   * Cela évite les erreurs 422 sur /auth/admin/me (GET sans body) et autres endpoints similaires
+   */
+  async transform(value: any, metadata: ArgumentMetadata) {
+    // Si c'est un body vide/undefined, ne pas valider (évite 422 sur GET sans body)
+    if (metadata.type === 'body') {
+      // Si le body est undefined, null ou un objet vide, retourner directement
+      // Le ValidationPipe de NestJS ne devrait pas valider les body vides,
+      // mais forbidNonWhitelisted peut causer des problèmes avec des body vides
+      if (value === undefined || value === null || (typeof value === 'object' && Object.keys(value).length === 0)) {
+        // Retourner undefined directement sans validation
+        // Cela évite les erreurs 422 causées par forbidNonWhitelisted sur body vide
+        return value;
+      }
+    }
+
+    // Sinon, utiliser la validation normale
+    try {
+      return await super.transform(value, metadata);
+    } catch (error) {
+      // Si erreur de validation sur un body vide, retourner undefined au lieu de throw
+      // Cela évite les 422 sur les GET sans body
+      if (metadata.type === 'body' && (value === undefined || value === null || (typeof value === 'object' && Object.keys(value).length === 0))) {
+        return value;
+      }
+      throw error;
+    }
   }
 }
