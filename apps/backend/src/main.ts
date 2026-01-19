@@ -319,9 +319,26 @@ async function bootstrap() {
    * - Headers X-CSRF-Token autorisé pour la protection CSRF
    * - Les routes /health et /health/ready bypassent CORS (créées avant)
    */
-  const frontendOrigins = configService.get<string[]>('app.frontendOrigins') || [
-    'http://localhost:3000',
-  ];
+  // Parser FRONTEND_ORIGINS directement depuis process.env (chargé par loadRootEnvFile())
+  // car app.config.ts est évalué avant que le .env soit chargé
+  const rawFrontendOrigins = process.env.FRONTEND_ORIGINS;
+  let frontendOrigins: string[] = ['http://localhost:3000']; // Valeur par défaut
+
+  if (rawFrontendOrigins) {
+    logger.log(`📋 FRONTEND_ORIGINS brute: ${rawFrontendOrigins}`, 'CORS');
+    // Parser les origines (séparées par virgules)
+    frontendOrigins = rawFrontendOrigins
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter((origin) => origin.length > 0);
+    logger.log(
+      `📋 frontendOrigins parsé (${frontendOrigins.length}): [${frontendOrigins.join(', ')}]`,
+      'CORS',
+    );
+  } else {
+    logger.warn('⚠️ FRONTEND_ORIGINS non définie, utilisation des valeurs par défaut', 'CORS');
+  }
+
   const adminOrigin = configService.get<string>('app.adminOrigin');
 
   // Construire la liste complète des origines autorisées
@@ -331,20 +348,6 @@ async function bootstrap() {
   }
 
   const isProduction = configService.get<string>('app.nodeEnv') === 'production';
-
-  // Log de la variable d'environnement brute (pour déboguer)
-  const rawFrontendOrigins = process.env.FRONTEND_ORIGINS;
-  if (rawFrontendOrigins) {
-    logger.log(`📋 FRONTEND_ORIGINS brute: ${rawFrontendOrigins}`, 'CORS');
-  } else {
-    logger.warn('⚠️ FRONTEND_ORIGINS non définie, utilisation des valeurs par défaut', 'CORS');
-  }
-
-  // Log du tableau parsé frontendOrigins
-  logger.log(
-    `📋 frontendOrigins parsé (${frontendOrigins.length}): [${frontendOrigins.join(', ')}]`,
-    'CORS',
-  );
 
   // Log des origines autorisées au démarrage (pour déboguer CORS)
   logger.log(
