@@ -322,6 +322,12 @@ async function bootstrap() {
   // Parser FRONTEND_ORIGINS directement depuis process.env (chargé par loadRootEnvFile())
   // car app.config.ts est évalué avant que le .env soit chargé
   const rawFrontendOrigins = process.env.FRONTEND_ORIGINS;
+  
+  // Debug: vérifier que la variable est bien chargée
+  console.log('[DEBUG] process.env.FRONTEND_ORIGINS:', process.env.FRONTEND_ORIGINS);
+  console.log('[DEBUG] typeof rawFrontendOrigins:', typeof rawFrontendOrigins);
+  console.log('[DEBUG] rawFrontendOrigins length:', rawFrontendOrigins?.length);
+  
   let frontendOrigins: string[] = ['http://localhost:3000']; // Valeur par défaut
 
   if (rawFrontendOrigins) {
@@ -352,8 +358,12 @@ async function bootstrap() {
   // Log des origines autorisées au démarrage (pour déboguer CORS)
   logger.log(
     `🔒 CORS configuré pour ${allowedOrigins.length} origine(s): ${allowedOrigins.join(', ')}`,
-    'CORS',
+    'Bootstrap',
   );
+  
+  // Debug supplémentaire
+  console.log('[DEBUG] allowedOrigins:', JSON.stringify(allowedOrigins));
+  console.log('[DEBUG] frontendOrigins:', JSON.stringify(frontendOrigins));
 
   // CORS conditionnel : appliquer seulement pour les routes qui ne sont pas /health
   app.use((req, res, next) => {
