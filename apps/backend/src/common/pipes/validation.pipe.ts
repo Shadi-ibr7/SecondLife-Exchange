@@ -133,10 +133,20 @@ export class ValidationPipe extends NestValidationPipe {
   async transform(value: any, metadata: ArgumentMetadata) {
     // Si c'est un body vide/undefined, ne pas valider (évite 422 sur GET sans body)
     if (metadata.type === 'body') {
-      // Si le body est undefined, null ou un objet vide, retourner directement
-      // Le ValidationPipe de NestJS ne devrait pas valider les body vides,
-      // mais forbidNonWhitelisted peut causer des problèmes avec des body vides
-      if (value === undefined || value === null || (typeof value === 'object' && Object.keys(value).length === 0)) {
+      // Vérifier si le body est vide/undefined/null
+      const isEmptyBody = 
+        value === undefined || 
+        value === null || 
+        (typeof value === 'object' && value !== null && Object.keys(value).length === 0);
+      
+      if (isEmptyBody) {
+        // LOG DE DIAGNOSTIC TEMPORAIRE
+        console.log(`[DIAG ValidationPipe] Body vide détecté, ignoré - metadata:`, {
+          type: metadata.type,
+          metatype: metadata.metatype?.name,
+          data: metadata.data
+        });
+        
         // Retourner undefined directement sans validation
         // Cela évite les erreurs 422 causées par forbidNonWhitelisted sur body vide
         return value;
@@ -146,12 +156,35 @@ export class ValidationPipe extends NestValidationPipe {
     // Sinon, utiliser la validation normale
     try {
       return await super.transform(value, metadata);
-    } catch (error) {
+    } catch (error: any) {
       // Si erreur de validation sur un body vide, retourner undefined au lieu de throw
       // Cela évite les 422 sur les GET sans body
-      if (metadata.type === 'body' && (value === undefined || value === null || (typeof value === 'object' && Object.keys(value).length === 0))) {
-        return value;
+      if (metadata.type === 'body') {
+        const isEmptyBody = 
+          value === undefined || 
+          value === null || 
+          (typeof value === 'object' && value !== null && Object.keys(value).length === 0);
+        
+        if (isEmptyBody) {
+          // LOG DE DIAGNOSTIC TEMPORAIRE
+          console.log(`[DIAG ValidationPipe] Erreur de validation sur body vide ignorée:`, error.message);
+          return value;
+        }
       }
+      
+      // LOG DE DIAGNOSTIC TEMPORAIRE pour voir les autres erreurs de validation
+      if (metadata.type === 'body') {
+        console.log(`[DIAG ValidationPipe] Erreur de validation sur body:`, {
+          errorMessage: error.message,
+          value: value,
+          metadata: {
+            type: metadata.type,
+            metatype: metadata.metatype?.name,
+            data: metadata.data
+          }
+        });
+      }
+      
       throw error;
     }
   }

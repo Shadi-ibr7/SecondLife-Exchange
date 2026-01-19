@@ -231,6 +231,30 @@ adminApiClient.interceptors.response.use(
       _skipErrorToast?: boolean;
     };
 
+    // Gérer les erreurs 422 (Unprocessable Entity) - généralement validation ou CSRF/cookie
+    // IMPORTANT: Ne pas retry, arrêter immédiatement pour éviter les boucles infinies
+    if (error.response?.status === 422) {
+      console.error('[Admin API] Erreur 422 détectée, arrêt immédiat:', {
+        url: originalRequest?.url,
+        message: error.response?.data?.message || 'Erreur de validation',
+        requestId: error.response?.data?.requestId
+      });
+      
+      // Afficher un message spécifique pour les 422
+      const errorData = error.response?.data as { message?: string; code?: string } | undefined;
+      const isValidationError = errorData?.code === 'VALIDATION_ERROR';
+      const message = isValidationError 
+        ? 'Erreur de validation des données. Veuillez vérifier votre connexion et les cookies.'
+        : 'Erreur de traitement (422). Vérifiez votre session et rechargez la page.';
+      
+      if (!originalRequest?._skipErrorToast) {
+        toast.error(message);
+      }
+      
+      // Ne pas retry sur 422
+      return Promise.reject(error);
+    }
+
     // Si erreur 401 et pas déjà en retry
     if (error.response?.status === 401 && !originalRequest?._retry) {
       // Ne pas retry pour les endpoints d'auth eux-mêmes
@@ -238,6 +262,18 @@ adminApiClient.interceptors.response.use(
         originalRequest?.url?.includes('/auth/admin/login') ||
         originalRequest?.url?.includes('/auth/admin/refresh')
       ) {
+        // Pour /auth/admin/me, si on reçoit 401, c'est que le token est vraiment invalide
+        // Arrêter immédiatement pour éviter les boucles
+        if (originalRequest?.url?.includes('/auth/admin/me')) {
+          console.log('[Admin API] 401 sur /auth/admin/me, arrêt immédiat (pas de retry)');
+          if (typeof window !== 'undefined') {
+            const adminBasePath =
+              process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
+            window.location.href = `/${adminBasePath}/login`;
+          }
+          return Promise.reject(error);
+        }
+        
         return Promise.reject(error);
       }
 
@@ -249,7 +285,8 @@ adminApiClient.interceptors.response.use(
         // Réessayer la requête originale
         return adminApiClient(originalRequest);
       } catch (refreshError) {
-        // Refresh échoué → rediriger vers login admin
+        // Refresh échoué → rediriger vers login admin et arrêter
+        console.log('[Admin API] Refresh token échoué, redirection vers login');
         if (typeof window !== 'undefined') {
           const adminBasePath =
             process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
@@ -514,10 +551,19 @@ export const adminApi = {
    */
   getMe: async (): Promise<AdminMeResponse | null> => {
     try {
-      const response = await adminApiClient.get<AdminMeResponse>(ADMIN_ME_ENDPOINT);
+      const response = await adminApiClient.get<AdminMeResponse>(ADMIN_ME_ENDPOINT, {
+        _skipErrorToast: true, // Ne pas afficher de toast pour getMe (géré par AdminGuard)
+      } as any);
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       // 401 = non authentifié (géré par l'intercepteur)
+      // 422 = erreur de validation/CSRF (arrêt immédiat, pas de retry)
+      if (error.response?.status === 422) {
+        console.error('[Admin API] Erreur 422 sur /auth/admin/me:', error.response?.data);
+        // Retourner null pour arrêter la boucle
+        return null;
+      }
+      // 401 = non authentifié (géré par l'intercepteur qui redirige)
       return null;
     }
   },

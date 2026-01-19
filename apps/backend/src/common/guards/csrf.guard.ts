@@ -54,7 +54,8 @@ export class CsrfGuard implements CanActivate {
     // Méthodes HTTP à protéger (mutantes)
     const protectedMethods = ['POST', 'PATCH', 'DELETE', 'PUT'];
 
-    // Ignorer les méthodes GET (lecture seule)
+    // Ignorer les méthodes GET (lecture seule) - GET /auth/admin/me est donc exempté automatiquement
+    // Pas besoin de vérifier CSRF sur les requêtes GET car elles sont idempotentes et non-mutantes
     if (!protectedMethods.includes(request.method)) {
       return true;
     }
