@@ -26,6 +26,7 @@ import {
   UseGuards,
   Res,
   Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
@@ -177,6 +178,8 @@ export class AuthAdminController {
    * Endpoint protégé par JWT. Permet au frontend de vérifier si
    * la session est toujours valide et d'obtenir les infos utilisateur.
    *
+   * IMPORTANT: Si le token est absent, le guard retourne 401 (pas 422).
+   *
    * @param req - Request avec user injecté par AdminJwtGuard
    * @returns Informations de l'admin connecté
    */
@@ -195,6 +198,13 @@ export class AuthAdminController {
     const hasCsrfHeader = !!req.headers['x-csrf-token'] || !!req.headers['X-CSRF-Token'];
     const hasCsrfCookie = req.cookies?.['XSRF-TOKEN'] ? true : false;
 
+    // LOG TEMPORAIRE: tracer la présence du cookie access token
+    const isProduction = process.env.NODE_ENV === 'production';
+    if (isProduction) {
+      console.log(`[ADMIN /me → access cookie present: ${hasAccessTokenCookie ? 'YES' : 'NO'}] requestId: ${requestId}`);
+      console.log(`[ADMIN /me → refresh cookie present: ${hasRefreshTokenCookie ? 'YES' : 'NO'}]`);
+    }
+
     console.log(`[DIAG /auth/admin/me] requestId: ${requestId}`);
     console.log(`[DIAG /auth/admin/me] cookies présents: ${hasCookies}, noms: ${cookieNames.join(', ')}`);
     console.log(`[DIAG /auth/admin/me] sl_access_token présent: ${hasAccessTokenCookie}`);
@@ -202,6 +212,14 @@ export class AuthAdminController {
     console.log(`[DIAG /auth/admin/me] CSRF header présent: ${hasCsrfHeader}`);
     console.log(`[DIAG /auth/admin/me] CSRF cookie (XSRF-TOKEN) présent: ${hasCsrfCookie}`);
     console.log(`[DIAG /auth/admin/me] user injecté par guard: ${req.user ? 'OUI (id: ' + req.user.id + ')' : 'NON'}`);
+
+    // Si user n'est pas injecté par le guard, cela signifie que le token est absent/invalide
+    // Le guard devrait déjà avoir lancé une UnauthorizedException (401)
+    if (!req.user) {
+      // Ce code ne devrait jamais être atteint car le guard devrait lancer une exception
+      // Mais on le laisse comme sécurité supplémentaire
+      throw new UnauthorizedException('Token admin manquant ou invalide');
+    }
 
     return this.authAdminService.getMe(req.user.id);
   }

@@ -41,13 +41,31 @@ export class AdminJwtGuard extends AuthGuard('admin-jwt') {
     console.log(`[DIAG AdminJwtGuard.handleRequest] user:`, user ? `OUI (id: ${user.id})` : 'NON');
     console.log(`[DIAG AdminJwtGuard.handleRequest] info:`, info ? (typeof info === 'object' ? JSON.stringify(info) : info) : 'null');
 
+    // IMPORTANT: Si pas d'utilisateur ou erreur, lancer UnauthorizedException (401)
+    // Ne jamais retourner 422 pour un token manquant - c'est une erreur d'authentification (401)
     if (err || !user) {
-      const errorToThrow = err || new UnauthorizedException('Token admin invalide');
-      console.log(`[DIAG AdminJwtGuard.handleRequest] LANCEMENT EXCEPTION:`, {
+      // Si info indique un token manquant ou invalide, message clair
+      let errorMessage = 'Token admin manquant ou invalide';
+      if (info && typeof info === 'object') {
+        if (info.message === 'No auth token' || info.message?.includes('No token')) {
+          errorMessage = 'Token admin manquant';
+        } else if (info.message === 'jwt expired' || info.message?.includes('expired')) {
+          errorMessage = 'Token admin expiré';
+        } else if (info.message === 'jwt malformed' || info.message?.includes('malformed')) {
+          errorMessage = 'Token admin invalide';
+        }
+      }
+
+      const errorToThrow = err instanceof UnauthorizedException
+        ? err
+        : new UnauthorizedException(errorMessage);
+
+      console.log(`[DIAG AdminJwtGuard.handleRequest] LANCEMENT EXCEPTION 401:`, {
         isError: !!err,
-        errorType: err?.constructor?.name || 'UnauthorizedException',
+        errorType: 'UnauthorizedException',
         errorMessage: errorToThrow.message,
-        userPresent: !!user
+        userPresent: !!user,
+        statusCode: 401
       });
       throw errorToThrow;
     }

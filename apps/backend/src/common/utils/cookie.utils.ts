@@ -76,12 +76,39 @@ export function getCookieConfig(maxAge: number): CookieConfig {
 /**
  * Définit le cookie d'access token
  *
+ * IMPORTANT: En production, le cookie est TOUJOURS défini avec:
+ * - httpOnly: true
+ * - secure: true
+ * - sameSite: 'none'
+ * - path: '/'
+ * - maxAge: 15 minutes
+ *
  * @param res - Objet Response Express
  * @param accessToken - Token d'accès JWT
  */
 export function setAccessTokenCookie(res: Response, accessToken: string): void {
-  const config = getCookieConfig(COOKIE_MAX_AGE.ACCESS_TOKEN);
+  const isProduction = process.env.NODE_ENV === 'production';
+  const cookieDomain = process.env.COOKIE_DOMAIN;
+
+  // Configuration obligatoire en production
+  const config: CookieConfig = {
+    httpOnly: true,
+    secure: isProduction, // true en prod, false en dev
+    sameSite: isProduction ? 'none' : 'lax', // 'none' requis pour cross-site en prod
+    path: '/',
+    maxAge: COOKIE_MAX_AGE.ACCESS_TOKEN, // 15 minutes
+  };
+
+  if (cookieDomain) {
+    config.domain = cookieDomain;
+  }
+
   res.cookie(AUTH_COOKIES.ACCESS_TOKEN, accessToken, config);
+
+  // LOG TEMPORAIRE pour tracer la pose du cookie
+  if (isProduction) {
+    console.log(`[ADMIN LOGIN → access cookie set: YES] cookie=${AUTH_COOKIES.ACCESS_TOKEN}, secure=${config.secure}, sameSite=${config.sameSite}, httpOnly=${config.httpOnly}`);
+  }
 }
 
 /**

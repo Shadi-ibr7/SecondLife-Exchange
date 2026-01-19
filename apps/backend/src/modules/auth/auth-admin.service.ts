@@ -268,9 +268,19 @@ export class AuthAdminService {
     const familyId = this.generateFamilyId();
     const refreshToken = await this.createRefreshToken(user.id, familyId);
 
-    // Définir les cookies si Response fournie
+    // IMPORTANT: Définir les cookies TOUJOURS si Response fournie
+    // L'access token doit être TOUJOURS posé en cookie en production
     if (res) {
       setAuthCookies(res, accessToken, refreshToken);
+      // LOG TEMPORAIRE pour tracer la pose des cookies
+      const isProduction = process.env.NODE_ENV === 'production';
+      if (isProduction) {
+        console.log(`[ADMIN LOGIN → access cookie set: YES] accessToken généré et cookie posé`);
+        console.log(`[ADMIN LOGIN → refresh cookie set: YES] refreshToken généré et cookie posé`);
+      }
+    } else {
+      // LOG TEMPORAIRE: avertir si Response n'est pas fournie
+      console.warn(`[ADMIN LOGIN → access cookie set: NO] Response non fournie, cookies non posés`);
     }
 
     // ============================================
@@ -605,9 +615,19 @@ export class AuthAdminService {
     const familyId = this.generateFamilyId();
     const refreshToken = await this.createRefreshToken(user.id, familyId);
 
-    // Définir les cookies si Response fournie
+    // IMPORTANT: Définir les cookies TOUJOURS si Response fournie
+    // L'access token doit être TOUJOURS posé en cookie en production
     if (res) {
       setAuthCookies(res, accessToken, refreshToken);
+      // LOG TEMPORAIRE pour tracer la pose des cookies
+      const isProduction = process.env.NODE_ENV === 'production';
+      if (isProduction) {
+        console.log(`[ADMIN LOGIN → access cookie set: YES] accessToken généré et cookie posé`);
+        console.log(`[ADMIN LOGIN → refresh cookie set: YES] refreshToken généré et cookie posé`);
+      }
+    } else {
+      // LOG TEMPORAIRE: avertir si Response n'est pas fournie
+      console.warn(`[ADMIN LOGIN → access cookie set: NO] Response non fournie, cookies non posés`);
     }
 
     // ============================================
