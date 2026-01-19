@@ -234,7 +234,7 @@ adminApiClient.interceptors.response.use(
     // Gérer les erreurs 422 (Unprocessable Entity) - généralement validation ou CSRF/cookie
     // IMPORTANT: Ne pas retry, arrêter immédiatement pour éviter les boucles infinies
     if (error.response?.status === 422) {
-      const errorData = error.response?.data as { message?: string; requestId?: string } | undefined;
+      const errorData = error.response?.data as { message?: string; code?: string; requestId?: string } | undefined;
       console.error('[Admin API] Erreur 422 détectée, arrêt immédiat:', {
         url: originalRequest?.url,
         message: errorData?.message || 'Erreur de validation',
@@ -242,7 +242,6 @@ adminApiClient.interceptors.response.use(
       });
 
       // Afficher un message spécifique pour les 422
-      // Note: errorData déjà défini ci-dessus
       const isValidationError = errorData?.code === 'VALIDATION_ERROR';
       const message = isValidationError
         ? 'Erreur de validation des données. Veuillez vérifier votre connexion et les cookies.'
