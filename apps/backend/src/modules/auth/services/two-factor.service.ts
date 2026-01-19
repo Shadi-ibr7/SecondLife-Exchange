@@ -23,10 +23,13 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
 import { UserRole } from '@prisma/client';
 import * as speakeasy from 'speakeasy';
 import * as QRCode from 'qrcode';
+import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { encrypt, decrypt } from '../../../common/utils/encryption.utils';
 import { Request } from 'express';
 import { AuditService } from '../../admin/services/audit.service';
 import { AdminActionType } from '../../admin/enums/admin-action-type.enum';
+import { TwoFactorAttemptService } from './two-factor-attempt.service';
 
 /**
  * Réponse du setup 2FA (retourne QR code et secret temporaire pour vérification)
@@ -35,6 +38,14 @@ export interface TwoFactorSetupResponse {
   qrCode: string; // QR code en base64 (data URL)
   secret: string; // Secret temporaire (non chiffré) pour affichage à l'utilisateur
   otpAuthUrl: string; // URL otpauth:// pour import manuel
+}
+
+/**
+ * Réponse de l'activation 2FA (retourne les backup codes)
+ */
+export interface TwoFactorEnableResponse {
+  enabled: boolean;
+  backupCodes: string[]; // Backup codes en clair (à afficher une seule fois)
 }
 
 /**
@@ -52,6 +63,7 @@ export class TwoFactorService {
     private configService: ConfigService,
     @Inject(forwardRef(() => AuditService))
     private auditService: AuditService,
+    private twoFactorAttemptService: TwoFactorAttemptService,
   ) {}
 
   /**
@@ -66,6 +78,83 @@ export class TwoFactorService {
       );
     }
     return key;
+  }
+
+  /**
+   * Génère des backup codes pour la récupération
+   *
+   * @param count - Nombre de codes à générer (défaut: 10)
+   * @returns Objet avec codes en clair et codes hashés
+   */
+  private async generateBackupCodes(count: number = 10): Promise<{
+    codes: string[];
+    hashedCodes: string[];
+  }> {
+    const codes: string[] = [];
+    const hashedCodes: string[] = [];
+
+    for (let i = 0; i < count; i++) {
+      // Générer un code de 8 caractères alphanumériques (format: XXXX-XXXX)
+      const part1 = crypto.randomBytes(2).toString('hex').toUpperCase();
+      const part2 = crypto.randomBytes(2).toString('hex').toUpperCase();
+      const code = `${part1}-${part2}`;
+
+      codes.push(code);
+
+      // Hasher le code avec bcrypt (on ne peut pas le déchiffrer, seulement vérifier)
+      const saltRounds = 10;
+      const hashed = await bcrypt.hash(code, saltRounds);
+      hashedCodes.push(hashed);
+    }
+
+    return { codes, hashedCodes };
+  }
+
+  /**
+   * Vérifie si un backup code est valide et le consomme
+   *
+   * @param userId - ID de l'utilisateur
+   * @param code - Code backup à vérifier
+   * @returns true si le code est valide
+   */
+  private async verifyAndConsumeBackupCode(
+    userId: string,
+    code: string,
+  ): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        twoFactorBackupCodes: true,
+      },
+    });
+
+    if (!user || !user.twoFactorBackupCodes || user.twoFactorBackupCodes.length === 0) {
+      return false;
+    }
+
+    // Vérifier chaque code hashé
+    for (let i = 0; i < user.twoFactorBackupCodes.length; i++) {
+      const hashedCode = user.twoFactorBackupCodes[i];
+      const isValid = await bcrypt.compare(code, hashedCode);
+
+      if (isValid) {
+        // Consommer le code en le retirant du tableau
+        const updatedCodes = [...user.twoFactorBackupCodes];
+        updatedCodes.splice(i, 1);
+
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: {
+            twoFactorBackupCodes: updatedCodes,
+          },
+        });
+
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -148,14 +237,15 @@ export class TwoFactorService {
    * @param userId - ID de l'utilisateur
    * @param code - Code TOTP à vérifier
    * @param secret - Secret temporaire du setup (base32)
-   * @returns true si activé avec succès
+   * @param req - Requête HTTP optionnelle (pour audit)
+   * @returns Backup codes en clair (à afficher une seule fois)
    */
   async enable(
     userId: string,
     code: string,
     secret: string,
     req?: Request,
-  ): Promise<{ enabled: boolean }> {
+  ): Promise<TwoFactorEnableResponse> {
     // Vérifier que l'utilisateur existe
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -197,13 +287,17 @@ export class TwoFactorService {
     const encryptionKey = this.getEncryptionKey();
     const encryptedSecret = encrypt(secret, encryptionKey);
 
-    // Activer le 2FA en base
+    // Générer les backup codes
+    const { codes: backupCodes, hashedCodes } = await this.generateBackupCodes(10);
+
+    // Activer le 2FA en base avec les backup codes hashés
     await this.prisma.user.update({
       where: { id: userId },
       data: {
         twoFactorEnabled: true,
         twoFactorSecret: encryptedSecret,
         twoFactorVerifiedAt: new Date(),
+        twoFactorBackupCodes: hashedCodes,
       },
     });
 
@@ -217,7 +311,7 @@ export class TwoFactorService {
       request: req,
     });
 
-    return { enabled: true };
+    return { enabled: true, backupCodes };
   }
 
   /**
@@ -225,9 +319,23 @@ export class TwoFactorService {
    *
    * @param userId - ID de l'utilisateur
    * @param code - Code TOTP à vérifier
+   * @param ip - Adresse IP de la requête (pour lockout)
+   * @param userAgent - User-Agent de la requête (optionnel, pour audit)
+   * @param req - Requête HTTP optionnelle (pour audit)
    * @returns true si le code est valide
    */
-  async verify(userId: string, code: string): Promise<TwoFactorVerifyResponse> {
+  async verify(
+    userId: string,
+    code: string,
+    ip?: string,
+    userAgent?: string,
+    req?: Request,
+  ): Promise<TwoFactorVerifyResponse> {
+    // Vérifier le lockout avant toute autre vérification
+    if (ip) {
+      await this.twoFactorAttemptService.checkAndThrowIfBlocked(userId, ip);
+    }
+
     // Récupérer l'utilisateur avec son secret chiffré
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -271,16 +379,77 @@ export class TwoFactorService {
       );
     }
 
-    // Vérifier le code TOTP
-    const verified = speakeasy.totp.verify({
+    // Vérifier le code TOTP ou backup code
+    let verified = false;
+    let usedBackupCode = false;
+
+    // Essayer d'abord avec le code TOTP
+    verified = speakeasy.totp.verify({
       secret: decryptedSecret,
       encoding: 'base32',
       token: code,
       window: 2, // Accepter codes dans une fenêtre de ±2 périodes
     });
 
+    // Si le code TOTP n'est pas valide, essayer avec un backup code
     if (!verified) {
-      throw new UnauthorizedException('Code TOTP invalide');
+      // Normaliser le code (enlever les espaces et convertir en majuscules)
+      const normalizedCode = code.replace(/\s+/g, '').toUpperCase();
+      verified = await this.verifyAndConsumeBackupCode(userId, normalizedCode);
+      usedBackupCode = verified;
+    }
+
+    if (!verified) {
+      // Enregistrer l'échec et vérifier si bloqué
+      if (ip) {
+        const failureResult = await this.twoFactorAttemptService.recordFailure(
+          userId,
+          ip,
+          userAgent,
+        );
+
+        // Logger l'échec de vérification 2FA
+        await this.auditService.log({
+          actionType: AdminActionType.ADMIN_LOGIN_FAIL,
+          actorId: userId,
+          targetType: 'Auth',
+          metadata: {
+            email: user.email,
+            reason: 'invalid_2fa_code',
+            isBlocked: failureResult.isBlocked,
+            attempts: failureResult.attempts,
+          },
+          request: req,
+        }).catch(() => {
+          // Ignorer les erreurs d'audit (non-bloquant)
+        });
+
+        // Si bloqué après cet échec, l'exception sera lancée par checkAndThrowIfBlocked au prochain appel
+      }
+
+      throw new UnauthorizedException('Code TOTP ou backup code invalide');
+    }
+
+    // Si un backup code a été utilisé, logger l'événement
+    if (usedBackupCode) {
+      await this.auditService.log({
+        actionType: AdminActionType.ADMIN_LOGIN_SUCCESS,
+        actorId: userId,
+        targetType: 'Auth',
+        metadata: {
+          email: user.email,
+          twoFactorEnabled: true,
+          usedBackupCode: true,
+        },
+        request: req,
+      }).catch(() => {
+        // Ignorer les erreurs d'audit (non-bloquant)
+      });
+    }
+
+    // Code valide : réinitialiser les tentatives
+    if (ip) {
+      await this.twoFactorAttemptService.recordSuccess(userId, ip);
     }
 
     return { verified: true, message: 'Code TOTP valide' };
@@ -305,13 +474,14 @@ export class TwoFactorService {
       },
     });
 
-    // Désactiver le 2FA en base (supprimer le secret)
+    // Désactiver le 2FA en base (supprimer le secret et les backup codes)
     await this.prisma.user.update({
       where: { id: userId },
       data: {
         twoFactorEnabled: false,
         twoFactorSecret: null,
         twoFactorVerifiedAt: null,
+        twoFactorBackupCodes: [],
       },
     });
 
@@ -343,5 +513,66 @@ export class TwoFactorService {
     });
 
     return user?.twoFactorEnabled ?? false;
+  }
+
+  /**
+   * Régénère les backup codes pour un utilisateur
+   *
+   * @param userId - ID de l'utilisateur
+   * @param req - Requête HTTP optionnelle (pour audit)
+   * @returns Backup codes en clair (à afficher une seule fois)
+   */
+  async regenerateBackupCodes(
+    userId: string,
+    req?: Request,
+  ): Promise<{ backupCodes: string[] }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        roles: true,
+        twoFactorEnabled: true,
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Utilisateur introuvable');
+    }
+
+    if (user.roles !== UserRole.ADMIN && user.roles !== UserRole.MODERATOR) {
+      throw new UnauthorizedException(
+        'Le 2FA est uniquement disponible pour les administrateurs et modérateurs',
+      );
+    }
+
+    if (!user.twoFactorEnabled) {
+      throw new BadRequestException('Le 2FA n\'est pas activé pour ce compte');
+    }
+
+    // Générer de nouveaux backup codes
+    const { codes: backupCodes, hashedCodes } = await this.generateBackupCodes(10);
+
+    // Mettre à jour les backup codes en base
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        twoFactorBackupCodes: hashedCodes,
+      },
+    });
+
+    // Logger la régénération (on pourrait ajouter un type d'action spécifique)
+    await this.auditService.log({
+      actionType: AdminActionType.ENABLE_2FA, // Réutiliser ENABLE_2FA avec metadata
+      actorId: userId,
+      targetType: 'User',
+      targetId: userId,
+      metadata: { email: user.email, action: 'regenerate_backup_codes' },
+      request: req,
+    }).catch(() => {
+      // Ignorer les erreurs d'audit (non-bloquant)
+    });
+
+    return { backupCodes };
   }
 }

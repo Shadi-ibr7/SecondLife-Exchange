@@ -78,6 +78,7 @@ export const ADMIN_2FA_SETUP_ENDPOINT = '/auth/admin/2fa/setup';
 export const ADMIN_2FA_ENABLE_ENDPOINT = '/auth/admin/2fa/enable';
 export const ADMIN_2FA_VERIFY_ENDPOINT = '/auth/admin/2fa/verify';
 export const ADMIN_2FA_DISABLE_ENDPOINT = '/auth/admin/2fa/disable';
+export const ADMIN_2FA_REGENERATE_BACKUP_CODES_ENDPOINT = '/auth/admin/2fa/regenerate-backup-codes';
 export const CSRF_ENDPOINT = '/security/csrf';
 export const getAdminApiBaseUrl = getApiBaseURL;
 
@@ -418,12 +419,12 @@ export const adminApi = {
    *
    * @param code - Code TOTP à 6 chiffres
    * @param secret - Secret temporaire du setup (base32)
-   * @returns Confirmation d'activation
+   * @returns Confirmation d'activation avec backup codes
    */
   enableTwoFactor: async (
     code: string,
     secret: string
-  ): Promise<{ data: { enabled: boolean }; status: number }> => {
+  ): Promise<{ data: { enabled: boolean; backupCodes: string[] }; status: number }> => {
     const response = await adminApiClient.post(ADMIN_2FA_ENABLE_ENDPOINT, {
       code,
       secret,
@@ -441,6 +442,19 @@ export const adminApi = {
     status: number;
   }> => {
     const response = await adminApiClient.post(ADMIN_2FA_DISABLE_ENDPOINT);
+    return { data: response.data, status: response.status };
+  },
+
+  /**
+   * Régénérer les backup codes 2FA
+   *
+   * @returns Nouveaux backup codes en clair
+   */
+  regenerateBackupCodes: async (): Promise<{
+    data: { backupCodes: string[] };
+    status: number;
+  }> => {
+    const response = await adminApiClient.post(ADMIN_2FA_REGENERATE_BACKUP_CODES_ENDPOINT);
     return { data: response.data, status: response.status };
   },
 

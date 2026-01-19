@@ -51,7 +51,7 @@ export default function TwoFactorVerifyPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!userId) {
       toast.error('Session expirée. Veuillez vous reconnecter.');
       router.push(`/${ADMIN_BASE_PATH}/login`);
@@ -92,6 +92,9 @@ export default function TwoFactorVerifyPage() {
         err.message === 'Network Error'
       ) {
         errorMessage = 'API inaccessible - Vérifiez que le backend est démarré';
+      } else if (status === 403) {
+        // Lockout après trop d'échecs
+        errorMessage = err.response?.data?.message || 'Trop de tentatives. Veuillez réessayer plus tard.';
       } else if (status === 401) {
         errorMessage = 'Code TOTP invalide. Vérifiez votre authenticator.';
       } else if (err.response?.data?.message) {

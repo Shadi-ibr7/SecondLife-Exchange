@@ -1,0 +1,107 @@
+# ============================================================================
+# EXEMPLE DE CRONTAB POUR BACKUP POSTGRESQL AUTOMATIQUE
+# ============================================================================
+#
+# INSTRUCTIONS:
+#   1. Copier les lignes souhaitées dans votre crontab: crontab -e
+#   2. Adapter les chemins selon votre installation
+#   3. Définir les variables d'environnement nécessaires
+#   4. Vérifier les logs régulièrement
+#
+# NOTE: Ne pas copier ce fichier directement dans le crontab,
+#       mais l'utiliser comme référence et adapter selon vos besoins.
+#
+# ============================================================================
+
+# Variables d'environnement (optionnel, mais recommandé)
+PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+SHELL=/bin/bash
+MAILTO=admin@example.com  # Email pour recevoir les erreurs (optionnel)
+
+# ============================================================================
+# BACKUP QUOTIDIEN
+# ============================================================================
+
+# Backup quotidien à 3h00 du matin (rétention 30 jours)
+0 3 * * * /chemin/vers/apps/backend/scripts/backup-db.sh -d secondlife -r 30 >> /var/log/secondlife-backup-cron.log 2>&1
+
+# Backup quotidien avec notification par email en cas d'erreur
+# 0 3 * * * /chemin/vers/apps/backend/scripts/backup-db.sh -d secondlife -r 30 || echo "Backup failed!" | mail -s "Backup Failed" admin@example.com
+
+# ============================================================================
+# BACKUP HEBDOMADAIRE + TEST DE RESTAURATION
+# ============================================================================
+
+# Backup quotidien à 3h00
+0 3 * * * /chemin/vers/apps/backend/scripts/backup-db.sh -d secondlife -r 30 >> /var/log/secondlife-backup-cron.log 2>&1
+
+# Test de restauration tous les dimanches à 4h00 (sur base de test)
+# 0 4 * * 0 /chemin/vers/apps/backend/scripts/restore-db.sh -d secondlife_restore_test --drop-if-exists --yes /var/backups/secondlife/$(ls -t /var/backups/secondlife/*.backup.gz | head -1 | xargs basename) >> /var/log/secondlife-restore-test.log 2>&1
+
+# ============================================================================
+# MULTIPLE BACKUPS (QUOTIDIEN + HEBDOMADAIRE)
+# ============================================================================
+
+# Backup quotidien (rétention 7 jours) dans /var/backups/secondlife/daily
+# 0 3 * * * /chemin/vers/apps/backend/scripts/backup-db.sh -d secondlife -r 7 -b /var/backups/secondlife/daily >> /var/log/secondlife-backup-daily.log 2>&1
+
+# Backup hebdomadaire le dimanche (rétention 30 jours) dans /var/backups/secondlife/weekly
+# 0 4 * * 0 /chemin/vers/apps/backend/scripts/backup-db.sh -d secondlife -r 30 -b /var/backups/secondlife/weekly >> /var/log/secondlife-backup-weekly.log 2>&1
+
+# ============================================================================
+# BACKUP MULTIPLE BASES DE DONNÉES
+# ============================================================================
+
+# Backup de plusieurs bases à différents moments
+# 0 3 * * * /chemin/vers/apps/backend/scripts/backup-db.sh -d secondlife_prod -r 30 >> /var/log/secondlife-prod-backup.log 2>&1
+# 0 4 * * * /chemin/vers/apps/backend/scripts/backup-db.sh -d secondlife_staging -r 14 >> /var/log/secondlife-staging-backup.log 2>&1
+
+# ============================================================================
+# BACKUP PLUS FRÉQUENT (TOUTES LES 6 HEURES)
+# ============================================================================
+
+# Backup toutes les 6 heures (rétention 7 jours pour backups fréquents)
+# 0 */6 * * * /chemin/vers/apps/backend/scripts/backup-db.sh -d secondlife -r 7 >> /var/log/secondlife-backup-frequent.log 2>&1
+
+# ============================================================================
+# VÉRIFICATION DES BACKUPS
+# ============================================================================
+
+# Vérifier quotidiennement que le dernier backup est récent (plus de 1 jour = alerte)
+# 0 9 * * * test $(find /var/backups/secondlife -name "*.backup.gz" -mtime -1 | wc -l) -gt 0 || echo "Aucun backup récent!" | mail -s "Backup Alert" admin@example.com
+
+# ============================================================================
+# NETTOYAGE MANUEL (OPTIONNEL)
+# ============================================================================
+
+# Nettoyage manuel des backups très anciens (plus de 60 jours) - à exécuter manuellement si besoin
+# 0 5 1 * * find /var/backups/secondlife -name "*.backup.gz" -mtime +60 -delete
+
+# ============================================================================
+# NOTES IMPORTANTES
+# ============================================================================
+#
+# 1. REMPLACER LES CHEMINS:
+#    - /chemin/vers/apps/backend/scripts/backup-db.sh
+#    - /var/backups/secondlife
+#    - /var/log/secondlife-backup.log
+#
+# 2. CONFIGURER .pgpass:
+#    - Créer ~/.pgpass avec permissions 600
+#    - Format: hostname:port:database:username:password
+#    - Voir docs/BACKUP_RESTORE.md pour plus de détails
+#
+# 3. VÉRIFIER LES PERMISSIONS:
+#    - Les scripts doivent être exécutables (chmod +x)
+#    - Les dossiers de backup et logs doivent être accessibles en écriture
+#
+# 4. TESTER D'ABORD:
+#    - Exécuter manuellement les scripts avant de les ajouter au cron
+#    - Vérifier les logs après la première exécution automatique
+#
+# 5. MONITORING:
+#    - Consulter régulièrement les logs
+#    - Configurer des alertes par email pour les échecs
+#    - Tester la restauration régulièrement
+#
+# ============================================================================

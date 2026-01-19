@@ -91,7 +91,7 @@ export class AuthAdminController {
     // Extraire l'IP et le userAgent pour le système anti-bruteforce
     const ip = req.ip || req.socket.remoteAddress || 'unknown';
     const userAgent = req.get('user-agent') || undefined;
-    
+
     try {
       return await this.authAdminService.login(loginDto, res, ip, userAgent, req);
     } catch (error: any) {
@@ -231,14 +231,14 @@ export class AuthAdminController {
   @UseGuards(ThrottlerGuard)
   @Throttle({ '2fa-enable': { limit: 5, ttl: 60000 } }) // 5 tentatives par minute
   @ApiOperation({ summary: 'Activer le 2FA après vérification du code TOTP' })
-  @ApiResponse({ status: 200, description: '2FA activé avec succès' })
+  @ApiResponse({ status: 200, description: '2FA activé avec succès, backup codes retournés' })
   @ApiResponse({ status: 401, description: 'Code TOTP invalide' })
   @ApiResponse({ status: 400, description: '2FA déjà activé ou données invalides' })
   async enableTwoFactor(
     @Req() req: AuthenticatedRequest,
     @Body() body: TwoFactorEnableDto,
   ) {
-    return this.twoFactorService.enable(req.user.id, body.code, body.secret);
+    return this.twoFactorService.enable(req.user.id, body.code, body.secret, req);
   }
 
   /**
@@ -258,7 +258,7 @@ export class AuthAdminController {
   @Post('2fa/verify')
   @HttpCode(HttpStatus.OK)
   @UseGuards(ThrottlerGuard)
-  @Throttle({ '2fa-verify': { limit: 10, ttl: 60000 } }) // 10 tentatives par minute
+  @Throttle({ '2fa-verify': { limit: 5, ttl: 60000 } }) // 5 tentatives par minute (anti brute-force)
   @ApiOperation({ summary: 'Vérifier le code 2FA après login et créer la session complète' })
   @ApiResponse({ status: 200, description: 'Code valide, session créée, cookies définis' })
   @ApiResponse({ status: 401, description: 'Code TOTP invalide ou utilisateur non trouvé' })
@@ -266,6 +266,7 @@ export class AuthAdminController {
   async verifyTwoFactor(
     @Body() body: TwoFactorVerifyDto & { userId: string },
     @Res({ passthrough: true }) res: Response,
+    @Req() req: Request,
   ) {
     // Note: userId doit être fourni dans le body ou via un token temporaire
     // Pour simplifier, on le demande dans le body (sécurisé car le code 2FA est requis)
@@ -276,10 +277,17 @@ export class AuthAdminController {
       };
     }
 
+    // Extraire l'IP et le userAgent pour le système anti-bruteforce
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const userAgent = req.get('user-agent') || undefined;
+
     return this.authAdminService.verifyTwoFactorAndCreateSession(
       body.userId,
       body.code,
       res,
+      ip,
+      userAgent,
+      req,
     );
   }
 
@@ -302,5 +310,26 @@ export class AuthAdminController {
   @ApiResponse({ status: 401, description: 'Non authentifié' })
   async disableTwoFactor(@Req() req: AuthenticatedRequest) {
     return this.twoFactorService.disable(req.user.id, req);
+  }
+
+  /**
+   * Régénérer les backup codes 2FA
+   *
+   * Endpoint protégé par JWT. Génère de nouveaux backup codes et invalide les anciens.
+   *
+   * @param req - Request avec user injecté par AdminJwtGuard
+   * @returns Nouveaux backup codes en clair
+   */
+  @Post('2fa/regenerate-backup-codes')
+  @UseGuards(AdminJwtGuard)
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ '2fa-regenerate': { limit: 3, ttl: 60000 } }) // 3 tentatives par minute (limité)
+  @ApiOperation({ summary: 'Régénérer les backup codes 2FA' })
+  @ApiResponse({ status: 200, description: 'Backup codes régénérés avec succès' })
+  @ApiResponse({ status: 400, description: '2FA non activé' })
+  @ApiResponse({ status: 401, description: 'Non authentifié' })
+  async regenerateBackupCodes(@Req() req: AuthenticatedRequest) {
+    return this.twoFactorService.regenerateBackupCodes(req.user.id, req);
   }
 }

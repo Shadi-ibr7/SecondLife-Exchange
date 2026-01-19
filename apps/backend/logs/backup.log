@@ -1,0 +1,18 @@
+[2026-01-19 17:54:27] [INFO] === Début du script de backup ===
+[2026-01-19 17:54:27] [INFO] Base de données: secondlife
+[2026-01-19 17:54:27] [INFO] Dossier de backup: ../backups
+[2026-01-19 17:54:27] [INFO] Rétention: 30 jours
+[2026-01-19 17:54:27] [INFO] [DRY-RUN] Création du dossier: ../backups
+[2026-01-19 17:54:27] [INFO] Début du backup de la base de données: secondlife
+[2026-01-19 17:54:27] [INFO] Hôte: localhost:5432, Utilisateur: postgres
+[2026-01-19 17:54:27] [INFO] Fichier de backup: ../backups/secondlife_20260119_1754.backup
+[2026-01-19 17:54:27] [INFO] [DRY-RUN] Commande: pg_dump -h localhost -p 5432 -U postgres -d secondlife -Fc -f ../backups/secondlife_20260119_1754.backup
+[2026-01-19 17:54:27] [INFO] [DRY-RUN] Compression: true
+[2026-01-19 17:54:27] [INFO] Purge des backups plus anciens que 30 jours...
+[2026-01-19 17:54:28] [INFO] [DRY-RUN] Aucun ancien backup à supprimer
+[2026-01-19 17:54:28] [INFO] === Fin du script de backup ===
+[2026-01-19 17:54:28] [INFO] Fichier de backup créé: [2026-01-19 17:54:27] [INFO] Début du backup de la base de données: secondlife
+[2026-01-19 17:54:27] [INFO] Hôte: localhost:5432, Utilisateur: postgres
+[2026-01-19 17:54:27] [INFO] Fichier de backup: ../backups/secondlife_20260119_1754.backup
+[2026-01-19 17:54:27] [INFO] [DRY-RUN] Commande: pg_dump -h localhost -p 5432 -U postgres -d secondlife -Fc -f ../backups/secondlife_20260119_1754.backup
+[2026-01-19 17:54:27] [INFO] [DRY-RUN] Compression: true

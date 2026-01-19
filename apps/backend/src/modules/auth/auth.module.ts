@@ -33,6 +33,7 @@ import { AuthAdminService } from './auth-admin.service';
 import { AdminJwtStrategy } from './strategies/admin-jwt.strategy';
 import { LoginAttemptService } from './services/login-attempt.service';
 import { TwoFactorService } from './services/two-factor.service';
+import { TwoFactorAttemptService } from './services/two-factor-attempt.service';
 
 // Import des modules nécessaires
 import { RedisModule } from '../../common/redis/redis.module';
@@ -94,6 +95,7 @@ import { AdminModule } from '../admin/admin.module';
     AdminJwtStrategy, // Stratégie JWT pour les admins
     LoginAttemptService, // Service pour gérer les tentatives de login et blocages
     TwoFactorService, // Service pour gérer l'authentification à deux facteurs (2FA) TOTP
+    TwoFactorAttemptService, // Service pour tracker les tentatives 2FA et lockout
   ],
 
   // ============================================

@@ -228,7 +228,7 @@ export class AuthAdminService {
     if (user.twoFactorEnabled) {
       // Ne pas enregistrer comme succès (on attend la vérification 2FA)
       // Mais ne pas non plus enregistrer comme échec (mot de passe valide)
-      
+
       // Réponse indiquant que le 2FA est requis
       const response: AdminLoginResponse = {
         user: {
@@ -519,12 +519,18 @@ export class AuthAdminService {
    * @param userId - ID de l'utilisateur (doit avoir passé email+password)
    * @param code - Code TOTP à 6 chiffres
    * @param res - Objet Response Express (optionnel, pour set cookies)
+   * @param ip - Adresse IP de la requête (pour lockout)
+   * @param userAgent - User-Agent de la requête (optionnel, pour audit)
+   * @param req - Requête HTTP optionnelle (pour audit)
    * @returns Informations utilisateur et tokens (dans cookies si res fourni)
    */
   async verifyTwoFactorAndCreateSession(
     userId: string,
     code: string,
     res?: Response,
+    ip?: string,
+    userAgent?: string,
+    req?: Request,
   ): Promise<AdminLoginResponse> {
     // Vérifier que l'utilisateur existe et est admin/moderator
     const user = await this.prisma.user.findUnique({
@@ -555,8 +561,8 @@ export class AuthAdminService {
       );
     }
 
-    // Vérifier le code TOTP
-    await this.twoFactorService.verify(userId, code);
+    // Vérifier le code TOTP (avec tracking des échecs et lockout)
+    await this.twoFactorService.verify(userId, code, ip, userAgent, req);
 
     // ============================================
     // GÉNÉRATION DES TOKENS (code 2FA valide)
@@ -585,6 +591,20 @@ export class AuthAdminService {
     if (res) {
       setAuthCookies(res, accessToken, refreshToken);
     }
+
+    // ============================================
+    // ENREGISTREMENT DU SUCCÈS (2FA vérifié)
+    // ============================================
+    // Logger ADMIN_LOGIN_SUCCESS après vérification 2FA réussie
+    await this.auditService.log({
+      actionType: AdminActionType.ADMIN_LOGIN_SUCCESS,
+      actorId: user.id,
+      targetType: 'Auth',
+      metadata: { email: user.email, twoFactorEnabled: true, twoFactorVerified: true },
+      request: req,
+    }).catch(() => {
+      // Ignorer les erreurs d'audit (non-bloquant)
+    });
 
     // Réponse avec infos utilisateur
     const response: AdminLoginResponse = {

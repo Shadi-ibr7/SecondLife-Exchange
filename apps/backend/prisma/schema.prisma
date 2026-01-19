@@ -19,6 +19,7 @@ model User {
   twoFactorEnabled   Boolean             @default(false)
   twoFactorSecret    String? // Secret chiffré avec APP_ENCRYPTION_KEY
   twoFactorVerifiedAt DateTime? // Date de vérification du setup 2FA
+  twoFactorBackupCodes String[] // Backup codes hashés (bcrypt) pour récupération
   exchangesRequested Exchange[]          @relation("ExchangeRequester")
   exchangesResponded Exchange[]          @relation("ExchangeResponder")
   items              Item[]

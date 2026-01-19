@@ -55,15 +55,18 @@ import {
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-  
+
   // 2FA state
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [twoFactorLoading, setTwoFactorLoading] = useState(false);
   const [setupModalOpen, setSetupModalOpen] = useState(false);
+  const [backupCodesModalOpen, setBackupCodesModalOpen] = useState(false);
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [setupSecret, setSetupSecret] = useState<string | null>(null);
   const [verificationCode, setVerificationCode] = useState('');
   const [verifying, setVerifying] = useState(false);
+  const [regeneratingBackupCodes, setRegeneratingBackupCodes] = useState(false);
 
   // Settings state
   const [platformSettings, setPlatformSettings] = useState({
@@ -142,17 +145,43 @@ export default function AdminSettingsPage() {
 
     setVerifying(true);
     try {
-      await adminApi.enableTwoFactor(verificationCode, setupSecret);
+      const { data } = await adminApi.enableTwoFactor(verificationCode, setupSecret);
       setTwoFactorEnabled(true);
       setSetupModalOpen(false);
       setQrCode(null);
       setSetupSecret(null);
       setVerificationCode('');
+
+      // Afficher les backup codes dans un modal
+      if (data.backupCodes && data.backupCodes.length > 0) {
+        setBackupCodes(data.backupCodes);
+        setBackupCodesModalOpen(true);
+      }
+
       toast.success('2FA activé avec succès');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Code invalide. Vérifiez votre authenticator.');
     } finally {
       setVerifying(false);
+    }
+  };
+
+  // Régénérer les backup codes
+  const handleRegenerateBackupCodes = async () => {
+    if (!confirm('Voulez-vous vraiment régénérer les backup codes ? Les anciens codes seront immédiatement invalidés.')) {
+      return;
+    }
+
+    setRegeneratingBackupCodes(true);
+    try {
+      const { data } = await adminApi.regenerateBackupCodes();
+      setBackupCodes(data.backupCodes);
+      setBackupCodesModalOpen(true);
+      toast.success('Backup codes régénérés avec succès');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Erreur lors de la régénération des backup codes');
+    } finally {
+      setRegeneratingBackupCodes(false);
     }
   };
 
@@ -502,11 +531,41 @@ export default function AdminSettingsPage() {
               />
             </div>
             {twoFactorEnabled && (
-              <div className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">
-                <p>
-                  ✅ Le 2FA est actif. Vous devrez entrer un code depuis votre authenticator à chaque connexion.
-                </p>
-              </div>
+              <>
+                <div className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">
+                  <p>
+                    ✅ Le 2FA est actif. Vous devrez entrer un code depuis votre authenticator à chaque connexion.
+                  </p>
+                </div>
+                <div className="flex items-center justify-between pt-2">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium text-foreground">
+                      Backup codes
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Codes de récupération en cas de perte de votre authenticator
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRegenerateBackupCodes}
+                    disabled={regeneratingBackupCodes}
+                  >
+                    {regeneratingBackupCodes ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Régénération...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Régénérer
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </>
             )}
             <Separator className="bg-border" />
             <div className="space-y-2">
@@ -750,7 +809,7 @@ export default function AdminSettingsPage() {
               Scannez ce QR code avec votre application d'authentification (Google Authenticator, Authy, etc.)
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-6">
             {/* QR Code */}
             {qrCode && (
@@ -831,6 +890,85 @@ export default function AdminSettingsPage() {
                 ) : (
                   'Activer 2FA'
                 )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Backup Codes */}
+      <Dialog open={backupCodesModalOpen} onOpenChange={setBackupCodesModalOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5" />
+              Backup Codes - Sauvegardez-les maintenant !
+            </DialogTitle>
+            <DialogDescription>
+              Ces codes vous permettront de vous connecter si vous perdez l'accès à votre authenticator.
+              <strong className="block mt-2 text-destructive">
+                ⚠️ Ces codes ne seront affichés qu'une seule fois. Sauvegardez-les immédiatement dans un endroit sûr !
+              </strong>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Backup Codes Grid */}
+            <div className="grid grid-cols-2 gap-3 p-4 bg-muted rounded-lg">
+              {backupCodes.map((code, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 bg-background rounded-md border border-border"
+                >
+                  <code className="text-sm font-mono font-semibold">{code}</code>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={() => {
+                      navigator.clipboard.writeText(code);
+                      toast.success(`Code ${code} copié`);
+                    }}
+                  >
+                    <span className="text-xs">Copier</span>
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            {/* Instructions */}
+            <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-4 space-y-2">
+              <p className="text-sm font-medium text-yellow-600 dark:text-yellow-400">
+                📝 Instructions importantes :
+              </p>
+              <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                <li>Chaque code ne peut être utilisé qu'une seule fois</li>
+                <li>Sauvegardez ces codes dans un gestionnaire de mots de passe ou un coffre-fort</li>
+                <li>Ne partagez jamais ces codes avec qui que ce soit</li>
+                <li>Si vous perdez ces codes, vous pouvez en régénérer de nouveaux</li>
+              </ul>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 justify-end pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  // Copier tous les codes
+                  const allCodes = backupCodes.join('\n');
+                  navigator.clipboard.writeText(allCodes);
+                  toast.success('Tous les codes copiés');
+                }}
+              >
+                Copier tous les codes
+              </Button>
+              <Button
+                onClick={() => {
+                  setBackupCodesModalOpen(false);
+                  setBackupCodes([]);
+                }}
+              >
+                J'ai sauvegardé les codes
               </Button>
             </div>
           </div>
