@@ -40,6 +40,13 @@ export class CsrfGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
+    const requestId = (request as any).requestId || 'unknown';
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    // LOG TEMPORAIRE pour diagnostiquer les décisions CSRF
+    if (isProduction && request.path?.includes('/auth/admin/me')) {
+      console.log(`[CSRF Guard] method: ${request.method}, path: ${request.path}, requestId: ${requestId}`);
+    }
 
     // Vérifier si la route est exclue de la vérification CSRF
     const skipCsrf = this.reflector.getAllAndOverride<boolean>(SKIP_CSRF, [
@@ -48,15 +55,21 @@ export class CsrfGuard implements CanActivate {
     ]);
 
     if (skipCsrf) {
+      if (isProduction && request.path?.includes('/auth/admin/me')) {
+        console.log(`[CSRF Guard] SKIP (explicit SkipCsrf decorator)`);
+      }
       return true;
     }
 
     // Méthodes HTTP à protéger (mutantes)
     const protectedMethods = ['POST', 'PATCH', 'DELETE', 'PUT'];
 
-    // Ignorer les méthodes GET (lecture seule) - GET /auth/admin/me est donc exempté automatiquement
+    // IMPORTANT: Ignorer les méthodes GET (lecture seule) - GET /auth/admin/me est donc exempté automatiquement
     // Pas besoin de vérifier CSRF sur les requêtes GET car elles sont idempotentes et non-mutantes
     if (!protectedMethods.includes(request.method)) {
+      if (isProduction && request.path?.includes('/auth/admin/me')) {
+        console.log(`[CSRF Guard] SKIP (GET method - safe)`);
+      }
       return true;
     }
 

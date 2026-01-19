@@ -32,11 +32,11 @@ const extractJwtFromCookieOrHeader = (req: Request): string | null => {
   const hasCookies = !!req.cookies && Object.keys(req.cookies).length > 0;
   const hasAccessToken = req.cookies?.[AUTH_COOKIES.ACCESS_TOKEN];
   const authHeader = req.headers.authorization;
-  
+
   console.log(`[DIAG extractJwtFromCookieOrHeader] cookies présents: ${hasCookies}`);
   console.log(`[DIAG extractJwtFromCookieOrHeader] ${AUTH_COOKIES.ACCESS_TOKEN} présent: ${!!hasAccessToken}`);
   console.log(`[DIAG extractJwtFromCookieOrHeader] Authorization header: ${authHeader ? 'PRÉSENT' : 'ABSENT'}`);
-  
+
   // 1. Essayer d'extraire depuis le cookie httpOnly
   if (req.cookies && req.cookies[AUTH_COOKIES.ACCESS_TOKEN]) {
     console.log(`[DIAG extractJwtFromCookieOrHeader] Token extrait depuis cookie`);

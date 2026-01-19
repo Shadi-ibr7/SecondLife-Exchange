@@ -182,7 +182,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     // LOG DE DIAGNOSTIC TEMPORAIRE pour /auth/admin/me
     // Note: on ne peut pas accéder à request ici, donc on log dans catch() plus haut
-    
+
     // Détecter le code d'erreur à partir du message ou du status
     let code: ErrorCode = HTTP_STATUS_TO_ERROR_CODE[statusCode] || 'INTERNAL_SERVER_ERROR';
     let message: string;
@@ -258,7 +258,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (lowerMessage.includes('token expired') || lowerMessage.includes('token expiré')) {
       return 'AUTH_TOKEN_EXPIRED';
     }
-    if (lowerMessage.includes('invalid token') || lowerMessage.includes('token invalide')) {
+    if (lowerMessage.includes('invalid token') || lowerMessage.includes('token invalide') ||
+        lowerMessage.includes('token admin invalide') || lowerMessage.includes('token admin manquant') ||
+        lowerMessage.includes('token admin expiré')) {
       return 'AUTH_TOKEN_INVALID';
     }
     if (lowerMessage.includes('2fa') || lowerMessage.includes('two factor')) {
@@ -269,7 +271,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
         return 'AUTH_2FA_INVALID';
       }
     }
-    if (lowerMessage.includes('validation') || lowerMessage.includes('invalide')) {
+    // IMPORTANT: Ne pas détecter "token invalide" comme validation_error
+    // Vérifier d'abord les erreurs d'auth avant les erreurs de validation
+    if ((lowerMessage.includes('validation') || lowerMessage.includes('invalide')) &&
+        !lowerMessage.includes('token') && !lowerMessage.includes('auth') && !lowerMessage.includes('admin')) {
       return 'VALIDATION_ERROR';
     }
     if (lowerMessage.includes('not found') || lowerMessage.includes('introuvable')) {

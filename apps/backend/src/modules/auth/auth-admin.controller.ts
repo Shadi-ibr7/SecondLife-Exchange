@@ -191,34 +191,44 @@ export class AuthAdminController {
   async getMe(@Req() req: AuthenticatedRequest) {
     // LOGS DE DIAGNOSTIC TEMPORAIRES
     const requestId = (req as any).requestId || 'unknown';
+    const method = req.method || 'UNKNOWN';
     const hasCookies = !!req.cookies && Object.keys(req.cookies).length > 0;
     const cookieNames = req.cookies ? Object.keys(req.cookies) : [];
     const hasAccessTokenCookie = req.cookies?.['sl_access_token'] ? true : false;
     const hasRefreshTokenCookie = req.cookies?.['sl_refresh_token'] ? true : false;
     const hasCsrfHeader = !!req.headers['x-csrf-token'] || !!req.headers['X-CSRF-Token'];
     const hasCsrfCookie = req.cookies?.['XSRF-TOKEN'] ? true : false;
+    const authHeader = req.headers.authorization;
 
     // LOG TEMPORAIRE: tracer la présence du cookie access token
     const isProduction = process.env.NODE_ENV === 'production';
     if (isProduction) {
-      console.log(`[ADMIN /me → access cookie present: ${hasAccessTokenCookie ? 'YES' : 'NO'}] requestId: ${requestId}`);
+      console.log(`[ADMIN /me → method: ${method}, access cookie present: ${hasAccessTokenCookie ? 'YES' : 'NO'}] requestId: ${requestId}`);
       console.log(`[ADMIN /me → refresh cookie present: ${hasRefreshTokenCookie ? 'YES' : 'NO'}]`);
+      console.log(`[ADMIN /me → CSRF cookie present: ${hasCsrfCookie ? 'YES' : 'NO'}]`);
+      console.log(`[ADMIN /me → Authorization header: ${authHeader ? 'PRESENT' : 'ABSENT'}]`);
     }
 
-    console.log(`[DIAG /auth/admin/me] requestId: ${requestId}`);
+    console.log(`[DIAG /auth/admin/me] method: ${method}, requestId: ${requestId}`);
     console.log(`[DIAG /auth/admin/me] cookies présents: ${hasCookies}, noms: ${cookieNames.join(', ')}`);
     console.log(`[DIAG /auth/admin/me] sl_access_token présent: ${hasAccessTokenCookie}`);
     console.log(`[DIAG /auth/admin/me] sl_refresh_token présent: ${hasRefreshTokenCookie}`);
     console.log(`[DIAG /auth/admin/me] CSRF header présent: ${hasCsrfHeader}`);
     console.log(`[DIAG /auth/admin/me] CSRF cookie (XSRF-TOKEN) présent: ${hasCsrfCookie}`);
+    console.log(`[DIAG /auth/admin/me] Authorization header: ${authHeader ? 'PRÉSENT' : 'ABSENT'}`);
     console.log(`[DIAG /auth/admin/me] user injecté par guard: ${req.user ? 'OUI (id: ' + req.user.id + ')' : 'NON'}`);
 
-    // Si user n'est pas injecté par le guard, cela signifie que le token est absent/invalide
+    // IMPORTANT: Si user n'est pas injecté par le guard, cela signifie que le token est absent/invalide
     // Le guard devrait déjà avoir lancé une UnauthorizedException (401)
+    // Cette vérification supplémentaire garantit qu'on retourne toujours 401 (pas 422)
     if (!req.user) {
       // Ce code ne devrait jamais être atteint car le guard devrait lancer une exception
-      // Mais on le laisse comme sécurité supplémentaire
-      throw new UnauthorizedException('Token admin manquant ou invalide');
+      // Mais on le laisse comme sécurité supplémentaire pour garantir un 401
+      const errorMessage = 'Token admin manquant ou invalide';
+      if (isProduction) {
+        console.log(`[ADMIN /me → user absent, lancer 401: ${errorMessage}]`);
+      }
+      throw new UnauthorizedException(errorMessage);
     }
 
     return this.authAdminService.getMe(req.user.id);

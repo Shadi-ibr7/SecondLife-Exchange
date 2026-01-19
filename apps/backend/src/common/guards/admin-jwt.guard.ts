@@ -35,6 +35,16 @@ export class AdminJwtGuard extends AuthGuard('admin-jwt') {
     // LOGS DE DIAGNOSTIC TEMPORAIRES
     const request = context.switchToHttp().getRequest<Request>();
     const requestId = (request as any).requestId || 'unknown';
+    const isProduction = process.env.NODE_ENV === 'production';
+    const path = request.path || 'unknown';
+
+    // LOG TEMPORAIRE pour /auth/admin/me en production
+    if (isProduction && path?.includes('/auth/admin/me')) {
+      console.log(`[ADMIN JWT Guard] method: ${request.method}, user present: ${!!user}, error: ${!!err}`);
+      if (info) {
+        console.log(`[ADMIN JWT Guard] info:`, typeof info === 'object' ? JSON.stringify(info) : info);
+      }
+    }
 
     console.log(`[DIAG AdminJwtGuard.handleRequest] requestId: ${requestId}`);
     console.log(`[DIAG AdminJwtGuard.handleRequest] err:`, err ? err.message || err : 'null');
@@ -46,13 +56,20 @@ export class AdminJwtGuard extends AuthGuard('admin-jwt') {
     if (err || !user) {
       // Si info indique un token manquant ou invalide, message clair
       let errorMessage = 'Token admin manquant ou invalide';
+      let reason = 'unknown';
       if (info && typeof info === 'object') {
         if (info.message === 'No auth token' || info.message?.includes('No token')) {
           errorMessage = 'Token admin manquant';
+          reason = 'token_missing';
         } else if (info.message === 'jwt expired' || info.message?.includes('expired')) {
           errorMessage = 'Token admin expiré';
+          reason = 'token_expired';
         } else if (info.message === 'jwt malformed' || info.message?.includes('malformed')) {
           errorMessage = 'Token admin invalide';
+          reason = 'token_malformed';
+        } else if (info.message === 'invalid signature' || info.message?.includes('signature')) {
+          errorMessage = 'Token admin invalide';
+          reason = 'token_invalid_signature';
         }
       }
 
@@ -60,10 +77,16 @@ export class AdminJwtGuard extends AuthGuard('admin-jwt') {
         ? err
         : new UnauthorizedException(errorMessage);
 
+      // LOG TEMPORAIRE pour tracer les erreurs d'auth
+      if (isProduction && path?.includes('/auth/admin/me')) {
+        console.log(`[ADMIN JWT Guard] REJECT → 401: ${errorMessage}, reason: ${reason}`);
+      }
+
       console.log(`[DIAG AdminJwtGuard.handleRequest] LANCEMENT EXCEPTION 401:`, {
         isError: !!err,
         errorType: 'UnauthorizedException',
         errorMessage: errorToThrow.message,
+        reason,
         userPresent: !!user,
         statusCode: 401
       });
