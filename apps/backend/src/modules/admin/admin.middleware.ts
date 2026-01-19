@@ -3,12 +3,12 @@
  *
  * DESCRIPTION:
  * Middleware pour masquer les routes admin non authentifiées (retourne 404).
- * 
+ *
  * IMPORTANT: Ce middleware est OBSOLÈTE car:
  * - Les tokens admin sont maintenant dans les cookies httpOnly (pas dans Authorization header)
  * - Les guards AdminJwtGuard et AdminRoleGuard gèrent déjà l'authentification
  * - Ce middleware ne vérifie que le header Authorization, ce qui bloque les requêtes avec cookies
- * 
+ *
  * SOLUTION: Désactiver ce middleware ou le supprimer complètement.
  * L'authentification est gérée par les guards sur chaque route.
  */
@@ -27,7 +27,7 @@ export class AdminMiddleware implements NestMiddleware {
     // 1. Les tokens admin sont dans les cookies (sl_access_token), pas dans Authorization header
     // 2. Les guards (AdminJwtGuard, AdminRoleGuard) gèrent déjà l'authentification
     // 3. Vérifier uniquement le header Authorization bloque les requêtes avec cookies
-    
+
     // Ancien code (OBSOLÈTE - ne pas utiliser):
     // const authHeader = req.headers.authorization;
     // if (!authHeader || !authHeader.startsWith('Bearer ')) {
