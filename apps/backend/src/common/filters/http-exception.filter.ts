@@ -82,6 +82,21 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const isProduction =
       this.configService.get<string>('app.nodeEnv') === 'production';
 
+    // LOG DE DIAGNOSTIC TEMPORAIRE pour /auth/admin/me
+    if (path?.includes('/auth/admin/me')) {
+      console.log(`[DIAG HttpExceptionFilter.catch] URL: ${path}`);
+      console.log(`[DIAG HttpExceptionFilter.catch] requestId: ${requestId}`);
+      if (exception instanceof HttpException) {
+        const statusCode = exception.getStatus();
+        const exceptionResponse = exception.getResponse();
+        console.log(`[DIAG HttpExceptionFilter.catch] StatusCode: ${statusCode}`);
+        console.log(`[DIAG HttpExceptionFilter.catch] Exception type: ${exception.constructor.name}`);
+        console.log(`[DIAG HttpExceptionFilter.catch] Exception response:`, typeof exceptionResponse === 'object' ? JSON.stringify(exceptionResponse) : exceptionResponse);
+      } else {
+        console.log(`[DIAG HttpExceptionFilter.catch] Exception type: ${exception?.constructor?.name || 'unknown'}`);
+      }
+    }
+
     // Formater l'erreur selon son type
     const errorResponse = this.formatError(exception, path, requestId, isProduction);
 
@@ -90,6 +105,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     // Déterminer le status HTTP à partir du code d'erreur
     const httpStatus = this.getHttpStatusFromErrorCode(errorResponse.code);
+
+    // LOG DE DIAGNOSTIC TEMPORAIRE pour /auth/admin/me
+    if (path?.includes('/auth/admin/me')) {
+      console.log(`[DIAG HttpExceptionFilter.catch] Final HTTP status: ${httpStatus}`);
+      console.log(`[DIAG HttpExceptionFilter.catch] Error response code: ${errorResponse.code}`);
+      console.log(`[DIAG HttpExceptionFilter.catch] Error response message: ${errorResponse.message}`);
+    }
 
     // Envoyer la réponse formatée au client (sans statusCode dans le body)
     response.status(httpStatus).json(errorResponse);
@@ -158,6 +180,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const statusCode = exception.getStatus();
     const exceptionResponse = exception.getResponse();
 
+    // LOG DE DIAGNOSTIC TEMPORAIRE pour /auth/admin/me
+    // Note: on ne peut pas accéder à request ici, donc on log dans catch() plus haut
+    
     // Détecter le code d'erreur à partir du message ou du status
     let code: ErrorCode = HTTP_STATUS_TO_ERROR_CODE[statusCode] || 'INTERNAL_SERVER_ERROR';
     let message: string;

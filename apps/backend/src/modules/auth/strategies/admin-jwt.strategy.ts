@@ -28,17 +28,28 @@ import { AUTH_COOKIES } from '../../../common/utils/cookie.utils';
  * Priorité: cookie > header (cookie plus sécurisé)
  */
 const extractJwtFromCookieOrHeader = (req: Request): string | null => {
+  // LOG DE DIAGNOSTIC TEMPORAIRE
+  const hasCookies = !!req.cookies && Object.keys(req.cookies).length > 0;
+  const hasAccessToken = req.cookies?.[AUTH_COOKIES.ACCESS_TOKEN];
+  const authHeader = req.headers.authorization;
+  
+  console.log(`[DIAG extractJwtFromCookieOrHeader] cookies présents: ${hasCookies}`);
+  console.log(`[DIAG extractJwtFromCookieOrHeader] ${AUTH_COOKIES.ACCESS_TOKEN} présent: ${!!hasAccessToken}`);
+  console.log(`[DIAG extractJwtFromCookieOrHeader] Authorization header: ${authHeader ? 'PRÉSENT' : 'ABSENT'}`);
+  
   // 1. Essayer d'extraire depuis le cookie httpOnly
   if (req.cookies && req.cookies[AUTH_COOKIES.ACCESS_TOKEN]) {
+    console.log(`[DIAG extractJwtFromCookieOrHeader] Token extrait depuis cookie`);
     return req.cookies[AUTH_COOKIES.ACCESS_TOKEN];
   }
 
   // 2. Fallback: extraire depuis le header Authorization
-  const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
+    console.log(`[DIAG extractJwtFromCookieOrHeader] Token extrait depuis header`);
     return authHeader.substring(7);
   }
 
+  console.log(`[DIAG extractJwtFromCookieOrHeader] AUCUN TOKEN TROUVÉ - retourne null`);
   return null;
 };
 

@@ -134,11 +134,11 @@ export class ValidationPipe extends NestValidationPipe {
     // Si c'est un body vide/undefined, ne pas valider (évite 422 sur GET sans body)
     if (metadata.type === 'body') {
       // Vérifier si le body est vide/undefined/null
-      const isEmptyBody = 
-        value === undefined || 
-        value === null || 
+      const isEmptyBody =
+        value === undefined ||
+        value === null ||
         (typeof value === 'object' && value !== null && Object.keys(value).length === 0);
-      
+
       if (isEmptyBody) {
         // LOG DE DIAGNOSTIC TEMPORAIRE
         console.log(`[DIAG ValidationPipe] Body vide détecté, ignoré - metadata:`, {
@@ -146,7 +146,7 @@ export class ValidationPipe extends NestValidationPipe {
           metatype: metadata.metatype?.name,
           data: metadata.data
         });
-        
+
         // Retourner undefined directement sans validation
         // Cela évite les erreurs 422 causées par forbidNonWhitelisted sur body vide
         return value;
@@ -160,18 +160,18 @@ export class ValidationPipe extends NestValidationPipe {
       // Si erreur de validation sur un body vide, retourner undefined au lieu de throw
       // Cela évite les 422 sur les GET sans body
       if (metadata.type === 'body') {
-        const isEmptyBody = 
-          value === undefined || 
-          value === null || 
+        const isEmptyBody =
+          value === undefined ||
+          value === null ||
           (typeof value === 'object' && value !== null && Object.keys(value).length === 0);
-        
+
         if (isEmptyBody) {
           // LOG DE DIAGNOSTIC TEMPORAIRE
           console.log(`[DIAG ValidationPipe] Erreur de validation sur body vide ignorée:`, error.message);
           return value;
         }
       }
-      
+
       // LOG DE DIAGNOSTIC TEMPORAIRE pour voir les autres erreurs de validation
       if (metadata.type === 'body') {
         console.log(`[DIAG ValidationPipe] Erreur de validation sur body:`, {
@@ -184,7 +184,7 @@ export class ValidationPipe extends NestValidationPipe {
           }
         });
       }
-      
+
       throw error;
     }
   }

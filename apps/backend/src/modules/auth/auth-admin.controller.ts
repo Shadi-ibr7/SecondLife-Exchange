@@ -194,7 +194,7 @@ export class AuthAdminController {
     const hasRefreshTokenCookie = req.cookies?.['sl_refresh_token'] ? true : false;
     const hasCsrfHeader = !!req.headers['x-csrf-token'] || !!req.headers['X-CSRF-Token'];
     const hasCsrfCookie = req.cookies?.['XSRF-TOKEN'] ? true : false;
-    
+
     console.log(`[DIAG /auth/admin/me] requestId: ${requestId}`);
     console.log(`[DIAG /auth/admin/me] cookies présents: ${hasCookies}, noms: ${cookieNames.join(', ')}`);
     console.log(`[DIAG /auth/admin/me] sl_access_token présent: ${hasAccessTokenCookie}`);
@@ -202,7 +202,7 @@ export class AuthAdminController {
     console.log(`[DIAG /auth/admin/me] CSRF header présent: ${hasCsrfHeader}`);
     console.log(`[DIAG /auth/admin/me] CSRF cookie (XSRF-TOKEN) présent: ${hasCsrfCookie}`);
     console.log(`[DIAG /auth/admin/me] user injecté par guard: ${req.user ? 'OUI (id: ' + req.user.id + ')' : 'NON'}`);
-    
+
     return this.authAdminService.getMe(req.user.id);
   }
 
