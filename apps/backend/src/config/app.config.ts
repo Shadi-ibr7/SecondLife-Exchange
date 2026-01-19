@@ -41,7 +41,9 @@ export default registerAs('app', () => ({
   // Origines frontend autorisées (séparées par des virgules)
   // Ex: FRONTEND_ORIGINS=https://second-life-exchange.vercel.app,https://secondelife-exchange.fr
   frontendOrigins: process.env.FRONTEND_ORIGINS
-    ? process.env.FRONTEND_ORIGINS.split(',').map((origin) => origin.trim())
+    ? process.env.FRONTEND_ORIGINS.split(',')
+        .map((origin) => origin.trim())
+        .filter((origin) => origin.length > 0) // Filtrer les chaînes vides
     : ['http://localhost:3000'],
 
   // Origine admin (optionnel, peut être différente du frontend)

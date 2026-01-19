@@ -315,6 +315,20 @@ async function bootstrap() {
 
   const isProduction = configService.get<string>('app.nodeEnv') === 'production';
 
+  // Log des origines autorisées au démarrage (pour déboguer CORS)
+  logger.info(
+    `🔒 CORS configuré pour ${allowedOrigins.length} origine(s): ${allowedOrigins.join(', ')}`,
+    'CORS',
+  );
+
+  // Log de la variable d'environnement brute (pour déboguer)
+  const rawFrontendOrigins = process.env.FRONTEND_ORIGINS;
+  if (rawFrontendOrigins) {
+    logger.info(`📋 FRONTEND_ORIGINS brute: ${rawFrontendOrigins}`, 'CORS');
+  } else {
+    logger.warn('⚠️ FRONTEND_ORIGINS non définie, utilisation des valeurs par défaut', 'CORS');
+  }
+
   // CORS conditionnel : appliquer seulement pour les routes qui ne sont pas /health
   app.use((req, res, next) => {
     // Skip CORS pour les routes health (elles sont accessibles publiquement)
@@ -341,16 +355,22 @@ async function bootstrap() {
           return callback(null, true);
         }
 
-        // Vérifier si l'origine est dans la whitelist
+        // Vérifier si l'origine est dans la whitelist (comparaison exacte)
         if (allowedOrigins.includes(origin)) {
           return callback(null, true);
         }
 
-        // Log de sécurité (sans données sensibles)
-        logger.warn(
-          `[CORS] Origine rejetée: ${origin.substring(0, 50)}... (whitelist: ${allowedOrigins.length} origin(s))`,
-          'CORS',
-        );
+        // Log détaillé pour déboguer CORS en production
+        if (isProduction) {
+          logger.warn(
+            `[CORS] Origine rejetée: ${origin}`,
+            'CORS',
+          );
+          logger.warn(
+            `[CORS] Origines autorisées: ${allowedOrigins.join(', ')}`,
+            'CORS',
+          );
+        }
         callback(new Error('Not allowed by CORS'));
       },
       credentials: true, // OBLIGATOIRE pour les cookies cross-origin

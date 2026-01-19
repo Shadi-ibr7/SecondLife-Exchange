@@ -171,6 +171,13 @@ class ApiClient {
       timeout: 10000, // 10 secondes
 
       /**
+       * withCredentials: true pour les requêtes cross-origin
+       * Nécessaire pour que le backend accepte les requêtes depuis Vercel
+       * et pour envoyer/recevoir les cookies si nécessaire
+       */
+      withCredentials: true,
+
+      /**
        * Headers par défaut pour toutes les requêtes
        * Content-Type: application/json indique que le corps de la requête est en JSON
        */
