@@ -289,17 +289,19 @@ function ExchangeDetailPageContent() {
     if (selectedImages.length > 0) {
       setUploadingImages(true);
       try {
-        const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-        if (!cloudName) {
-          throw new Error('Cloudinary non configuré');
-        }
-
         // Upload toutes les images
+        // NOTE: cloud_name et api_key sont fournis par la signature backend (sécurité renforcée)
         const uploadPromises = selectedImages.map(async (file) => {
           const signature = await uploadApi.getUploadSignature({
             folder: `exchanges/${exchangeId}/messages`,
           });
-          return uploadApi.uploadToCloudinary(file, signature, cloudName);
+          // Vérifier que la signature contient cloud_name et api_key
+          if (!signature.cloud_name || !signature.api_key) {
+            throw new Error(
+              'Signature incomplète: cloud_name ou api_key manquant. Vérifiez la configuration backend.'
+            );
+          }
+          return uploadApi.uploadToCloudinary(file, signature);
         });
 
         uploadedImages = await Promise.all(uploadPromises);

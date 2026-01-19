@@ -189,14 +189,22 @@ export interface ListItemsParams {
   sort?: string;
 }
 
+/**
+ * Interface pour la signature Cloudinary sécurisée générée par le backend.
+ * Toutes les valeurs publiques (api_key, cloud_name) sont incluses,
+ * mais JAMAIS le secret API qui reste côté serveur.
+ */
 export interface UploadSignature {
-  signature: string;
-  timestamp: number | string;
-  folder: string;
-  public_id?: string;
-  allowed_formats?: string[];
-  max_bytes?: number;
-  transformation?: string;
+  signature: string; // Signature HMAC SHA-1 cryptographique
+  timestamp: number | string; // Timestamp Unix (expire après 60s)
+  folder: string; // Dossier Cloudinary (ex: "items/<itemId>", "profiles/<userId>")
+  public_id?: string; // ID public Cloudinary
+  allowed_formats?: string[]; // Formats autorisés (jpg, png, webp) - validation serveur uniquement
+  max_bytes?: number; // Taille max en octets - validation serveur uniquement
+  transformation?: string; // Transformations Cloudinary autorisées
+  resource_type?: string; // Type de ressource: 'image' uniquement
+  api_key?: string; // Clé API Cloudinary (publique, pas le secret) - fournie par le backend
+  cloud_name?: string; // Nom du cloud Cloudinary (publique) - fourni par le backend
 }
 
 export interface PhotoMeta {

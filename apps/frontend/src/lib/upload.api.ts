@@ -96,7 +96,7 @@ export const uploadApi = {
    * ce qui optimise les performances et réduit la charge sur notre serveur.
    *
    * FLUX:
-   * 1. Vérifier que les paramètres requis sont configurés (cloudName, apiKey)
+   * 1. Vérifier que les paramètres requis sont présents dans la signature (cloudName, apiKey)
    * 2. Créer un FormData avec le fichier et les paramètres de signature
    * 3. Envoyer une requête POST vers l'API Cloudinary
    * 4. Vérifier la réponse et extraire les métadonnées de l'image
@@ -106,33 +106,32 @@ export const uploadApi = {
    * - La signature est incluse dans la requête pour prouver que l'upload est autorisé
    * - Seuls les paramètres signés sont envoyés à Cloudinary
    * - Validation stricte de la réponse Cloudinary
+   * - api_key et cloud_name proviennent de la signature backend (pas de NEXT_PUBLIC_)
+   * - Aucun secret API n'est exposé côté client
    *
    * @param file - Le fichier image à uploader
-   * @param signature - La signature sécurisée générée par le serveur
-   * @param cloudName - Le nom du compte Cloudinary (variable d'environnement publique)
+   * @param signature - La signature sécurisée générée par le serveur (inclut api_key et cloud_name)
    * @returns Promise qui se résout avec les métadonnées de l'image uploadée
    */
   async uploadToCloudinary(
     file: File,
-    signature: UploadSignature,
-    cloudName: string
+    signature: UploadSignature
   ): Promise<PhotoMeta> {
     /**
-     * Vérifier que le nom du compte Cloudinary est configuré
-     * Si ce n'est pas le cas, lancer une erreur explicite
+     * Vérifier que la signature contient cloud_name et api_key
+     * Ces valeurs sont fournies par le backend dans la signature pour éviter
+     * d'exposer NEXT_PUBLIC_CLOUDINARY_API_KEY côté client
      */
-    if (!cloudName) {
-      throw new Error('Cloudinary cloud name non configuré');
+    if (!signature.cloud_name) {
+      throw new Error(
+        'Cloudinary cloud name manquant dans la signature. Vérifiez la configuration backend.'
+      );
     }
 
-    /**
-     * Récupérer la clé API Cloudinary depuis les variables d'environnement
-     * Cette clé est publique (NEXT_PUBLIC_) car nécessaire côté client pour l'upload
-     * La sécurité est garantie par la signature, pas par la clé API
-     */
-    const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
-    if (!apiKey) {
-      throw new Error('Cloudinary API key non configurée');
+    if (!signature.api_key) {
+      throw new Error(
+        'Cloudinary API key manquante dans la signature. Vérifiez la configuration backend.'
+      );
     }
 
     /**
@@ -148,10 +147,11 @@ export const uploadApi = {
     formData.append('file', file);
 
     /**
-     * Ajouter la clé API Cloudinary
+     * Ajouter la clé API Cloudinary depuis la signature
      * 'api_key' est requis par Cloudinary pour identifier le compte
+     * IMPORTANT: L'api_key provient de la signature backend, pas de NEXT_PUBLIC_
      */
-    formData.append('api_key', apiKey);
+    formData.append('api_key', signature.api_key);
 
     /**
      * Ajouter le timestamp de la signature
@@ -168,11 +168,12 @@ export const uploadApi = {
     formData.append('signature', signature.signature);
 
     /**
-     * IMPORTANT: La signature Cloudinary est calculée SEULEMENT avec ces paramètres:
+     * IMPORTANT: La signature Cloudinary est calculée avec ces paramètres:
      * - folder: dossier où stocker l'image
-     * - public_id: ID public de l'image (optionnel)
-     * - transformation: transformations à appliquer (optionnel)
-     * - timestamp: timestamp Unix
+     * - public_id: ID public de l'image
+     * - resource_type: 'image' uniquement (sécurité renforcée)
+     * - transformation: transformations autorisées
+     * - timestamp: timestamp Unix (expire après 60s)
      *
      * Les paramètres suivants sont des paramètres de validation côté serveur
      * et ne doivent PAS être envoyés à Cloudinary:
@@ -197,9 +198,20 @@ export const uploadApi = {
     }
 
     /**
+     * Ajouter resource_type pour limiter à 'image' uniquement
+     * Sécurité renforcée: empêche l'upload de vidéos ou autres types
+     */
+    if (signature.resource_type) {
+      formData.append('resource_type', signature.resource_type);
+    } else {
+      // Fallback par défaut pour compatibilité
+      formData.append('resource_type', 'image');
+    }
+
+    /**
      * Ajouter les transformations si spécifiées dans la signature
      * Les transformations permettent de redimensionner, recadrer, etc. l'image
-     * Format: "w_500,h_500,c_fill" (largeur 500px, hauteur 500px, remplissage)
+     * Format: "f_webp,q_auto,w_800,h_600,c_fill"
      */
     if (signature.transformation) {
       formData.append('transformation', signature.transformation);
@@ -213,13 +225,15 @@ export const uploadApi = {
     try {
       /**
        * Construire l'URL de l'API Cloudinary
-       * Format: https://api.cloudinary.com/v1_1/{cloud_name}/image/upload
+       * Format: https://api.cloudinary.com/v1_1/{cloud_name}/{resource_type}/upload
        * v1_1: version de l'API
-       * {cloud_name}: nom du compte Cloudinary
-       * image/upload: endpoint pour uploader une image
+       * {cloud_name}: nom du compte Cloudinary (depuis signature)
+       * {resource_type}: type de ressource ('image' uniquement)
+       * upload: endpoint pour uploader
        */
+      const resourceType = signature.resource_type || 'image';
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        `https://api.cloudinary.com/v1_1/${signature.cloud_name}/${resourceType}/upload`,
         {
           method: 'POST', // Méthode HTTP POST pour envoyer le fichier
           body: formData, // Corps de la requête (FormData avec le fichier et les paramètres)

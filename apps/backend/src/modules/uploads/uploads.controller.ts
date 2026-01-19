@@ -146,6 +146,7 @@ export class UploadsController {
     }
 
     // Utiliser le service avec validation userId pour empêcher les uploads non autorisés
+    // Signature expire après 60 secondes (sécurité renforcée)
     return this.uploadsService.getSignedUploadParams(folder, req.user.id);
   }
 }

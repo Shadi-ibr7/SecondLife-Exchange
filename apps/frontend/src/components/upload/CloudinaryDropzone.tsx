@@ -83,29 +83,8 @@ export function CloudinaryDropzone({
   const uploadFiles = async () => {
     if (files.length === 0) return;
 
-    // Vérifier que Cloudinary est configuré
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-    const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
-
-    if (!cloudName || !apiKey) {
-      console.error('Variables Cloudinary manquantes:', {
-        cloudName: !!cloudName,
-        apiKey: !!apiKey,
-        env: {
-          NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME:
-            process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-          NEXT_PUBLIC_CLOUDINARY_API_KEY: process.env
-            .NEXT_PUBLIC_CLOUDINARY_API_KEY
-            ? '***'
-            : undefined,
-        },
-      });
-
-      toast.error(
-        'Configuration Cloudinary manquante. Vérifiez que NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME et NEXT_PUBLIC_CLOUDINARY_API_KEY sont définies dans .env.local et redémarrez le serveur.'
-      );
-      return;
-    }
+    // NOTE: cloud_name et api_key sont maintenant fournis par la signature backend
+    // Plus besoin de NEXT_PUBLIC_CLOUDINARY_API_KEY côté client (sécurité renforcée)
 
     setIsUploading(true);
     onUploadStart?.();
@@ -129,12 +108,15 @@ export function CloudinaryDropzone({
           throw new Error('Signature invalide reçue du serveur');
         }
 
-        // Upload vers Cloudinary
-        const result = await uploadApi.uploadToCloudinary(
-          file,
-          signature,
-          cloudName
-        );
+        // Vérifier que la signature contient cloud_name et api_key
+        if (!signature.cloud_name || !signature.api_key) {
+          throw new Error(
+            'Signature incomplète: cloud_name ou api_key manquant. Vérifiez la configuration backend.'
+          );
+        }
+
+        // Upload vers Cloudinary (cloud_name et api_key proviennent de la signature)
+        const result = await uploadApi.uploadToCloudinary(file, signature);
 
         // Mettre à jour avec le succès
         setFiles((prev) =>

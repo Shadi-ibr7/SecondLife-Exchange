@@ -191,18 +191,25 @@ export function AvatarUpload({
         // ÉTAPE 2: UPLOAD DIRECT VERS CLOUDINARY
         // ============================================
         /**
+         * Vérifier que la signature contient cloud_name et api_key
+         * Ces valeurs sont fournies par le backend dans la signature
+         */
+        if (!signature.cloud_name || !signature.api_key) {
+          throw new Error(
+            'Signature incomplète: cloud_name ou api_key manquant. Vérifiez la configuration backend.'
+          );
+        }
+
+        /**
          * Uploader directement l'image vers Cloudinary (pas via notre serveur)
          * Cela optimise les performances car l'image ne passe pas par notre serveur
          *
          * La signature est incluse dans la requête pour prouver que l'upload est autorisé
-         *
-         * process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: nom du compte Cloudinary
-         * (variable d'environnement publique car nécessaire côté client)
+         * cloud_name et api_key proviennent de la signature backend (pas de NEXT_PUBLIC_)
          */
         const result = await uploadApi.uploadToCloudinary(
           file, // Le fichier à uploader
-          signature, // La signature sécurisée
-          process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || '' // Nom du compte Cloudinary
+          signature // La signature sécurisée (inclut cloud_name et api_key)
         );
 
         // ============================================

@@ -52,6 +52,9 @@ export interface SignedUploadParams {
   allowed_formats: string[]; // Formats autorisés (jpg, png, webp)
   max_bytes: number; // Taille maximale en octets
   transformation?: string; // Transformations à appliquer (redimensionnement, etc.)
+  resource_type: string; // Type de ressource: 'image' uniquement
+  api_key: string; // Clé API Cloudinary (publique, pas le secret)
+  cloud_name: string; // Nom du cloud Cloudinary (publique)
 }
 
 /**
@@ -167,7 +170,7 @@ export class UploadsService {
     // ============================================
     if (baseFolder === 'items' && folderParts.length === 2) {
       const itemId = folderParts[1];
-      
+
       if (!userId) {
         throw new BadRequestException(
           'Authentification requise pour uploader dans un dossier items',
@@ -191,8 +194,34 @@ export class UploadsService {
       }
     }
 
-    // Pour 'profiles', on accepte sans vérification supplémentaire car
-    // l'authentification est déjà vérifiée par le guard JWT
+    // ============================================
+    // VALIDATION OWNERSHIP POUR profiles/<userId>
+    // ============================================
+    if (baseFolder === 'profiles') {
+      if (!userId) {
+        throw new BadRequestException(
+          'Authentification requise pour uploader dans un dossier profiles',
+        );
+      }
+
+      // Valider le format: profiles/<userId> OU juste 'profiles' (utilisera userId automatiquement)
+      if (folderParts.length === 2) {
+        const profileUserId = folderParts[1];
+        // Vérifier que le userId dans le folder correspond à l'utilisateur authentifié
+        if (profileUserId !== userId) {
+          throw new ForbiddenException(
+            'Vous ne pouvez uploader des photos que pour votre propre profil',
+          );
+        }
+      } else if (folderParts.length === 1) {
+        // Si juste 'profiles', on utilise le userId de l'utilisateur authentifié
+        folder = `profiles/${userId}`;
+      } else {
+        throw new BadRequestException(
+          "Format de dossier invalide pour profiles. Utilisez 'profiles' ou 'profiles/<userId>'",
+        );
+      }
+    }
 
     // ============================================
     // VALIDATION DE LA TAILLE MAX (5MB)
@@ -225,25 +254,36 @@ export class UploadsService {
     const timestamp = Math.round(new Date().getTime() / 1000);
     const publicId = `${folder}/${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Créer la signature Cloudinary uniquement avec les paramètres supportés
-    // Ne PAS inclure allowed_formats ou max_bytes dans la signature
+    // Transformations autorisées uniquement (whitelist stricte)
+    // Format: f_webp (format WebP), q_auto (qualité automatique),
+    // w_800 (largeur max 800px), h_600 (hauteur max 600px), c_fill (remplissage)
+    const transformation = 'f_webp,q_auto,w_800,h_600,c_fill';
+
+    // Créer la signature Cloudinary avec TOUS les paramètres qui seront envoyés
+    // IMPORTANT: resource_type doit être inclus pour limiter à 'image' uniquement
     const paramsToSign = {
       timestamp,
       folder,
       public_id: publicId,
-      transformation: 'f_webp,q_auto,w_800,h_600,c_fill',
+      resource_type: 'image', // LIMITE STRICTE: images uniquement
+      transformation,
     };
 
     const signature = this.createSignature(paramsToSign);
 
+    // Retourner les paramètres nécessaires pour l'upload
+    // api_key et cloud_name sont PUBLIQUES (pas de secret exposé)
     return {
       signature,
       timestamp,
       folder,
       public_id: publicId,
-      allowed_formats: allowedFormats,
-      max_bytes: maxBytes,
-      transformation: 'f_webp,q_auto,w_800,h_600,c_fill',
+      allowed_formats: allowedFormats, // Validation côté serveur uniquement
+      max_bytes: maxBytes, // Validation côté serveur uniquement
+      transformation,
+      resource_type: 'image', // LIMITE STRICTE: images uniquement
+      api_key: this.cloudinaryConfig.apiKey, // Clé API publique (pas le secret)
+      cloud_name: this.cloudinaryConfig.cloudName, // Nom du cloud (publique)
     };
   }
 
@@ -258,14 +298,21 @@ export class UploadsService {
    * - Vérifie que l'item existe
    * - Vérifie que le nombre maximum de photos n'est pas atteint (5 max)
    * - Valide l'URL Cloudinary (doit provenir de Cloudinary)
+   * - Valide que l'URL correspond au folder attendu (items/<itemId>)
    * - Valide le publicId (ne doit pas être vide)
    *
    * @param itemId - ID de l'item
    * @param photoData - Données de la photo (URL, publicId, dimensions)
+   * @param userId - ID de l'utilisateur (pour validation ownership)
    * @throws NotFoundException si l'item n'existe pas
    * @throws BadRequestException si validation échoue ou limite atteinte
+   * @throws ForbiddenException si l'utilisateur n'est pas propriétaire
    */
-  async attachPhoto(itemId: string, photoData: AttachPhotoDto): Promise<void> {
+  async attachPhoto(
+    itemId: string,
+    photoData: AttachPhotoDto,
+    userId?: string,
+  ): Promise<void> {
     // ============================================
     // VALIDATION DES DONNÉES DE LA PHOTO
     // ============================================
@@ -273,20 +320,26 @@ export class UploadsService {
       throw new BadRequestException('URL ou publicId manquant');
     }
 
-    // Valider que l'URL provient bien de Cloudinary
-    const cloudinaryUrlPattern =
-      /^https?:\/\/res\.cloudinary\.com\/[^\/]+\/image\/upload\//;
-    if (!cloudinaryUrlPattern.test(photoData.url)) {
-      throw new BadRequestException('URL invalide: doit provenir de Cloudinary');
-    }
     // Vérifier que l'item existe
     const item = await this.prisma.item.findUnique({
       where: { id: itemId },
+      select: { ownerId: true },
     });
 
     if (!item) {
       throw new NotFoundException('Item non trouvé');
     }
+
+    // Vérifier ownership si userId fourni
+    if (userId && item.ownerId !== userId) {
+      throw new ForbiddenException(
+        'Vous ne pouvez ajouter des photos qu\'aux items qui vous appartiennent',
+      );
+    }
+
+    // Valider que l'URL Cloudinary correspond au folder attendu
+    const expectedFolder = `items/${itemId}`;
+    this.validateCloudinaryUrl(photoData.url, expectedFolder);
 
     // Vérifier le nombre maximum de photos
     const photoCount = await this.prisma.itemPhoto.count({
@@ -322,13 +375,20 @@ export class UploadsService {
    * - Vérifie le nombre de photos existantes
    * - Limite le nombre de photos à insérer selon la limite maximale
    * - Insère toutes les photos en une transaction
+   * - Valide que toutes les URLs correspondent au folder attendu
    *
    * @param itemId - ID de l'item
    * @param photos - Tableau de photos à attacher
+   * @param userId - ID de l'utilisateur (pour validation ownership)
    * @throws BadRequestException si aucune photo fournie ou limite atteinte
    * @throws NotFoundException si l'item n'existe pas
+   * @throws ForbiddenException si l'utilisateur n'est pas propriétaire
    */
-  async attachPhotos(itemId: string, photos: AttachPhotoDto[]): Promise<void> {
+  async attachPhotos(
+    itemId: string,
+    photos: AttachPhotoDto[],
+    userId?: string,
+  ): Promise<void> {
     // ============================================
     // VALIDATION DU TABLEAU DE PHOTOS
     // ============================================
@@ -359,9 +419,25 @@ export class UploadsService {
     }
 
     // Vérifier l'item
-    const item = await this.prisma.item.findUnique({ where: { id: itemId } });
+    const item = await this.prisma.item.findUnique({
+      where: { id: itemId },
+      select: { ownerId: true },
+    });
     if (!item) {
       throw new NotFoundException('Item non trouvé');
+    }
+
+    // Vérifier ownership si userId fourni
+    if (userId && item.ownerId !== userId) {
+      throw new ForbiddenException(
+        'Vous ne pouvez ajouter des photos qu\'aux items qui vous appartiennent',
+      );
+    }
+
+    // Valider que toutes les URLs Cloudinary correspondent au folder attendu
+    const expectedFolder = `items/${itemId}`;
+    for (const photo of photos) {
+      this.validateCloudinaryUrl(photo.url, expectedFolder);
     }
 
     // Vérifier la limite totale (depuis la config: 5 photos max par item par défaut)
@@ -517,7 +593,8 @@ export class UploadsService {
    * VALIDATION:
    * - Vérifie que tous les paramètres requis sont présents
    * - Vérifie que la signature correspond aux paramètres
-   * - Vérifie que la signature n'est pas expirée (5 minutes)
+   * - Vérifie que la signature n'est pas expirée (60 secondes)
+   * - Vérifie que resource_type est 'image'
    *
    * @param params - Paramètres d'upload à valider
    * @throws BadRequestException si les paramètres sont invalides ou expirés
@@ -528,31 +605,95 @@ export class UploadsService {
       timestamp,
       folder,
       public_id,
-      allowed_formats,
-      max_bytes,
+      resource_type,
+      transformation,
     } = params;
 
     if (!signature || !timestamp || !folder || !public_id) {
       throw new BadRequestException("Paramètres d'upload manquants");
     }
 
+    // Vérifier que resource_type est 'image' uniquement
+    if (resource_type && resource_type !== 'image') {
+      throw new BadRequestException(
+        `Resource type non autorisé: ${resource_type}. Seul 'image' est autorisé.`,
+      );
+    }
+
     // Vérifier la signature
     // Doit correspondre exactement aux paramètres envoyés à Cloudinary
+    const transformationValue = transformation || 'f_webp,q_auto,w_800,h_600,c_fill';
     const expectedSignature = this.createSignature({
       timestamp,
       folder,
       public_id,
-      transformation: 'f_webp,q_auto,w_800,h_600,c_fill',
+      resource_type: 'image',
+      transformation: transformationValue,
     });
 
     if (signature !== expectedSignature) {
       throw new BadRequestException('Signature invalide');
     }
 
-    // Vérifier l'expiration (5 minutes)
+    // Vérifier l'expiration (60 secondes) - signature courte pour sécurité renforcée
     const now = Math.round(new Date().getTime() / 1000);
-    if (now - timestamp > 300) {
-      throw new BadRequestException('Signature expirée');
+    const expirationSeconds = 60;
+    if (now - timestamp > expirationSeconds) {
+      throw new BadRequestException(
+        `Signature expirée (expire après ${expirationSeconds} secondes)`,
+      );
     }
+  }
+
+  // ============================================
+  // MÉTHODE: validateCloudinaryUrl
+  // ============================================
+
+  /**
+   * Valide qu'une URL Cloudinary correspond au folder attendu.
+   *
+   * SÉCURITÉ:
+   * - Vérifie que l'URL provient bien de Cloudinary
+   * - Vérifie que le public_id correspond au folder attendu
+   * - Empêche les uploads dans des dossiers non autorisés
+   *
+   * @param url - URL Cloudinary de l'image
+   * @param expectedFolder - Folder attendu (ex: "items/<itemId>", "profiles/<userId>")
+   * @returns true si l'URL correspond au folder attendu
+   * @throws BadRequestException si l'URL est invalide ou ne correspond pas
+   */
+  validateCloudinaryUrl(url: string, expectedFolder: string): boolean {
+    // Vérifier que l'URL provient bien de Cloudinary
+    const cloudinaryUrlPattern =
+      /^https?:\/\/res\.cloudinary\.com\/[^\/]+\/image\/upload\//;
+    if (!cloudinaryUrlPattern.test(url)) {
+      throw new BadRequestException('URL invalide: doit provenir de Cloudinary');
+    }
+
+    // Extraire le public_id de l'URL Cloudinary
+    // Format: https://res.cloudinary.com/<cloud_name>/image/upload/<transformation>/<public_id>
+    const urlParts = url.split('/image/upload/');
+    if (urlParts.length < 2) {
+      throw new BadRequestException('URL Cloudinary invalide: format incorrect');
+    }
+
+    // Le public_id est la dernière partie après les transformations
+    const pathAfterUpload = urlParts[1];
+    // Retirer les transformations et extensions de fichier
+    const publicIdMatch = pathAfterUpload.match(/^[^\/]*\/?([^\.]+)/);
+    if (!publicIdMatch) {
+      throw new BadRequestException('URL Cloudinary invalide: public_id introuvable');
+    }
+
+    const publicId = publicIdMatch[1];
+    // Le public_id devrait commencer par le folder attendu
+    // Format: <folder>/<timestamp>_<random>
+    if (!publicId.startsWith(expectedFolder + '/')) {
+      throw new BadRequestException(
+        `URL Cloudinary invalide: le public_id '${publicId}' ne correspond pas au folder attendu '${expectedFolder}'`,
+      );
+    }
+
+    return true;
   }
 }

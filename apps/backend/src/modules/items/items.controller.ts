@@ -293,10 +293,11 @@ export class ItemsController {
     }
 
     // Accepter un tableau ou un seul objet pour compatibilité
+    // Passer userId pour validation ownership dans le service
     if (Array.isArray(photos)) {
-      return this.uploadsService.attachPhotos(itemId, photos);
+      return this.uploadsService.attachPhotos(itemId, photos, req.user.id);
     }
-    return this.uploadsService.attachPhoto(itemId, photos);
+    return this.uploadsService.attachPhoto(itemId, photos, req.user.id);
   }
 
   @Delete('photos/:photoId')
