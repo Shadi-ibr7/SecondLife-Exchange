@@ -86,9 +86,11 @@ function loadRootEnvFile(): void {
   try {
     // Essayer d'abord depuis la racine du projet (depuis dist/)
     if (fs.existsSync(fromDistPath)) {
+      console.log(`[ENV] Chargement .env depuis: ${fromDistPath}`);
       // Utiliser dotenv si disponible
       try {
         require('dotenv').config({ path: fromDistPath });
+        console.log(`[ENV] .env chargé avec succès depuis: ${fromDistPath}`);
       } catch {
         // Si dotenv n'est pas disponible, parser manuellement
         const envContent = fs.readFileSync(fromDistPath, 'utf-8');
@@ -102,14 +104,17 @@ function loadRootEnvFile(): void {
             }
           }
         });
+        console.log(`[ENV] .env parsé manuellement depuis: ${fromDistPath}`);
       }
       return;
     }
 
     // Essayer depuis process.cwd() vers la racine
     if (fs.existsSync(fromCwdPath)) {
+      console.log(`[ENV] Chargement .env depuis: ${fromCwdPath}`);
       try {
         require('dotenv').config({ path: fromCwdPath });
+        console.log(`[ENV] .env chargé avec succès depuis: ${fromCwdPath}`);
       } catch {
         const envContent = fs.readFileSync(fromCwdPath, 'utf-8');
         envContent.split('\n').forEach((line) => {
@@ -122,14 +127,17 @@ function loadRootEnvFile(): void {
             }
           }
         });
+        console.log(`[ENV] .env parsé manuellement depuis: ${fromCwdPath}`);
       }
       return;
     }
 
     // Essayer directement depuis process.cwd() (si PM2 démarre depuis la racine)
     if (fs.existsSync(directPath) && !directPath.includes('apps/backend')) {
+      console.log(`[ENV] Chargement .env depuis: ${directPath}`);
       try {
         require('dotenv').config({ path: directPath });
+        console.log(`[ENV] .env chargé avec succès depuis: ${directPath}`);
       } catch {
         const envContent = fs.readFileSync(directPath, 'utf-8');
         envContent.split('\n').forEach((line) => {
@@ -142,8 +150,17 @@ function loadRootEnvFile(): void {
             }
           }
         });
+        console.log(`[ENV] .env parsé manuellement depuis: ${directPath}`);
       }
+      return;
     }
+
+    console.warn(`[ENV] Aucun .env trouvé dans les chemins suivants:
+      - ${fromDistPath}
+      - ${fromCwdPath}
+      - ${directPath}
+    __dirname: ${__dirname}
+    process.cwd(): ${process.cwd()}`);
   } catch (error) {
     // Ignorer les erreurs silencieusement - ConfigModule essaiera aussi
     console.warn('Impossible de charger le .env à la racine, ConfigModule essaiera:', error.message);
@@ -315,12 +332,6 @@ async function bootstrap() {
 
   const isProduction = configService.get<string>('app.nodeEnv') === 'production';
 
-  // Log des origines autorisées au démarrage (pour déboguer CORS)
-  logger.info(
-    `🔒 CORS configuré pour ${allowedOrigins.length} origine(s): ${allowedOrigins.join(', ')}`,
-    'CORS',
-  );
-
   // Log de la variable d'environnement brute (pour déboguer)
   const rawFrontendOrigins = process.env.FRONTEND_ORIGINS;
   if (rawFrontendOrigins) {
@@ -328,6 +339,18 @@ async function bootstrap() {
   } else {
     logger.warn('⚠️ FRONTEND_ORIGINS non définie, utilisation des valeurs par défaut', 'CORS');
   }
+
+  // Log du tableau parsé frontendOrigins
+  logger.info(
+    `📋 frontendOrigins parsé (${frontendOrigins.length}): [${frontendOrigins.join(', ')}]`,
+    'CORS',
+  );
+
+  // Log des origines autorisées au démarrage (pour déboguer CORS)
+  logger.info(
+    `🔒 CORS configuré pour ${allowedOrigins.length} origine(s): ${allowedOrigins.join(', ')}`,
+    'CORS',
+  );
 
   // CORS conditionnel : appliquer seulement pour les routes qui ne sont pas /health
   app.use((req, res, next) => {
