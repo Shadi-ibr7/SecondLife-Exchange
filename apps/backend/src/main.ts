@@ -370,12 +370,12 @@ async function bootstrap() {
 
     // Autoriser les health checks depuis localhost/127.0.0.1 sans Origin
     const isLocalhost = req.ip === '127.0.0.1' || req.ip === '::1' || req.ip === '::ffff:127.0.0.1';
-    const isHealthCheck = req.headers['user-agent']?.includes('healthcheck') || 
+    const isHealthCheck = req.headers['user-agent']?.includes('healthcheck') ||
                          req.headers['x-health-check'] === 'true';
 
     // Middleware CORS personnalisé pour retourner 403 au lieu de 500
     const origin = req.headers.origin;
-    
+
     // Vérifier Origin manquant en production
     if (!origin) {
       if (isProduction && !isLocalhost && !isHealthCheck) {

@@ -31,11 +31,18 @@ export class AdminModule implements NestModule {
   constructor(private configService: ConfigService) {}
 
   configure(consumer: MiddlewareConsumer) {
-    // IMPORTANT: Utiliser un chemin fixe 'admin' pour les routes API
-    // ADMIN_BASE_PATH sert UNIQUEMENT au routing Next.js (UI), pas aux appels API
-    consumer
-      .apply(AdminMiddleware)
-      .forRoutes('admin/*');
+    // IMPORTANT: AdminMiddleware désactivé car:
+    // 1. Les tokens admin sont maintenant dans les cookies httpOnly (sl_access_token)
+    // 2. Les guards AdminJwtGuard et AdminRoleGuard gèrent déjà l'authentification
+    // 3. Le middleware vérifiait uniquement le header Authorization, ce qui bloquait les requêtes avec cookies
+    // 
+    // L'authentification est maintenant gérée par les guards sur chaque route du AdminController
+    // qui retournent 401 (pas 404) si non authentifié
+    
+    // Middleware désactivé - laisser les guards gérer l'authentification
+    // consumer
+    //   .apply(AdminMiddleware)
+    //   .forRoutes('admin/*');
   }
 }
 

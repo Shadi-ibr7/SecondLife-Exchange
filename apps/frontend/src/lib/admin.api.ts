@@ -69,16 +69,16 @@ const getApiBaseURL = () => {
   // En production, utiliser l'URL de production
   // En dev, utiliser localhost ou l'URL définie dans .env
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-  
+
   // Nettoyer l'URL (enlever trailing slash)
   const cleanUrl = apiUrl.replace(/\/$/, '');
-  
+
   // IMPORTANT: Toujours ajouter /api/v1 si pas déjà présent
   // Même si l'URL contient /api/v1, on s'assure qu'elle est correcte
   if (cleanUrl.endsWith('/api/v1')) {
     return cleanUrl;
   }
-  
+
   // Si l'URL contient /api/v1 quelque part, l'extraire jusqu'à /api/v1
   if (cleanUrl.includes('/api/v1')) {
     const match = cleanUrl.match(/^(https?:\/\/[^\/]+)\/api\/v1/);
@@ -86,7 +86,7 @@ const getApiBaseURL = () => {
       return `${match[1]}/api/v1`;
     }
   }
-  
+
   // Sinon, ajouter /api/v1
   return `${cleanUrl}/api/v1`;
 };
