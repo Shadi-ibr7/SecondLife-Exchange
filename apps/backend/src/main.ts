@@ -367,37 +367,73 @@ async function bootstrap() {
     ) {
       return next();
     }
-    // Appliquer CORS pour les autres routes
+
+    // Autoriser les health checks depuis localhost/127.0.0.1 sans Origin
+    const isLocalhost = req.ip === '127.0.0.1' || req.ip === '::1' || req.ip === '::ffff:127.0.0.1';
+    const isHealthCheck = req.headers['user-agent']?.includes('healthcheck') || 
+                         req.headers['x-health-check'] === 'true';
+
+    // Middleware CORS personnalisé pour retourner 403 au lieu de 500
+    const origin = req.headers.origin;
+    
+    // Vérifier Origin manquant en production
+    if (!origin) {
+      if (isProduction && !isLocalhost && !isHealthCheck) {
+        logger.warn(
+          JSON.stringify({
+            type: 'CORS_REJECTED',
+            reason: 'missing_origin',
+            ip: req.ip,
+            path: req.path,
+            method: req.method,
+          }),
+          'CORS',
+        );
+        // IMPORTANT: Retourner 403 directement, pas 500
+        return res.status(403).json({
+          code: 'CORS_FORBIDDEN',
+          message: 'Origin header required',
+          requestId: (req as any).requestId || 'unknown',
+        });
+      }
+      // En dev ou health check localhost, continuer sans Origin
+    } else {
+      // Vérifier si l'origine est autorisée
+      if (!allowedOrigins.includes(origin)) {
+        logger.warn(
+          JSON.stringify({
+            type: 'CORS_REJECTED',
+            reason: 'origin_not_allowed',
+            origin,
+            allowedOrigins,
+            ip: req.ip,
+            path: req.path,
+            method: req.method,
+          }),
+          'CORS',
+        );
+        // IMPORTANT: Retourner 403 directement, pas 500
+        return res.status(403).json({
+          code: 'CORS_FORBIDDEN',
+          message: 'Origin not allowed',
+          requestId: (req as any).requestId || 'unknown',
+        });
+      }
+    }
+
+    // Appliquer CORS standard si l'origine est valide ou absente (dev/localhost)
     return cors({
       origin: (origin, callback) => {
-        // En production, rejeter les requêtes sans origin (protection renforcée)
-        // En dev, autoriser pour faciliter le développement avec Postman/curl
+        // Si pas d'origine et en dev ou localhost, autoriser
         if (!origin) {
-          if (isProduction) {
-            logger.warn('[CORS] Requête sans origin rejetée en production', 'CORS');
-            return callback(new Error('Origin header required in production'));
-          }
-          // En dev, autoriser les requêtes sans origin
           return callback(null, true);
         }
-
-        // Vérifier si l'origine est dans la whitelist (comparaison exacte)
+        // Si l'origine est dans la whitelist, autoriser
         if (allowedOrigins.includes(origin)) {
           return callback(null, true);
         }
-
-        // Log détaillé pour déboguer CORS en production
-        if (isProduction) {
-          logger.warn(
-            `[CORS] Origine rejetée: ${origin}`,
-            'CORS',
-          );
-          logger.warn(
-            `[CORS] Origines autorisées: ${allowedOrigins.join(', ')}`,
-            'CORS',
-          );
-        }
-        callback(new Error('Not allowed by CORS'));
+        // Sinon, rejeter (mais ce cas ne devrait jamais arriver car on a déjà vérifié)
+        return callback(null, false);
       },
       credentials: true, // OBLIGATOIRE pour les cookies cross-origin
       methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], // PUT retiré (utiliser PATCH)

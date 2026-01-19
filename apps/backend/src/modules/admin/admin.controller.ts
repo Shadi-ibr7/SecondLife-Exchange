@@ -21,11 +21,14 @@ import {
   UseGuards,
   Request,
   Post,
+  Req,
+  Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { AdminJwtGuard } from '../../common/guards/admin-jwt.guard';
 import { AdminRoleGuard } from '../../common/guards/admin-role.guard';
+import { Request as ExpressRequest } from 'express';
 import { BanUserDto } from './dtos/user-admin.dto';
 import { ResolveReportDto } from './dtos/report.dto';
 import { CreateThemeDto } from '../themes/dtos/create-theme.dto';
@@ -67,24 +70,93 @@ class GenerateMonthlyThemesDto {
 @Controller('admin')
 @UseGuards(AdminJwtGuard, AdminRoleGuard)
 export class AdminController {
+  private readonly logger = new Logger(AdminController.name);
+
   constructor(private readonly adminService: AdminService) {}
+
+  /**
+   * Helper pour logger les erreurs avec requestId
+   */
+  private logError(error: any, method: string, requestId: string, context: string) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const errorMessage = error?.message || 'Unknown error';
+    const errorStack = isProduction ? undefined : error?.stack;
+
+    this.logger.error(
+      JSON.stringify({
+        requestId,
+        method,
+        context,
+        error: errorMessage,
+        ...(errorStack && { stack: errorStack }),
+      }),
+    );
+  }
+
+  /**
+   * Helper pour logger les requêtes avec requestId
+   */
+  private logRequest(method: string, requestId: string, endpoint: string) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    if (isProduction) {
+      this.logger.log(
+        JSON.stringify({
+          requestId,
+          method,
+          endpoint,
+        }),
+      );
+    }
+  }
 
   // Dashboard
   @Get('dashboard')
   @ApiOperation({ summary: 'Statistiques du dashboard' })
-  async getDashboard() {
-    return this.adminService.getDashboardStats();
+  @ApiResponse({ status: 200, description: 'Statistiques retournées avec succès' })
+  @ApiResponse({ status: 401, description: 'Non authentifié' })
+  @ApiResponse({ status: 403, description: 'Accès refusé (pas admin)' })
+  @ApiResponse({ status: 500, description: 'Erreur serveur' })
+  async getDashboard(@Req() req: ExpressRequest) {
+    const requestId = (req as any).requestId || 'unknown';
+    const method = req.method || 'GET';
+
+    this.logRequest(method, requestId, '/admin/dashboard');
+
+    try {
+      const stats = await this.adminService.getDashboardStats(requestId);
+      return stats;
+    } catch (error: any) {
+      this.logError(error, method, requestId, 'AdminController.getDashboard');
+      // Laisser le filtre d'exception gérer la transformation en 500 avec log
+      throw error;
+    }
   }
 
   // Users
   @Get('users')
   @ApiOperation({ summary: 'Liste des utilisateurs' })
-  async getUsers(@Query() query: AdminGetUsersQueryDto) {
-    return this.adminService.getUsers(
-      query.page || 1,
-      query.limit || 20,
-      query.search,
-    );
+  @ApiResponse({ status: 200, description: 'Liste des utilisateurs retournée' })
+  @ApiResponse({ status: 401, description: 'Non authentifié' })
+  @ApiResponse({ status: 403, description: 'Accès refusé (pas admin)' })
+  @ApiResponse({ status: 500, description: 'Erreur serveur' })
+  async getUsers(@Query() query: AdminGetUsersQueryDto, @Req() req: ExpressRequest) {
+    const requestId = (req as any).requestId || 'unknown';
+    const method = req.method || 'GET';
+
+    this.logRequest(method, requestId, '/admin/users');
+
+    try {
+      const users = await this.adminService.getUsers(
+        query.page || 1,
+        query.limit || 20,
+        query.search,
+        requestId,
+      );
+      return users;
+    } catch (error: any) {
+      this.logError(error, method, requestId, 'AdminController.getUsers');
+      throw error;
+    }
   }
 
   @Get('users/:id')

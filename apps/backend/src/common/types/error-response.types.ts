@@ -34,6 +34,8 @@ export type ErrorCode =
   | 'AUTH_2FA_INVALID'
   // Validation
   | 'VALIDATION_ERROR'
+  // CORS
+  | 'CORS_FORBIDDEN'
   // Prisma
   | 'UNIQUE_CONSTRAINT_VIOLATION'
   | 'RECORD_NOT_FOUND'

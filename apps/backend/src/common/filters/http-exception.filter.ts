@@ -469,6 +469,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
       AUTH_2FA_INVALID: HttpStatus.UNAUTHORIZED,
       // Validation
       VALIDATION_ERROR: HttpStatus.UNPROCESSABLE_ENTITY,
+      // CORS
+      CORS_FORBIDDEN: HttpStatus.FORBIDDEN,
       // Prisma
       UNIQUE_CONSTRAINT_VIOLATION: HttpStatus.CONFLICT,
       RECORD_NOT_FOUND: HttpStatus.NOT_FOUND,

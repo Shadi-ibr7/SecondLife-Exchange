@@ -63,22 +63,43 @@ type AdminMeResponse = {
  * - baseURL = ${API_ORIGIN}/api/v1
  * - ADMIN_BASE_PATH sert UNIQUEMENT au routing Next.js (UI)
  * - Les endpoints API utilisent /admin/... (chemin fixe du backend)
+ * - TOUJOURS utiliser /api/v1 comme préfixe pour toutes les requêtes admin
  */
 const getApiBaseURL = () => {
+  // En production, utiliser l'URL de production
+  // En dev, utiliser localhost ou l'URL définie dans .env
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  
   // Nettoyer l'URL (enlever trailing slash)
   const cleanUrl = apiUrl.replace(/\/$/, '');
-  // Le backend a un préfixe global /api/v1
-  if (cleanUrl.includes('/api/v1')) {
+  
+  // IMPORTANT: Toujours ajouter /api/v1 si pas déjà présent
+  // Même si l'URL contient /api/v1, on s'assure qu'elle est correcte
+  if (cleanUrl.endsWith('/api/v1')) {
     return cleanUrl;
   }
-  // Toujours ajouter /api/v1
+  
+  // Si l'URL contient /api/v1 quelque part, l'extraire jusqu'à /api/v1
+  if (cleanUrl.includes('/api/v1')) {
+    const match = cleanUrl.match(/^(https?:\/\/[^\/]+)\/api\/v1/);
+    if (match) {
+      return `${match[1]}/api/v1`;
+    }
+  }
+  
+  // Sinon, ajouter /api/v1
   return `${cleanUrl}/api/v1`;
 };
 
-// Log uniquement en développement
-if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
-  console.info('🔧 Admin API Base URL:', getApiBaseURL());
+// Log en développement ET production pour debug
+if (typeof window !== 'undefined') {
+  const baseURL = getApiBaseURL();
+  if (process.env.NODE_ENV !== 'production') {
+    console.info('🔧 Admin API Base URL:', baseURL);
+  } else {
+    // En production, log une seule fois au chargement
+    console.log('[Admin API] Base URL:', baseURL);
+  }
 }
 
 export const ADMIN_LOGIN_ENDPOINT = '/auth/admin/login';

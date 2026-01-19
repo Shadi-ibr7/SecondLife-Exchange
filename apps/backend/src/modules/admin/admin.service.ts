@@ -5,7 +5,7 @@
  * Service principal pour toutes les opérations admin.
  */
 
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { ItemStatus } from '@prisma/client';
 import { ThemesService } from '../themes/themes.service';
@@ -19,9 +19,12 @@ import { UpdateThemeDto } from '../themes/dtos/update-theme.dto';
 import { AuditService } from './services/audit.service';
 import { AdminActionType } from './enums/admin-action-type.enum';
 import { Request } from 'express';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class AdminService {
+  private readonly logger = new Logger(AdminService.name);
+
   constructor(
     private prisma: PrismaService,
     private themesService: ThemesService,
@@ -30,116 +33,174 @@ export class AdminService {
     private auditService: AuditService,
   ) {}
 
+  /**
+   * Helper pour logger les erreurs Prisma avec contexte
+   */
+  private handlePrismaError(error: any, context: string, requestId?: string): never {
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      this.logger.error(
+        JSON.stringify({
+          requestId,
+          context,
+          errorCode: error.code,
+          errorMessage: error.message,
+        }),
+      );
+      // Erreurs Prisma connues -> 500 avec message générique en prod
+      throw new InternalServerErrorException(
+        isProduction
+          ? 'Erreur de base de données'
+          : `Erreur Prisma ${error.code}: ${error.message}`,
+      );
+    }
+
+    if (error instanceof Prisma.PrismaClientValidationError) {
+      this.logger.error(
+        JSON.stringify({
+          requestId,
+          context,
+          errorMessage: error.message,
+        }),
+      );
+      throw new InternalServerErrorException(
+        isProduction ? 'Erreur de validation de base de données' : error.message,
+      );
+    }
+
+    // Autres erreurs Prisma (connexion, timeout, etc.)
+    this.logger.error(
+      JSON.stringify({
+        requestId,
+        context,
+        errorMessage: error?.message || 'Unknown Prisma error',
+        errorType: error?.constructor?.name,
+      }),
+    );
+    throw new InternalServerErrorException(
+      isProduction ? 'Erreur de base de données' : error?.message || 'Erreur inconnue',
+    );
+  }
+
   // Dashboard Stats
-  async getDashboardStats() {
-    const [
-      totalUsers,
-      totalItems,
-      totalExchanges,
-      openReports,
-      usersLastMonth,
-      itemsLastMonth,
-      exchangesLastMonth,
-      reportsLastMonth,
-    ] = await Promise.all([
-      this.prisma.user.count(),
-      this.prisma.item.count(),
-      this.prisma.exchange.count(),
-      this.prisma.report.count({ where: { resolved: false } }),
-      this.prisma.user.count({
-        where: {
-          createdAt: {
-            gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+  async getDashboardStats(requestId?: string) {
+    try {
+      const [
+        totalUsers,
+        totalItems,
+        totalExchanges,
+        openReports,
+        usersLastMonth,
+        itemsLastMonth,
+        exchangesLastMonth,
+        reportsLastMonth,
+      ] = await Promise.all([
+        this.prisma.user.count(),
+        this.prisma.item.count(),
+        this.prisma.exchange.count(),
+        this.prisma.report.count({ where: { resolved: false } }),
+        this.prisma.user.count({
+          where: {
+            createdAt: {
+              gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+            },
           },
-        },
-      }),
-      this.prisma.item.count({
-        where: {
-          createdAt: {
-            gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        }),
+        this.prisma.item.count({
+          where: {
+            createdAt: {
+              gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+            },
           },
-        },
-      }),
-      this.prisma.exchange.count({
-        where: {
-          createdAt: {
-            gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        }),
+        this.prisma.exchange.count({
+          where: {
+            createdAt: {
+              gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+            },
           },
-        },
-      }),
-      this.prisma.report.count({
-        where: {
-          createdAt: {
-            gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        }),
+        this.prisma.report.count({
+          where: {
+            createdAt: {
+              gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+            },
           },
-        },
-      }),
-    ]);
+        }),
+      ]);
 
-    const totalUsersBefore = totalUsers - usersLastMonth;
-    const totalItemsBefore = totalItems - itemsLastMonth;
-    const totalExchangesBefore = totalExchanges - exchangesLastMonth;
-    const totalReportsBefore = openReports - reportsLastMonth;
+      const totalUsersBefore = totalUsers - usersLastMonth;
+      const totalItemsBefore = totalItems - itemsLastMonth;
+      const totalExchangesBefore = totalExchanges - exchangesLastMonth;
+      const totalReportsBefore = openReports - reportsLastMonth;
 
-    return {
-      totalUsers,
-      totalItems,
-      totalExchanges,
-      openReports,
-      usersGrowth:
-        totalUsersBefore > 0 ? (usersLastMonth / totalUsersBefore) * 100 : 0,
-      itemsGrowth:
-        totalItemsBefore > 0 ? (itemsLastMonth / totalItemsBefore) * 100 : 0,
-      exchangesGrowth:
-        totalExchangesBefore > 0
-          ? (exchangesLastMonth / totalExchangesBefore) * 100
-          : 0,
-      reportsGrowth:
-        totalReportsBefore > 0
-          ? (reportsLastMonth / totalReportsBefore) * 100
-          : 0,
-    };
+      return {
+        totalUsers,
+        totalItems,
+        totalExchanges,
+        openReports,
+        usersGrowth:
+          totalUsersBefore > 0 ? (usersLastMonth / totalUsersBefore) * 100 : 0,
+        itemsGrowth:
+          totalItemsBefore > 0 ? (itemsLastMonth / totalItemsBefore) * 100 : 0,
+        exchangesGrowth:
+          totalExchangesBefore > 0
+            ? (exchangesLastMonth / totalExchangesBefore) * 100
+            : 0,
+        reportsGrowth:
+          totalReportsBefore > 0
+            ? (reportsLastMonth / totalReportsBefore) * 100
+            : 0,
+      };
+    } catch (error: any) {
+      this.handlePrismaError(error, 'AdminService.getDashboardStats', requestId);
+    }
   }
 
   // Users Management
-  async getUsers(page = 1, limit = 20, search?: string) {
-    const skip = (page - 1) * limit;
-    const where = search
-      ? {
-          OR: [
-            { email: { contains: search, mode: 'insensitive' as const } },
-            { displayName: { contains: search, mode: 'insensitive' as const } },
-          ],
-        }
-      : {};
+  async getUsers(page = 1, limit = 20, search?: string, requestId?: string) {
+    try {
+      const skip = (page - 1) * limit;
+      const where = search
+        ? {
+            OR: [
+              { email: { contains: search, mode: 'insensitive' as const } },
+              { displayName: { contains: search, mode: 'insensitive' as const } },
+            ],
+          }
+        : {};
 
-    const [users, total] = await Promise.all([
-      this.prisma.user.findMany({
-        where,
-        skip,
-        take: limit,
-        include: {
-          ban: true,
-          _count: {
-            select: {
-              items: true,
-              exchangesRequested: true,
-              exchangesResponded: true,
+      const [users, total] = await Promise.all([
+        this.prisma.user.findMany({
+          where,
+          skip,
+          take: limit,
+          include: {
+            ban: true,
+            _count: {
+              select: {
+                items: true,
+                exchangesRequested: true,
+                exchangesResponded: true,
+              },
             },
           },
-        },
-        orderBy: { createdAt: 'desc' },
-      }),
-      this.prisma.user.count({ where }),
-    ]);
+          orderBy: { createdAt: 'desc' },
+        }),
+        this.prisma.user.count({ where }),
+      ]);
 
-    return {
-      users,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
+      return {
+        users,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      };
+    } catch (error: any) {
+      this.handlePrismaError(error, 'AdminService.getUsers', requestId);
+    }
   }
 
   async getUserById(id: string) {
