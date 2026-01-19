@@ -60,6 +60,99 @@ import { validateEnv } from './config/env.validation';
 import { HealthService } from './modules/health/health.service';
 import { HealthModule } from './modules/health/health.module';
 
+// Import de path et fs pour charger le .env à la racine
+import * as path from 'path';
+import * as fs from 'fs';
+
+/**
+ * CHARGEMENT DU FICHIER .ENV À LA RACINE DU PROJET
+ *
+ * Charge le fichier .env depuis la racine du projet avant que NestJS ConfigModule
+ * ne charge ses propres fichiers. Cela permet d'utiliser un seul fichier .env à la racine.
+ */
+function loadRootEnvFile(): void {
+  // Essayer plusieurs chemins possibles selon d'où l'application est lancée
+
+  // 1. Depuis __dirname (dist/) vers la racine
+  const fromDistPath = path.join(__dirname, '..', '..', '..', '.env');
+
+  // 2. Depuis process.cwd() vers la racine (si lancé depuis apps/backend/)
+  const fromCwdPath = path.join(process.cwd(), '..', '..', '.env');
+
+  // 3. Directement depuis process.cwd() (si lancé depuis la racine)
+  const directPath = path.join(process.cwd(), '.env');
+
+  // Essayer de charger dotenv (disponible via @nestjs/config)
+  try {
+    // Essayer d'abord depuis la racine du projet (depuis dist/)
+    if (fs.existsSync(fromDistPath)) {
+      // Utiliser dotenv si disponible
+      try {
+        require('dotenv').config({ path: fromDistPath });
+      } catch {
+        // Si dotenv n'est pas disponible, parser manuellement
+        const envContent = fs.readFileSync(fromDistPath, 'utf-8');
+        envContent.split('\n').forEach((line) => {
+          const trimmed = line.trim();
+          if (trimmed && !trimmed.startsWith('#')) {
+            const [key, ...valueParts] = trimmed.split('=');
+            if (key && valueParts.length > 0) {
+              const value = valueParts.join('=').replace(/^["']|["']$/g, '');
+              process.env[key.trim()] = value.trim();
+            }
+          }
+        });
+      }
+      return;
+    }
+
+    // Essayer depuis process.cwd() vers la racine
+    if (fs.existsSync(fromCwdPath)) {
+      try {
+        require('dotenv').config({ path: fromCwdPath });
+      } catch {
+        const envContent = fs.readFileSync(fromCwdPath, 'utf-8');
+        envContent.split('\n').forEach((line) => {
+          const trimmed = line.trim();
+          if (trimmed && !trimmed.startsWith('#')) {
+            const [key, ...valueParts] = trimmed.split('=');
+            if (key && valueParts.length > 0) {
+              const value = valueParts.join('=').replace(/^["']|["']$/g, '');
+              process.env[key.trim()] = value.trim();
+            }
+          }
+        });
+      }
+      return;
+    }
+
+    // Essayer directement depuis process.cwd() (si PM2 démarre depuis la racine)
+    if (fs.existsSync(directPath) && !directPath.includes('apps/backend')) {
+      try {
+        require('dotenv').config({ path: directPath });
+      } catch {
+        const envContent = fs.readFileSync(directPath, 'utf-8');
+        envContent.split('\n').forEach((line) => {
+          const trimmed = line.trim();
+          if (trimmed && !trimmed.startsWith('#')) {
+            const [key, ...valueParts] = trimmed.split('=');
+            if (key && valueParts.length > 0) {
+              const value = valueParts.join('=').replace(/^["']|["']$/g, '');
+              process.env[key.trim()] = value.trim();
+            }
+          }
+        });
+      }
+    }
+  } catch (error) {
+    // Ignorer les erreurs silencieusement - ConfigModule essaiera aussi
+    console.warn('Impossible de charger le .env à la racine, ConfigModule essaiera:', error.message);
+  }
+}
+
+// Charger le .env à la racine AVANT la validation
+loadRootEnvFile();
+
 /**
  * VALIDATION DES VARIABLES D'ENVIRONNEMENT
  *

@@ -69,7 +69,12 @@ import prismaConfig from './config/prisma.config'; // Configuration de la base d
     ConfigModule.forRoot({
       isGlobal: true, // Disponible dans tous les modules sans réimporter
       load: [appConfig, securityConfig, prismaConfig], // Charge les configs personnalisées
-      envFilePath: ['.env.local', '.env'], // Fichiers .env à lire (ordre de priorité)
+      // Note: Le .env à la racine est déjà chargé dans main.ts avant cette étape
+      // Ici on garde les chemins locaux pour compatibilité
+      envFilePath: [
+        '.env.local', // Fichier local prioritaire (si existe dans apps/backend/)
+        '.env', // Fichier dans apps/backend/ (si existe)
+      ], // Fichiers .env à lire (ordre de priorité)
     }),
 
     // ============================================
