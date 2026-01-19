@@ -6,9 +6,10 @@
  * Toutes les erreurs sont interceptées et formatées selon un format unique.
  *
  * FONCTIONNALITÉS:
- * - Format standardisé pour toutes les erreurs (statusCode, error, message, path, timestamp, requestId)
- * - Gestion des erreurs Prisma (P2002 → 409, P2025 → 404, validation → 400/422, etc.)
+ * - Format standardisé pour toutes les erreurs (code, message, requestId, details?)
+ * - Gestion des erreurs Prisma (P2002 → UNIQUE_CONSTRAINT_VIOLATION, etc.)
  * - Gestion des HttpException de NestJS
+ * - Gestion des erreurs de validation (VALIDATION_ERROR avec details)
  * - Gestion des erreurs inconnues (500)
  * - Pas de stacktrace exposée en production (uniquement en développement)
  * - Logging des erreurs avec détails complets (seulement dans les logs)
@@ -21,12 +22,10 @@
  *
  * FORMAT DE RÉPONSE:
  * {
- *   "statusCode": number,
- *   "error": "BadRequest" | "Unauthorized" | "Forbidden" | "NotFound" | "Conflict" | "InternalServerError",
- *   "message": string,
- *   "path": string,
- *   "timestamp": string (ISO 8601),
- *   "requestId": string (UUID)
+ *   "code": "AUTH_INVALID_CREDENTIALS" | "VALIDATION_ERROR" | ...,
+ *   "message": "Texte lisible user",
+ *   "requestId": "...",
+ *   "details": [{ "field": "...", "issue": "..." }] // Optionnel
  * }
  */
 
@@ -43,39 +42,13 @@ import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
 import { RequestWithId } from '../middleware/request-id.middleware';
-
-/**
- * INTERFACE: ErrorResponse
- *
- * Format standardisé des réponses d'erreur de l'API.
- */
-interface ErrorResponse {
-  statusCode: number;
-  error: string;
-  message: string;
-  path: string;
-  timestamp: string;
-  requestId: string;
-  stack?: string; // Uniquement en développement
-}
-
-/**
- * MAPPING DES CODES HTTP VERS NOMS D'ERREUR
- */
-const HTTP_STATUS_NAMES: Record<number, string> = {
-  [HttpStatus.BAD_REQUEST]: 'BadRequest',
-  [HttpStatus.UNAUTHORIZED]: 'Unauthorized',
-  [HttpStatus.FORBIDDEN]: 'Forbidden',
-  [HttpStatus.NOT_FOUND]: 'NotFound',
-  [HttpStatus.METHOD_NOT_ALLOWED]: 'MethodNotAllowed',
-  [HttpStatus.CONFLICT]: 'Conflict',
-  [HttpStatus.UNPROCESSABLE_ENTITY]: 'UnprocessableEntity',
-  [HttpStatus.TOO_MANY_REQUESTS]: 'TooManyRequests',
-  [HttpStatus.INTERNAL_SERVER_ERROR]: 'InternalServerError',
-  [HttpStatus.BAD_GATEWAY]: 'BadGateway',
-  [HttpStatus.SERVICE_UNAVAILABLE]: 'ServiceUnavailable',
-  [HttpStatus.GATEWAY_TIMEOUT]: 'GatewayTimeout',
-};
+import {
+  ErrorResponse,
+  ErrorCode,
+  HTTP_STATUS_TO_ERROR_CODE,
+  PRISMA_ERROR_CODE_TO_ERROR_CODE,
+  ValidationErrorDetail,
+} from '../types/error-response.types';
 
 /**
  * FILTRE: HttpExceptionFilter
@@ -115,17 +88,20 @@ export class HttpExceptionFilter implements ExceptionFilter {
     // Logger l'erreur avec tous les détails (mais ne pas les renvoyer au client)
     this.logError(exception, request, errorResponse, isProduction);
 
-    // Envoyer la réponse formatée au client
-    response.status(errorResponse.statusCode).json(errorResponse);
+    // Déterminer le status HTTP à partir du code d'erreur
+    const httpStatus = this.getHttpStatusFromErrorCode(errorResponse.code);
+
+    // Envoyer la réponse formatée au client (sans statusCode dans le body)
+    response.status(httpStatus).json(errorResponse);
   }
 
   /**
    * Formate l'erreur selon son type (HttpException, Prisma, Error, etc.)
    *
    * @param exception - L'exception à formater
-   * @param path - Chemin de la requête
+   * @param path - Chemin de la requête (pour logging uniquement)
    * @param requestId - ID unique de la requête
-   * @param isProduction - Si on est en production (pour décider si inclure la stacktrace)
+   * @param isProduction - Si on est en production
    * @returns Réponse d'erreur formatée
    */
   private formatError(
@@ -136,39 +112,32 @@ export class HttpExceptionFilter implements ExceptionFilter {
   ): ErrorResponse {
     // Cas 1: HttpException (exceptions NestJS standard)
     if (exception instanceof HttpException) {
-      return this.formatHttpException(exception, path, requestId, isProduction);
+      return this.formatHttpException(exception, requestId, isProduction);
     }
 
     // Cas 2: Erreurs Prisma
     if (exception instanceof Prisma.PrismaClientKnownRequestError) {
-      return this.formatPrismaError(exception, path, requestId, isProduction);
+      return this.formatPrismaError(exception, requestId, isProduction);
     }
 
     // Cas 3: Erreurs Prisma de validation
     if (exception instanceof Prisma.PrismaClientValidationError) {
       return {
-        statusCode: HttpStatus.BAD_REQUEST,
-        error: 'BadRequest',
+        code: 'VALIDATION_ERROR',
         message: 'Données invalides',
-        path,
-        timestamp: new Date().toISOString(),
         requestId,
-        ...(isProduction ? {} : { stack: exception.stack }),
       };
     }
 
     // Cas 4: Erreur générique (Error)
     if (exception instanceof Error) {
-      return this.formatGenericError(exception, path, requestId, isProduction);
+      return this.formatGenericError(exception, requestId, isProduction);
     }
 
     // Cas 5: Erreur inconnue (type non reconnu)
     return {
-      statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-      error: 'InternalServerError',
+      code: 'INTERNAL_SERVER_ERROR',
       message: 'Une erreur inattendue est survenue',
-      path,
-      timestamp: new Date().toISOString(),
       requestId,
     };
   }
@@ -177,32 +146,49 @@ export class HttpExceptionFilter implements ExceptionFilter {
    * Formate une HttpException (exceptions NestJS)
    *
    * @param exception - L'exception HttpException
-   * @param path - Chemin de la requête
    * @param requestId - ID unique de la requête
    * @param isProduction - Si on est en production
    * @returns Réponse d'erreur formatée
    */
   private formatHttpException(
     exception: HttpException,
-    path: string,
     requestId: string,
     isProduction: boolean,
   ): ErrorResponse {
     const statusCode = exception.getStatus();
     const exceptionResponse = exception.getResponse();
 
-    // Extraire le message d'erreur
+    // Détecter le code d'erreur à partir du message ou du status
+    let code: ErrorCode = HTTP_STATUS_TO_ERROR_CODE[statusCode] || 'INTERNAL_SERVER_ERROR';
     let message: string;
+    let details: ValidationErrorDetail[] | undefined;
+
     if (typeof exceptionResponse === 'string') {
       message = exceptionResponse;
+      // Essayer de détecter des codes spécifiques depuis le message
+      code = this.detectErrorCodeFromMessage(message, statusCode);
     } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
-      // Gérer les réponses complexes (ex: validation errors avec array d'erreurs)
       const response = exceptionResponse as any;
-      if (response.message) {
-        // Si c'est un array (validation errors), prendre le premier ou joindre
-        message = Array.isArray(response.message)
-          ? response.message[0] || 'Erreur de validation'
-          : response.message;
+
+      // Cas spécial: erreurs de validation (422)
+      if (statusCode === HttpStatus.UNPROCESSABLE_ENTITY && response.errors) {
+        code = 'VALIDATION_ERROR';
+        message = response.message || 'Erreurs de validation';
+        // Extraire les détails de validation depuis response.errors
+        details = this.extractValidationDetails(response.errors);
+      } else if (response.message) {
+        // Message simple ou array de messages
+        if (Array.isArray(response.message)) {
+          message = response.message[0] || 'Erreur de validation';
+          // Si c'est un array de strings, essayer d'extraire les détails
+          if (response.errors && Array.isArray(response.errors)) {
+            details = this.extractValidationDetails(response.errors);
+          }
+        } else {
+          message = response.message;
+        }
+        // Détecter le code depuis le message
+        code = this.detectErrorCodeFromMessage(message, statusCode);
       } else {
         message = 'Une erreur est survenue';
       }
@@ -213,45 +199,136 @@ export class HttpExceptionFilter implements ExceptionFilter {
     // Normaliser le message pour la production (pas de détails techniques)
     if (isProduction && statusCode >= 500) {
       message = 'Une erreur serveur est survenue';
+      code = 'INTERNAL_SERVER_ERROR';
     }
 
-    const errorName = HTTP_STATUS_NAMES[statusCode] || 'InternalServerError';
-
     return {
-      statusCode,
-      error: errorName,
+      code,
       message,
-      path,
-      timestamp: new Date().toISOString(),
       requestId,
-      ...(isProduction ? {} : { stack: exception.stack }),
+      ...(details && details.length > 0 ? { details } : {}),
     };
+  }
+
+  /**
+   * Détecte le code d'erreur à partir du message et du status HTTP
+   *
+   * @param message - Message d'erreur
+   * @param statusCode - Code HTTP
+   * @returns Code d'erreur détecté
+   */
+  private detectErrorCodeFromMessage(message: string, statusCode: number): ErrorCode {
+    const lowerMessage = message.toLowerCase();
+
+    // Détection basée sur le contenu du message
+    if (lowerMessage.includes('invalid credentials') || lowerMessage.includes('identifiants invalides')) {
+      return 'AUTH_INVALID_CREDENTIALS';
+    }
+    if (lowerMessage.includes('unauthorized') || lowerMessage.includes('non autorisé')) {
+      return 'AUTH_UNAUTHORIZED';
+    }
+    if (lowerMessage.includes('forbidden') || lowerMessage.includes('interdit')) {
+      return 'AUTH_FORBIDDEN';
+    }
+    if (lowerMessage.includes('token expired') || lowerMessage.includes('token expiré')) {
+      return 'AUTH_TOKEN_EXPIRED';
+    }
+    if (lowerMessage.includes('invalid token') || lowerMessage.includes('token invalide')) {
+      return 'AUTH_TOKEN_INVALID';
+    }
+    if (lowerMessage.includes('2fa') || lowerMessage.includes('two factor')) {
+      if (lowerMessage.includes('required') || lowerMessage.includes('requis')) {
+        return 'AUTH_2FA_REQUIRED';
+      }
+      if (lowerMessage.includes('invalid') || lowerMessage.includes('invalide')) {
+        return 'AUTH_2FA_INVALID';
+      }
+    }
+    if (lowerMessage.includes('validation') || lowerMessage.includes('invalide')) {
+      return 'VALIDATION_ERROR';
+    }
+    if (lowerMessage.includes('not found') || lowerMessage.includes('introuvable')) {
+      return 'NOT_FOUND';
+    }
+    if (lowerMessage.includes('already exists') || lowerMessage.includes('déjà utilisé')) {
+      return 'UNIQUE_CONSTRAINT_VIOLATION';
+    }
+
+    // Fallback sur le mapping HTTP status
+    return HTTP_STATUS_TO_ERROR_CODE[statusCode] || 'INTERNAL_SERVER_ERROR';
+  }
+
+  /**
+   * Extrait les détails de validation depuis un array d'erreurs
+   *
+   * @param errors - Array d'erreurs (strings ou objets)
+   * @returns Détails de validation formatés
+   */
+  private extractValidationDetails(errors: any[]): ValidationErrorDetail[] {
+    return errors.map((error, index) => {
+      if (typeof error === 'string') {
+        // Si c'est une string, essayer de parser "field: issue" ou utiliser l'index
+        const parts = error.split(':');
+        if (parts.length >= 2) {
+          return {
+            field: parts[0].trim(),
+            issue: parts.slice(1).join(':').trim(),
+          };
+        }
+        return {
+          field: `field_${index}`,
+          issue: error,
+        };
+      } else if (error && typeof error === 'object') {
+        // Si c'est un objet avec property et constraints (class-validator)
+        if (error.property && error.constraints) {
+          const constraintMessages = Object.values(error.constraints) as string[];
+          return {
+            field: error.property,
+            issue: constraintMessages.join(', '),
+          };
+        }
+        // Si c'est un objet avec field et issue
+        if (error.field && error.issue) {
+          return {
+            field: error.field,
+            issue: error.issue,
+          };
+        }
+      }
+      // Fallback
+      return {
+        field: `field_${index}`,
+        issue: String(error),
+      };
+    });
   }
 
   /**
    * Formate une erreur Prisma
    *
    * MAPPING DES CODES PRISMA:
-   * - P2002: Unique constraint violation → 409 Conflict
-   * - P2025: Record not found → 404 Not Found
-   * - P2003: Foreign key constraint → 400 Bad Request
-   * - P2014: Invalid ID → 400 Bad Request
-   * - Autres: 400 Bad Request ou 500 Internal Server Error
+   * - P2002: Unique constraint violation → UNIQUE_CONSTRAINT_VIOLATION
+   * - P2025: Record not found → RECORD_NOT_FOUND
+   * - P2003: Foreign key constraint → FOREIGN_KEY_CONSTRAINT_VIOLATION
+   * - P2014: Invalid ID → INVALID_RELATION
+   * - P1001/P1008/P1010: Database connection → DATABASE_CONNECTION_ERROR
    *
    * @param exception - L'erreur Prisma
-   * @param path - Chemin de la requête
    * @param requestId - ID unique de la requête
    * @param isProduction - Si on est en production
    * @returns Réponse d'erreur formatée
    */
   private formatPrismaError(
     exception: Prisma.PrismaClientKnownRequestError,
-    path: string,
     requestId: string,
     isProduction: boolean,
   ): ErrorResponse {
     // Extraire le message d'erreur Prisma
     const prismaMessage = exception.message;
+
+    // Obtenir le code d'erreur depuis le mapping
+    const code = PRISMA_ERROR_CODE_TO_ERROR_CODE[exception.code] || 'BAD_REQUEST';
 
     // Mapper selon le code d'erreur Prisma
     switch (exception.code) {
@@ -260,52 +337,36 @@ export class HttpExceptionFilter implements ExceptionFilter {
         const target = (exception.meta as any)?.target as string[] | undefined;
         const field = target?.[0] || 'champ';
         return {
-          statusCode: HttpStatus.CONFLICT,
-          error: 'Conflict',
+          code: 'UNIQUE_CONSTRAINT_VIOLATION',
           message: `Cette ${field} est déjà utilisée`,
-          path,
-          timestamp: new Date().toISOString(),
           requestId,
-          ...(isProduction ? {} : { stack: exception.stack }),
         };
       }
 
       // P2025: Record not found
       case 'P2025': {
         return {
-          statusCode: HttpStatus.NOT_FOUND,
-          error: 'NotFound',
+          code: 'RECORD_NOT_FOUND',
           message: 'Ressource introuvable',
-          path,
-          timestamp: new Date().toISOString(),
           requestId,
-          ...(isProduction ? {} : { stack: exception.stack }),
         };
       }
 
       // P2003: Foreign key constraint violation
       case 'P2003': {
         return {
-          statusCode: HttpStatus.BAD_REQUEST,
-          error: 'BadRequest',
+          code: 'FOREIGN_KEY_CONSTRAINT_VIOLATION',
           message: 'Données de référence invalides',
-          path,
-          timestamp: new Date().toISOString(),
           requestId,
-          ...(isProduction ? {} : { stack: exception.stack }),
         };
       }
 
       // P2014: Invalid ID (required relation missing)
       case 'P2014': {
         return {
-          statusCode: HttpStatus.BAD_REQUEST,
-          error: 'BadRequest',
+          code: 'INVALID_RELATION',
           message: 'Données de relation invalides',
-          path,
-          timestamp: new Date().toISOString(),
           requestId,
-          ...(isProduction ? {} : { stack: exception.stack }),
         };
       }
 
@@ -316,28 +377,20 @@ export class HttpExceptionFilter implements ExceptionFilter {
       case 'P1008':
       case 'P1010': {
         return {
-          statusCode: HttpStatus.SERVICE_UNAVAILABLE,
-          error: 'ServiceUnavailable',
+          code: 'DATABASE_CONNECTION_ERROR',
           message: isProduction
             ? 'Service temporairement indisponible'
             : `Erreur de connexion à la base de données: ${prismaMessage}`,
-          path,
-          timestamp: new Date().toISOString(),
           requestId,
-          ...(isProduction ? {} : { stack: exception.stack }),
         };
       }
 
-      // Par défaut: 400 Bad Request
+      // Par défaut: BAD_REQUEST
       default: {
         return {
-          statusCode: HttpStatus.BAD_REQUEST,
-          error: 'BadRequest',
+          code: 'BAD_REQUEST',
           message: isProduction ? 'Requête invalide' : `Erreur Prisma: ${prismaMessage}`,
-          path,
-          timestamp: new Date().toISOString(),
           requestId,
-          ...(isProduction ? {} : { stack: exception.stack }),
         };
       }
     }
@@ -347,14 +400,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
    * Formate une erreur générique (Error)
    *
    * @param exception - L'erreur Error
-   * @param path - Chemin de la requête
    * @param requestId - ID unique de la requête
    * @param isProduction - Si on est en production
    * @returns Réponse d'erreur formatée
    */
   private formatGenericError(
     exception: Error,
-    path: string,
     requestId: string,
     isProduction: boolean,
   ): ErrorResponse {
@@ -364,14 +415,45 @@ export class HttpExceptionFilter implements ExceptionFilter {
       : exception.message || 'Une erreur inattendue est survenue';
 
     return {
-      statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-      error: 'InternalServerError',
+      code: 'INTERNAL_SERVER_ERROR',
       message,
-      path,
-      timestamp: new Date().toISOString(),
       requestId,
-      ...(isProduction ? {} : { stack: exception.stack }),
     };
+  }
+
+  /**
+   * Convertit un code d'erreur en code HTTP
+   *
+   * @param code - Code d'erreur
+   * @returns Code HTTP correspondant
+   */
+  private getHttpStatusFromErrorCode(code: ErrorCode): number {
+    const mapping: Record<ErrorCode, number> = {
+      // Authentification
+      AUTH_INVALID_CREDENTIALS: HttpStatus.UNAUTHORIZED,
+      AUTH_UNAUTHORIZED: HttpStatus.UNAUTHORIZED,
+      AUTH_TOKEN_EXPIRED: HttpStatus.UNAUTHORIZED,
+      AUTH_TOKEN_INVALID: HttpStatus.UNAUTHORIZED,
+      AUTH_FORBIDDEN: HttpStatus.FORBIDDEN,
+      AUTH_2FA_REQUIRED: HttpStatus.UNAUTHORIZED,
+      AUTH_2FA_INVALID: HttpStatus.UNAUTHORIZED,
+      // Validation
+      VALIDATION_ERROR: HttpStatus.UNPROCESSABLE_ENTITY,
+      // Prisma
+      UNIQUE_CONSTRAINT_VIOLATION: HttpStatus.CONFLICT,
+      RECORD_NOT_FOUND: HttpStatus.NOT_FOUND,
+      FOREIGN_KEY_CONSTRAINT_VIOLATION: HttpStatus.BAD_REQUEST,
+      INVALID_RELATION: HttpStatus.BAD_REQUEST,
+      DATABASE_CONNECTION_ERROR: HttpStatus.SERVICE_UNAVAILABLE,
+      // Générique
+      BAD_REQUEST: HttpStatus.BAD_REQUEST,
+      NOT_FOUND: HttpStatus.NOT_FOUND,
+      CONFLICT: HttpStatus.CONFLICT,
+      INTERNAL_SERVER_ERROR: HttpStatus.INTERNAL_SERVER_ERROR,
+      SERVICE_UNAVAILABLE: HttpStatus.SERVICE_UNAVAILABLE,
+    };
+
+    return mapping[code] || HttpStatus.INTERNAL_SERVER_ERROR;
   }
 
   /**
@@ -390,18 +472,24 @@ export class HttpExceptionFilter implements ExceptionFilter {
   ) {
     const { method, url, ip } = request;
     const userId = (request as any).user?.id || null;
+    const httpStatus = this.getHttpStatusFromErrorCode(errorResponse.code);
 
     // Construire le log d'erreur
     const logData: any = {
       requestId: errorResponse.requestId,
       method,
-      path: errorResponse.path,
-      statusCode: errorResponse.statusCode,
-      error: errorResponse.error,
+      path: url,
+      statusCode: httpStatus,
+      code: errorResponse.code,
       message: errorResponse.message,
       userId: userId || undefined,
       ip,
     };
+
+    // Ajouter les détails de validation si présents
+    if (errorResponse.details && errorResponse.details.length > 0) {
+      logData.details = errorResponse.details;
+    }
 
     // En production, logger les détails complets mais ne jamais les exposer
     // En dev, inclure aussi la stacktrace dans les logs
@@ -410,9 +498,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
 
     // Logger selon le niveau de sévérité
-    if (errorResponse.statusCode >= 500) {
+    if (httpStatus >= 500) {
       this.logger.error(JSON.stringify(logData));
-    } else if (errorResponse.statusCode >= 400) {
+    } else if (httpStatus >= 400) {
       this.logger.warn(JSON.stringify(logData));
     }
   }

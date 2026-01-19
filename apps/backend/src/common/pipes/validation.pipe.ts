@@ -72,21 +72,36 @@ export class ValidationPipe extends NestValidationPipe {
       },
 
       // exceptionFactory: personnalise les exceptions de validation
-      // Retourne 422 (Unprocessable Entity) au lieu de 400 pour les erreurs de validation
+      // Retourne 422 (Unprocessable Entity) avec format standardisé (code + details)
       exceptionFactory: (errors) => {
-        const messages = errors.map((error) => {
+        // Extraire les détails de validation (field, issue)
+        const details = errors.map((error) => {
           const constraints = error.constraints;
           if (constraints) {
-            return Object.values(constraints).join(', ');
+            // Joindre toutes les contraintes pour ce champ
+            const issue = Object.values(constraints).join(', ');
+            return {
+              field: error.property,
+              issue,
+            };
           }
-          return `${error.property} a une valeur invalide`;
+          return {
+            field: error.property,
+            issue: 'Valeur invalide',
+          };
         });
+
+        // Créer un message général
+        const message =
+          details.length === 1
+            ? `Erreur de validation: ${details[0].field}`
+            : `${details.length} erreurs de validation`;
 
         return new HttpException(
           {
             statusCode: HttpStatus.UNPROCESSABLE_ENTITY,
-            message: 'Erreurs de validation',
-            errors: messages,
+            message,
+            errors: details, // Format standardisé avec field et issue
           },
           HttpStatus.UNPROCESSABLE_ENTITY,
         );

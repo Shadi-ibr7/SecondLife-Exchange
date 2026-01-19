@@ -15,13 +15,7 @@
  */
 
 // Import des décorateurs NestJS
-import {
-  Controller,
-  Post,
-  Body,
-  UseGuards,
-  Request,
-} from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
 
 // Import des décorateurs Swagger pour la documentation API
 import {
@@ -103,7 +97,7 @@ export class UploadsController {
     description:
       'Génère une signature signée avec HMAC SHA-1 pour autoriser un upload direct vers Cloudinary. ' +
       'Le folder doit respecter les patterns autorisés (items/<itemId> ou profiles). ' +
-      'Pour items/<itemId>, vérifie que l\'item appartient à l\'utilisateur authentifié.',
+      "Pour items/<itemId>, vérifie que l'item appartient à l'utilisateur authentifié.",
   })
   @ApiResponse({
     status: 200,
@@ -131,7 +125,10 @@ export class UploadsController {
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Folder invalide ou taille trop grande' })
+  @ApiResponse({
+    status: 400,
+    description: 'Folder invalide ou taille trop grande',
+  })
   @ApiResponse({ status: 401, description: 'Non authentifié' })
   @ApiResponse({
     status: 403,

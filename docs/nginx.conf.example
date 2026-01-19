@@ -1,7 +1,7 @@
 # ============================================
 # CONFIGURATION NGINX POUR SECONDLIFE EXCHANGE
 # ============================================
-# 
+#
 # Ce fichier est un exemple de configuration Nginx pour le backend.
 # À adapter selon votre environnement de production.
 #
@@ -21,11 +21,11 @@
 upstream backend {
     # Adresse du backend (localhost si sur le même serveur)
     server localhost:4000;
-    
+
     # Health check (nécessite le module nginx_upstream_check_module)
     # Si le module n'est pas disponible, commenter ces lignes
     # check interval=3000 rise=2 fall=3 timeout=1000;
-    
+
     # Pour plusieurs instances PM2, ajouter plusieurs serveurs:
     # server localhost:4000;
     # server localhost:4001;
@@ -47,34 +47,34 @@ server {
     # listen 443 ssl http2;
     # ssl_certificate /etc/letsencrypt/live/api.example.com/fullchain.pem;
     # ssl_certificate_key /etc/letsencrypt/live/api.example.com/privkey.pem;
-    
+
     server_name api.example.com; # À adapter avec votre domaine
-    
+
     # Taille maximale des uploads (pour les images Cloudinary)
     client_max_body_size 10M;
-    
+
     # Timeouts
     proxy_connect_timeout 60s;
     proxy_send_timeout 60s;
     proxy_read_timeout 60s;
-    
+
     # Headers pour le backend
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_set_header X-Request-Id $request_id;
-    
+
     # Générer un request_id si absent (pour traçage)
     set $request_id $request_id;
     if ($request_id = "") {
         set $request_id "${request_id_prefix}${msec}${pid}${connection}";
     }
-    
+
     # ============================================
     # HEALTH CHECKS (bypass auth, pas de logs)
     # ============================================
-    
+
     # GET /health - Health check simple
     location = /health {
         proxy_pass http://backend/health;
@@ -85,7 +85,7 @@ server {
         add_header Pragma "no-cache";
         add_header Expires "0";
     }
-    
+
     # GET /health/ready - Readiness check
     location = /health/ready {
         proxy_pass http://backend/health/ready;
@@ -96,11 +96,11 @@ server {
         add_header Pragma "no-cache";
         add_header Expires "0";
     }
-    
+
     # ============================================
     # API ROUTES
     # ============================================
-    
+
     # Toutes les routes API
     location /api/ {
         proxy_pass http://backend;
@@ -108,12 +108,12 @@ server {
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_cache_bypass $http_upgrade;
-        
+
         # WebSocket support (pour Socket.io)
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
     }
-    
+
     # Routes sans préfixe /api (pour compatibilité)
     location / {
         proxy_pass http://backend;
@@ -122,15 +122,15 @@ server {
         proxy_set_header Connection 'upgrade';
         proxy_cache_bypass $http_upgrade;
     }
-    
+
     # ============================================
     # LOGGING
     # ============================================
-    
+
     # Logs d'accès (format JSON pour parsing facile)
     access_log /var/log/nginx/secondlife-backend-access.log json;
     error_log /var/log/nginx/secondlife-backend-error.log warn;
-    
+
     # Format de log JSON (nécessite nginx-module-http-log-format-json)
     # Si le module n'est pas disponible, utiliser le format standard
     log_format json escape=json
@@ -149,7 +149,7 @@ server {
         '"upstream_status":"$upstream_status",'
         '"upstream_response_time":"$upstream_response_time"'
         '}';
-    
+
     # Utiliser le format JSON pour les logs d'accès
     # access_log /var/log/nginx/secondlife-backend-access.log json;
 }
@@ -157,27 +157,27 @@ server {
 # ============================================
 # CONFIGURATION SSL/TLS (optionnel)
 # ============================================
-# 
+#
 # Pour activer HTTPS, décommenter et configurer:
 #
 # server {
 #     listen 443 ssl http2;
 #     server_name api.example.com;
-#     
+#
 #     # Certificats SSL (Let's Encrypt)
 #     ssl_certificate /etc/letsencrypt/live/api.example.com/fullchain.pem;
 #     ssl_certificate_key /etc/letsencrypt/live/api.example.com/privkey.pem;
-#     
+#
 #     # Configuration SSL moderne
 #     ssl_protocols TLSv1.2 TLSv1.3;
 #     ssl_ciphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384';
 #     ssl_prefer_server_ciphers off;
 #     ssl_session_cache shared:SSL:10m;
 #     ssl_session_timeout 10m;
-#     
+#
 #     # HSTS (HTTP Strict Transport Security)
 #     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-#     
+#
 #     # ... (reprendre la configuration du serveur ci-dessus)
 # }
 # ============================================

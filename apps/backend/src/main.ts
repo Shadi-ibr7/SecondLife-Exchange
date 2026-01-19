@@ -146,7 +146,7 @@ async function bootstrap() {
    */
   const healthModule = app.select(HealthModule);
   const healthService = healthModule.get(HealthService, { strict: false });
-  
+
   app.getHttpAdapter().get('/health', (req, res) => {
     try {
       const response = healthService.getHealth();
@@ -156,7 +156,7 @@ async function bootstrap() {
       res.status(500).json({ status: 'error', message: 'Health check failed' });
     }
   });
-  
+
   app.getHttpAdapter().get('/health/ready', async (req, res) => {
     try {
       const response = await healthService.getReady();
@@ -175,7 +175,7 @@ async function bootstrap() {
   /**
    * Middleware RequestId génère un UUID unique pour chaque requête HTTP.
    * Permet de tracer toutes les opérations liées à une même requête dans les logs.
-   * 
+   *
    * - Génère un UUID si le header X-Request-Id est absent
    * - Utilise le header X-Request-Id existant s'il est présent
    * - Ajoute X-Request-Id dans la réponse HTTP

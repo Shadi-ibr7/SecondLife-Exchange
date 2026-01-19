@@ -18,6 +18,11 @@ import axios from 'axios';
 import type { AxiosError } from 'axios';
 import { toast } from 'react-hot-toast';
 import { ADMIN_API_BASE, ADMIN_BASE_PATH } from './admin.config';
+import {
+  parseApiError,
+  formatErrorMessageForToast,
+  logApiError,
+} from './parse-api-error';
 
 /**
  * Réponse du login admin
@@ -255,22 +260,14 @@ adminApiClient.interceptors.response.use(
      * - Erreurs 403 CSRF (gérées par le retry automatique)
      * - Requêtes marquées comme silencieuses (_skipErrorToast)
      *
-     * PRIORITÉ DES MESSAGES:
-     * 1. error.response?.data?.message: message d'erreur standardisé du serveur (prioritaire)
-     * 2. Erreur réseau (pas de response) → "API inaccessible"
-     * 3. error.message: message d'erreur générique (fallback)
-     *
      * FORMAT BACKEND STANDARDISÉ:
      * Le backend retourne toujours un format standardisé:
      * {
-     *   "statusCode": number,
-     *   "error": string,
-     *   "message": string,
-     *   "path": string,
-     *   "timestamp": string,
-     *   "requestId": string
+     *   "code": "AUTH_INVALID_CREDENTIALS" | "VALIDATION_ERROR" | ...,
+     *   "message": "Texte lisible user",
+     *   "requestId": "...",
+     *   "details": [{ "field": "...", "issue": "..." }] // Optionnel
      * }
-     * On extrait toujours message pour l'afficher à l'utilisateur.
      */
     const shouldShowToast =
       error.response?.status !== 401 && // Ne pas afficher pour les 401 (gérées par le rafraîchissement)
@@ -278,42 +275,20 @@ adminApiClient.interceptors.response.use(
       !originalRequest?._skipErrorToast; // Ne pas afficher pour les requêtes silencieuses
 
     if (shouldShowToast) {
-      let userMessage: string;
+      // Parser l'erreur avec le helper centralisé
+      const parsedError = parseApiError(error);
 
-      // Cas 1: Erreur avec réponse du serveur (format standardisé backend)
-      const errorData = error.response?.data as { message?: string } | undefined;
-      if (errorData?.message) {
-        // Extraire le message standardisé du backend
-        userMessage = errorData.message;
-      }
-      // Cas 2: Erreur réseau (pas de response) → API inaccessible
-      else if (!error.response && error.request) {
-        // Pas de réponse du serveur = erreur réseau (connexion impossible, timeout, etc.)
-        userMessage = 'API inaccessible. Veuillez vérifier votre connexion.';
-      }
-      // Cas 3: Message d'erreur générique (fallback)
-      else if ('message' in error && error.message) {
-        // Utiliser le message d'erreur générique seulement si ce n'est pas un message technique
-        // Éviter d'afficher des messages techniques comme "Network Error" brut
-        const errorMessage = String(error.message);
-        const technicalMessages = ['Network Error', 'timeout', 'ECONNREFUSED', 'ENOTFOUND'];
-        const isTechnical = technicalMessages.some((msg) =>
-          errorMessage.toLowerCase().includes(msg.toLowerCase()),
-        );
-        userMessage = isTechnical
-          ? 'API inaccessible. Veuillez vérifier votre connexion.'
-          : errorMessage;
-      }
-      // Cas 4: Aucun message disponible
-      else {
-        userMessage = 'Une erreur est survenue. Veuillez réessayer.';
-      }
+      // Logger l'erreur en dev uniquement
+      logApiError(error, parsedError);
+
+      // Formater le message avec requestId pour le toast
+      const toastMessage = formatErrorMessageForToast(parsedError);
 
       /**
        * Afficher un toast d'erreur avec le message utilisateur-friendly
        * toast.error() affiche une notification rouge en bas de l'écran
        */
-      toast.error(userMessage);
+      toast.error(toastMessage);
     }
 
     return Promise.reject(error);

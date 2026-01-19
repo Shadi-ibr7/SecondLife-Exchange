@@ -40,6 +40,13 @@ import axios, { AxiosInstance, AxiosResponse } from 'axios';
 // Import de react-hot-toast pour afficher les notifications
 import { toast } from 'react-hot-toast';
 
+// Import du helper pour parser les erreurs API
+import {
+  parseApiError,
+  formatErrorMessageForToast,
+  logApiError,
+} from './parse-api-error';
+
 // Import des types TypeScript
 import {
   AuthResponse,
@@ -565,22 +572,14 @@ class ApiClient {
          * - Erreurs de l'endpoint /auth/refresh (pour éviter les toasts redondants)
          * - Requêtes marquées comme silencieuses (_skipErrorToast)
          *
-         * PRIORITÉ DES MESSAGES:
-         * 1. error.response?.data?.message: message d'erreur standardisé du serveur (prioritaire)
-         * 2. Erreur réseau (pas de response) → "API inaccessible"
-         * 3. error.message: message d'erreur générique (fallback)
-         *
          * FORMAT BACKEND STANDARDISÉ:
          * Le backend retourne toujours un format standardisé:
          * {
-         *   "statusCode": number,
-         *   "error": string,
-         *   "message": string,
-         *   "path": string,
-         *   "timestamp": string,
-         *   "requestId": string
+         *   "code": "AUTH_INVALID_CREDENTIALS" | "VALIDATION_ERROR" | ...,
+         *   "message": "Texte lisible user",
+         *   "requestId": "...",
+         *   "details": [{ "field": "...", "issue": "..." }] // Optionnel
          * }
-         * On extrait toujours message pour l'afficher à l'utilisateur.
          */
         if (
           error.response?.status !== 401 || // Ne pas afficher pour les 401 (gérées par le rafraîchissement)
@@ -588,40 +587,20 @@ class ApiClient {
         ) {
           // Ne pas afficher les erreurs pour les requêtes marquées comme silencieuses
           if (!originalRequest?._skipErrorToast) {
-            let userMessage: string;
+            // Parser l'erreur avec le helper centralisé
+            const parsedError = parseApiError(error);
 
-            // Cas 1: Erreur avec réponse du serveur (format standardisé backend)
-          if (error.response?.data?.message) {
-              // Extraire le message standardisé du backend
-              userMessage = error.response.data.message;
-            }
-            // Cas 2: Erreur réseau (pas de response) → API inaccessible
-            else if (!error.response && error.request) {
-              // Pas de réponse du serveur = erreur réseau (connexion impossible, timeout, etc.)
-              userMessage = 'API inaccessible. Veuillez vérifier votre connexion.';
-            }
-            // Cas 3: Message d'erreur générique (fallback)
-            else if (error.message) {
-              // Utiliser le message d'erreur générique seulement si ce n'est pas un message technique
-              // Éviter d'afficher des messages techniques comme "Network Error" brut
-              const technicalMessages = ['Network Error', 'timeout', 'ECONNREFUSED', 'ENOTFOUND'];
-              const isTechnical = technicalMessages.some((msg) =>
-                error.message.toLowerCase().includes(msg.toLowerCase()),
-              );
-              userMessage = isTechnical
-                ? 'API inaccessible. Veuillez vérifier votre connexion.'
-                : error.message;
-            }
-            // Cas 4: Aucun message disponible
-            else {
-              userMessage = 'Une erreur est survenue. Veuillez réessayer.';
-            }
+            // Logger l'erreur en dev uniquement
+            logApiError(error, parsedError);
 
-              /**
+            // Formater le message avec requestId pour le toast
+            const toastMessage = formatErrorMessageForToast(parsedError);
+
+            /**
              * Afficher un toast d'erreur avec le message utilisateur-friendly
-               * toast.error() affiche une notification rouge en bas de l'écran
-               */
-            toast.error(userMessage);
+             * toast.error() affiche une notification rouge en bas de l'écran
+             */
+            toast.error(toastMessage);
           }
         }
 
