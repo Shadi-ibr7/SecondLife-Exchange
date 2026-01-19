@@ -50,8 +50,8 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 // Import du middleware RequestId (génère un UUID pour chaque requête)
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 
-// Import du logger structuré
-import { StructuredLoggerService } from './common/logger/structured-logger.service';
+// Import du logger structuré Pino
+import { PinoLoggerService } from './common/logger/pino-logger.service';
 
 // Import de la validation des variables d'environnement
 import { validateEnv } from './config/env.validation';
@@ -88,8 +88,21 @@ async function bootstrap() {
   // Récupération du service de configuration pour accéder aux variables d'environnement
   const configService = app.get(ConfigService);
 
-  // Logger structuré pour le bootstrap
-  const logger = StructuredLoggerService.create('Bootstrap');
+  // ============================================
+  // CONFIGURATION DU LOGGER STRUCTURÉ (PINO)
+  // ============================================
+  /**
+   * Configuration du logger structuré Pino pour tous les logs NestJS.
+   * - Format JSON en production pour parsing facile
+   * - Format lisible en développement (pino-pretty)
+   * - Inclusion automatique du requestId dans tous les logs
+   * - Filtrage automatique des secrets
+   */
+  const pinoLogger = new PinoLoggerService();
+  app.useLogger(pinoLogger);
+
+  // Logger structuré pour le bootstrap (utilise aussi Pino)
+  const logger = pinoLogger;
 
   // ============================================
   // CONFIGURATION DE LA SÉCURITÉ (HELMET)

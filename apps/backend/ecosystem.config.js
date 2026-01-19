@@ -20,17 +20,19 @@ module.exports = {
     {
       name: 'secondlife-backend',
       script: 'dist/main.js',
-      instances: 1, // Nombre d'instances (1 pour commencer, peut être augmenté)
-      exec_mode: 'fork', // Mode fork (cluster pour plusieurs instances)
+      instances: 2, // Nombre d'instances (2 pour production, peut être augmenté)
+      exec_mode: 'cluster', // Mode cluster pour plusieurs instances
       watch: false, // Ne pas surveiller les fichiers en production
       max_memory_restart: '500M', // Redémarrer si la mémoire dépasse 500MB
       env: {
         NODE_ENV: 'development',
+        LOG_LEVEL: 'debug',
         // Les variables d'environnement sont chargées depuis .env
         // PM2 charge automatiquement .env si présent dans le répertoire de travail
       },
       env_production: {
         NODE_ENV: 'production',
+        LOG_LEVEL: 'info',
         // Les variables d'environnement sont chargées depuis .env
         // PM2 charge automatiquement .env si présent dans le répertoire de travail
       },
@@ -54,6 +56,10 @@ module.exports = {
       // Installez pm2-http-health pour utiliser cette fonctionnalité
       // health_check_url: 'http://localhost:4000/health',
       // health_check_grace_period: 3000,
+      // Health check grace period (délai avant de commencer les health checks)
+      health_check_grace_period: 3000,
+      // Health check interval (intervalle entre les vérifications)
+      health_check_interval: 30000,
       // Variables d'environnement supplémentaires (optionnel)
       // PM2 charge automatiquement .env depuis le répertoire de travail
       // Si vous avez besoin de spécifier un chemin différent:

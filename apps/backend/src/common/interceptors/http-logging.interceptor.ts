@@ -62,18 +62,8 @@ export class HttpLoggingInterceptor implements NestInterceptor {
     // Filtrer les paramètres sensibles de l'URL (query params avec password, token, etc.)
     const safeUrl = this.sanitizeUrl(url);
 
-    // Enregistrer le début de la requête
-    this.logger.log(
-      JSON.stringify({
-        type: 'http_request_start',
-        requestId,
-        method,
-        path,
-        url: safeUrl,
-        ip,
-        userId: userId || undefined,
-      }),
-    );
+    // Enregistrer le début de la requête (optionnel, pour traçage détaillé)
+    // Le log principal sera fait à la fin avec toutes les infos
 
     // Enregistrer l'heure de début pour calculer la durée
     const startTime = Date.now();
@@ -89,16 +79,19 @@ export class HttpLoggingInterceptor implements NestInterceptor {
           // Déterminer le niveau de log selon le code de statut
           const logLevel = this.getLogLevel(statusCode);
           const logData = {
-            type: 'http_request_end',
+            type: 'http_request',
             requestId,
             method,
+            url: safeUrl,
             path,
             statusCode,
-            duration,
+            durationMs: duration,
             userId: userId || undefined,
+            ip,
           };
 
           // Logger selon le niveau approprié
+          // Le logger Pino sera utilisé automatiquement via app.useLogger()
           if (logLevel === 'error') {
             this.logger.error(JSON.stringify(logData));
           } else if (logLevel === 'warn') {
@@ -116,14 +109,16 @@ export class HttpLoggingInterceptor implements NestInterceptor {
           const logLevel = this.getLogLevel(statusCode);
 
           const logData = {
-            type: 'http_request_error',
+            type: 'http_request',
             requestId,
             method,
+            url: safeUrl,
             path,
             statusCode,
-            duration,
+            durationMs: duration,
             userId: userId || undefined,
-            error: error.message || 'Unknown error',
+            ip,
+            error: this.sanitizeMessage(error.message || 'Unknown error'),
             // Ne jamais logger les détails complets de l'erreur en prod
             // pour éviter d'exposer des informations sensibles
           };
@@ -188,5 +183,36 @@ export class HttpLoggingInterceptor implements NestInterceptor {
       });
       return safeUrl;
     }
+  }
+
+  /**
+   * Sanitise un message pour retirer les secrets.
+   *
+   * @param message - Message à sanitiser
+   * @returns Message sans secrets
+   */
+  private sanitizeMessage(message: string): string {
+    if (!message || typeof message !== 'string') {
+      return message;
+    }
+
+    // Liste des patterns sensibles à masquer
+    const sensitivePatterns = [
+      /password["\s]*[:=]["\s]*([^"'\s,}]+)/gi,
+      /token["\s]*[:=]["\s]*([^"'\s,}]+)/gi,
+      /secret["\s]*[:=]["\s]*([^"'\s,}]+)/gi,
+      /api[_-]?key["\s]*[:=]["\s]*([^"'\s,}]+)/gi,
+      /authorization["\s]*[:=]["\s]*([^"'\s,}]+)/gi,
+      /cookie["\s]*[:=]["\s]*([^"'\s,}]+)/gi,
+    ];
+
+    let sanitized = message;
+    sensitivePatterns.forEach((pattern) => {
+      sanitized = sanitized.replace(pattern, (match, value) => {
+        return match.replace(value, '***REDACTED***');
+      });
+    });
+
+    return sanitized;
   }
 }
