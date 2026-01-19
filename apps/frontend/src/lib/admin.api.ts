@@ -234,23 +234,24 @@ adminApiClient.interceptors.response.use(
     // Gérer les erreurs 422 (Unprocessable Entity) - généralement validation ou CSRF/cookie
     // IMPORTANT: Ne pas retry, arrêter immédiatement pour éviter les boucles infinies
     if (error.response?.status === 422) {
+      const errorData = error.response?.data as { message?: string; requestId?: string } | undefined;
       console.error('[Admin API] Erreur 422 détectée, arrêt immédiat:', {
         url: originalRequest?.url,
-        message: error.response?.data?.message || 'Erreur de validation',
-        requestId: error.response?.data?.requestId
+        message: errorData?.message || 'Erreur de validation',
+        requestId: errorData?.requestId
       });
-      
+
       // Afficher un message spécifique pour les 422
-      const errorData = error.response?.data as { message?: string; code?: string } | undefined;
+      // Note: errorData déjà défini ci-dessus
       const isValidationError = errorData?.code === 'VALIDATION_ERROR';
-      const message = isValidationError 
+      const message = isValidationError
         ? 'Erreur de validation des données. Veuillez vérifier votre connexion et les cookies.'
         : 'Erreur de traitement (422). Vérifiez votre session et rechargez la page.';
-      
+
       if (!originalRequest?._skipErrorToast) {
         toast.error(message);
       }
-      
+
       // Ne pas retry sur 422
       return Promise.reject(error);
     }
@@ -273,7 +274,7 @@ adminApiClient.interceptors.response.use(
           }
           return Promise.reject(error);
         }
-        
+
         return Promise.reject(error);
       }
 
