@@ -94,9 +94,9 @@ const EnvSchema = z.object({
     .describe('Origines frontend autorisées (séparées par virgules)'),
 
   ADMIN_ORIGIN: z
-    .string()
-    .url('ADMIN_ORIGIN doit être une URL valide')
+    .union([z.string().url(), z.literal('')])
     .optional()
+    .transform((val) => (val === '' ? undefined : val))
     .describe('Origine admin (optionnel, si différente du frontend)'),
 
   COOKIE_DOMAIN: z
