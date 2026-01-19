@@ -20,6 +20,9 @@ module.exports = {
     {
       name: 'secondlife-backend',
       script: 'dist/main.js',
+      cwd: '/var/www/SecondLife-Exchange/apps/backend',
+      // PM2 chargera automatiquement .env depuis le répertoire de travail
+      // Mais on utilise loadRootEnvFile() dans main.ts pour charger depuis la racine
       instances: 2, // Nombre d'instances (2 pour production, peut être augmenté)
       exec_mode: 'cluster', // Mode cluster pour plusieurs instances
       watch: false, // Ne pas surveiller les fichiers en production
@@ -27,14 +30,12 @@ module.exports = {
       env: {
         NODE_ENV: 'development',
         LOG_LEVEL: 'debug',
-        // Les variables d'environnement sont chargées depuis .env
-        // PM2 charge automatiquement .env si présent dans le répertoire de travail
+        // Les variables d'environnement sont chargées depuis .env à la racine
       },
       env_production: {
         NODE_ENV: 'production',
         LOG_LEVEL: 'info',
-        // Les variables d'environnement sont chargées depuis .env
-        // PM2 charge automatiquement .env si présent dans le répertoire de travail
+        // Les variables d'environnement sont chargées depuis .env à la racine
       },
       // Configuration des logs avec rotation
       error_file: './logs/pm2-error.log',
