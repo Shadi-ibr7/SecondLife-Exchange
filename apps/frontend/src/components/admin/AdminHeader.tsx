@@ -13,7 +13,7 @@ import { LogOut, Menu, Bell } from 'lucide-react';
 import { ADMIN_BASE_PATH } from '@/lib/admin.config';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { clearAdminToken } from '@/lib/admin.token';
+import { adminApi } from '@/lib/admin.api';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
 import { useNotifications } from '@/hooks/useNotifications';
 
@@ -25,9 +25,11 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
   const router = useRouter();
   const { unreadCount } = useNotifications();
 
-  const handleLogout = () => {
-    clearAdminToken();
-    router.push(`/${ADMIN_BASE_PATH}/login`);
+  const handleLogout = async () => {
+    // Appeler adminApi.logout() qui:
+    // 1. Appelle POST /auth/admin/logout pour révoquer le refresh token et supprimer les cookies
+    // 2. Redirige automatiquement vers le login
+    await adminApi.logout();
   };
 
   return (
