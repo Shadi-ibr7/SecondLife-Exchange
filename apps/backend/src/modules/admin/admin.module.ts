@@ -2,7 +2,11 @@
  * FICHIER: admin.module.ts
  *
  * DESCRIPTION:
- * Module admin avec routes secrètes basées sur ADMIN_BASE_PATH.
+ * Module admin avec routes API fixes sur /admin.
+ *
+ * IMPORTANT:
+ * - Routes API: /api/v1/admin/* (chemin fixe)
+ * - ADMIN_BASE_PATH sert UNIQUEMENT au routing Next.js (UI)
  */
 
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
@@ -27,12 +31,11 @@ export class AdminModule implements NestModule {
   constructor(private configService: ConfigService) {}
 
   configure(consumer: MiddlewareConsumer) {
-    const adminBasePath = this.configService.get<string>('ADMIN_BASE_PATH') || 'admin';
-
-    // Appliquer le middleware uniquement aux routes admin
+    // IMPORTANT: Utiliser un chemin fixe 'admin' pour les routes API
+    // ADMIN_BASE_PATH sert UNIQUEMENT au routing Next.js (UI), pas aux appels API
     consumer
       .apply(AdminMiddleware)
-      .forRoutes(`${adminBasePath}/*`);
+      .forRoutes('admin/*');
   }
 }
 

@@ -56,18 +56,29 @@ type AdminMeResponse = {
   twoFactorEnabled?: boolean;
 };
 
-// Construire l'URL de base de l'API
+/**
+ * Construire l'URL de base de l'API admin
+ *
+ * IMPORTANT:
+ * - baseURL = ${API_ORIGIN}/api/v1
+ * - ADMIN_BASE_PATH sert UNIQUEMENT au routing Next.js (UI)
+ * - Les endpoints API utilisent /admin/... (chemin fixe du backend)
+ */
 const getApiBaseURL = () => {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  // Nettoyer l'URL (enlever trailing slash)
+  const cleanUrl = apiUrl.replace(/\/$/, '');
   // Le backend a un préfixe global /api/v1
-  if (apiUrl.includes('/api/v1')) {
-    return apiUrl;
+  if (cleanUrl.includes('/api/v1')) {
+    return cleanUrl;
   }
-  return `${apiUrl}${ADMIN_API_BASE}`;
+  // Toujours ajouter /api/v1
+  return `${cleanUrl}/api/v1`;
 };
 
-if (typeof window !== 'undefined') {
-  console.log('🔧 Admin API Base URL:', getApiBaseURL());
+// Log uniquement en développement
+if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+  console.info('🔧 Admin API Base URL:', getApiBaseURL());
 }
 
 export const ADMIN_LOGIN_ENDPOINT = '/auth/admin/login';
@@ -149,9 +160,16 @@ const adminApiClient = axios.create({
  * - Récupère le token depuis le cookie XSRF-TOKEN
  * - Si absent, en récupère un nouveau via /security/csrf
  * - Ajoute le header X-CSRF-Token sur toutes les requêtes mutantes
+ * - Log les requêtes en développement uniquement
  */
 adminApiClient.interceptors.request.use(
   async (config) => {
+    // Log DEV uniquement
+    if (process.env.NODE_ENV !== 'production' && config.url && config.method) {
+      const fullUrl = `${adminApiClient.defaults.baseURL}${config.url}`;
+      console.info('Admin API request:', config.method.toUpperCase(), fullUrl);
+    }
+
     // Méthodes HTTP mutantes nécessitant CSRF
     const mutatingMethods = ['POST', 'PATCH', 'DELETE', 'PUT'];
 
@@ -204,12 +222,12 @@ adminApiClient.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        // Tenter de rafraîchir le token
+        // Tenter de rafraîchir le token via endpoint exact
         await adminApiClient.post(ADMIN_REFRESH_ENDPOINT);
         // Réessayer la requête originale
         return adminApiClient(originalRequest);
       } catch (refreshError) {
-        // Refresh échoué → rediriger vers login
+        // Refresh échoué → rediriger vers login admin
         if (typeof window !== 'undefined') {
           const adminBasePath =
             process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
@@ -217,6 +235,11 @@ adminApiClient.interceptors.response.use(
         }
         return Promise.reject(refreshError);
       }
+    }
+
+    // Ne pas refresh sur 404/403 (ce ne sont pas des erreurs d'auth)
+    if (error.response?.status === 404 || error.response?.status === 403) {
+      return Promise.reject(error);
     }
 
     // Gérer les erreurs CSRF (403 avec message spécifique)
@@ -492,9 +515,7 @@ export const adminApi = {
   // ============================================
 
   getDashboardStats: async () => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
-    const response = await adminApiClient.get(`/${adminBasePath}/dashboard`);
+    const response = await adminApiClient.get('/admin/dashboard');
     return response.data;
   },
 
@@ -503,41 +524,33 @@ export const adminApi = {
   // ============================================
 
   getUsers: async (page = 1, limit = 20, search?: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
     });
     if (search) params.append('search', search);
     const response = await adminApiClient.get(
-      `/${adminBasePath}/users?${params.toString()}`
+      `/admin/users?${params.toString()}`
     );
     return response.data;
   },
 
   getUserById: async (id: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
-    const response = await adminApiClient.get(`/${adminBasePath}/users/${id}`);
+    const response = await adminApiClient.get(`/admin/users/${id}`);
     return response.data;
   },
 
   banUser: async (id: string, reason?: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.patch(
-      `/${adminBasePath}/users/${id}/ban`,
+      `/admin/users/${id}/ban`,
       { reason }
     );
     return response.data;
   },
 
   unbanUser: async (id: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.patch(
-      `/${adminBasePath}/users/${id}/unban`
+      `/admin/users/${id}/unban`
     );
     return response.data;
   },
@@ -551,8 +564,6 @@ export const adminApi = {
     limit = 20,
     filters?: { ownerId?: string; category?: string; status?: string }
   ) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
@@ -561,32 +572,26 @@ export const adminApi = {
     if (filters?.category) params.append('category', filters.category);
     if (filters?.status) params.append('status', filters.status);
     const response = await adminApiClient.get(
-      `/${adminBasePath}/items?${params.toString()}`
+      `/admin/items?${params.toString()}`
     );
     return response.data;
   },
 
   getItemById: async (id: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
-    const response = await adminApiClient.get(`/${adminBasePath}/items/${id}`);
+    const response = await adminApiClient.get(`/admin/items/${id}`);
     return response.data;
   },
 
   archiveItem: async (id: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.patch(
-      `/${adminBasePath}/items/${id}/archive`
+      `/admin/items/${id}/archive`
     );
     return response.data;
   },
 
   deleteItem: async (id: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.delete(
-      `/${adminBasePath}/items/${id}`
+      `/admin/items/${id}`
     );
     return response.data;
   },
@@ -596,40 +601,32 @@ export const adminApi = {
   // ============================================
 
   getReports: async (page = 1, limit = 20, resolved?: boolean) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
     });
     if (resolved !== undefined) params.append('resolved', resolved.toString());
     const response = await adminApiClient.get(
-      `/${adminBasePath}/reports?${params.toString()}`
+      `/admin/reports?${params.toString()}`
     );
     return response.data;
   },
 
   getReportById: async (id: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
-    const response = await adminApiClient.get(`/${adminBasePath}/reports/${id}`);
+    const response = await adminApiClient.get(`/admin/reports/${id}`);
     return response.data;
   },
 
   resolveReport: async (id: string, banUser = false) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.patch(
-      `/${adminBasePath}/reports/${id}/resolve`,
+      `/admin/reports/${id}/resolve`,
       { banUser }
     );
     return response.data;
   },
 
   deleteReport: async (id: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
-    const response = await adminApiClient.delete(`/${adminBasePath}/reports/${id}`);
+    const response = await adminApiClient.delete(`/admin/reports/${id}`);
     return response.data;
   },
 
@@ -638,17 +635,13 @@ export const adminApi = {
   // ============================================
 
   getThemes: async () => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
-    const response = await adminApiClient.get(`/${adminBasePath}/themes`);
+    const response = await adminApiClient.get('/admin/themes');
     const data = response.data;
     return Array.isArray(data) ? data : [];
   },
 
   getThemeById: async (id: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
-    const response = await adminApiClient.get(`/${adminBasePath}/themes/${id}`);
+    const response = await adminApiClient.get(`/admin/themes/${id}`);
     return response.data;
   },
 
@@ -659,10 +652,8 @@ export const adminApi = {
     impactText?: string;
     isActive?: boolean;
   }) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.post(
-      `/${adminBasePath}/themes`,
+      '/admin/themes',
       payload
     );
     return response.data;
@@ -678,38 +669,30 @@ export const adminApi = {
       isActive?: boolean;
     }>
   ) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.patch(
-      `/${adminBasePath}/themes/${id}`,
+      `/admin/themes/${id}`,
       payload
     );
     return response.data;
   },
 
   activateTheme: async (id: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.patch(
-      `/${adminBasePath}/themes/${id}/activate`
+      `/admin/themes/${id}/activate`
     );
     return response.data;
   },
 
   deleteTheme: async (id: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.delete(
-      `/${adminBasePath}/themes/${id}`
+      `/admin/themes/${id}`
     );
     return response.data;
   },
 
   generateThemeSuggestions: async (id: string, locales?: string[]) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.post(
-      `/${adminBasePath}/themes/${id}/suggestions`,
+      `/admin/themes/${id}/suggestions`,
       { locales }
     );
     return response.data;
@@ -721,34 +704,28 @@ export const adminApi = {
     limit = 10,
     sort = '-createdAt'
   ) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
       sort,
     });
     const response = await adminApiClient.get(
-      `/${adminBasePath}/themes/${id}/suggestions?${params.toString()}`
+      `/admin/themes/${id}/suggestions?${params.toString()}`
     );
     return response.data;
   },
 
   getThemeSuggestionStats: async (id: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.get(
-      `/${adminBasePath}/themes/${id}/suggestions/stats`
+      `/admin/themes/${id}/suggestions/stats`
     );
     return response.data;
   },
 
   generateTheme: async () => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     try {
       const response = await adminApiClient.post(
-        `/${adminBasePath}/themes/generate`
+        '/admin/themes/generate'
       );
       return response.data;
     } catch (error: unknown) {
@@ -759,11 +736,9 @@ export const adminApi = {
   },
 
   generateMonthlyThemes: async (month?: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     try {
       const response = await adminApiClient.post(
-        `/${adminBasePath}/themes/generate-monthly`,
+        '/admin/themes/generate-monthly',
         month ? { month } : {}
       );
       return response.data;
@@ -779,22 +754,18 @@ export const adminApi = {
   // ============================================
 
   getEcoContent: async (page = 1, limit = 20) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
     });
     const response = await adminApiClient.get(
-      `/${adminBasePath}/eco?${params.toString()}`
+      `/admin/eco?${params.toString()}`
     );
     return response.data;
   },
 
   getEcoContentById: async (id: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
-    const response = await adminApiClient.get(`/${adminBasePath}/eco/${id}`);
+    const response = await adminApiClient.get(`/admin/eco/${id}`);
     return response.data;
   },
 
@@ -808,9 +779,7 @@ export const adminApi = {
     tags?: string[];
     published?: boolean;
   }) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
-    const response = await adminApiClient.post(`/${adminBasePath}/eco`, data);
+    const response = await adminApiClient.post('/admin/eco', data);
     return response.data;
   },
 
@@ -827,16 +796,12 @@ export const adminApi = {
       published?: boolean;
     }
   ) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
-    const response = await adminApiClient.patch(`/${adminBasePath}/eco/${id}`, data);
+    const response = await adminApiClient.patch(`/admin/eco/${id}`, data);
     return response.data;
   },
 
   deleteEcoContent: async (id: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
-    const response = await adminApiClient.delete(`/${adminBasePath}/eco/${id}`);
+    const response = await adminApiClient.delete(`/admin/eco/${id}`);
     return response.data;
   },
 
@@ -849,8 +814,6 @@ export const adminApi = {
     limit = 20,
     filters?: { status?: string; requesterId?: string; responderId?: string }
   ) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
@@ -859,23 +822,19 @@ export const adminApi = {
     if (filters?.requesterId) params.append('requesterId', filters.requesterId);
     if (filters?.responderId) params.append('responderId', filters.responderId);
     const response = await adminApiClient.get(
-      `/${adminBasePath}/exchanges?${params.toString()}`
+      `/admin/exchanges?${params.toString()}`
     );
     return response.data;
   },
 
   getExchangeById: async (id: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
-    const response = await adminApiClient.get(`/${adminBasePath}/exchanges/${id}`);
+    const response = await adminApiClient.get(`/admin/exchanges/${id}`);
     return response.data;
   },
 
   deleteExchange: async (id: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.delete(
-      `/${adminBasePath}/exchanges/${id}`
+      `/admin/exchanges/${id}`
     );
     return response.data;
   },
@@ -885,33 +844,27 @@ export const adminApi = {
   // ============================================
 
   getThreads: async (page = 1, limit = 20, scope?: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
     });
     if (scope) params.append('scope', scope);
     const response = await adminApiClient.get(
-      `/${adminBasePath}/community/threads?${params.toString()}`
+      `/admin/community/threads?${params.toString()}`
     );
     return response.data;
   },
 
   getThreadById: async (id: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.get(
-      `/${adminBasePath}/community/threads/${id}`
+      `/admin/community/threads/${id}`
     );
     return response.data;
   },
 
   deleteThread: async (id: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.delete(
-      `/${adminBasePath}/community/threads/${id}`
+      `/admin/community/threads/${id}`
     );
     return response.data;
   },
@@ -921,8 +874,6 @@ export const adminApi = {
     limit = 20,
     filters?: { threadId?: string; authorId?: string }
   ) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
@@ -930,25 +881,21 @@ export const adminApi = {
     if (filters?.threadId) params.append('threadId', filters.threadId);
     if (filters?.authorId) params.append('authorId', filters.authorId);
     const response = await adminApiClient.get(
-      `/${adminBasePath}/community/posts?${params.toString()}`
+      `/admin/community/posts?${params.toString()}`
     );
     return response.data;
   },
 
   getPostById: async (id: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.get(
-      `/${adminBasePath}/community/posts/${id}`
+      `/admin/community/posts/${id}`
     );
     return response.data;
   },
 
   deletePost: async (id: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const response = await adminApiClient.delete(
-      `/${adminBasePath}/community/posts/${id}`
+      `/admin/community/posts/${id}`
     );
     return response.data;
   },
@@ -958,35 +905,27 @@ export const adminApi = {
   // ============================================
 
   getAnalyticsOverview: async (startDate?: string, endDate?: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
     const response = await adminApiClient.get(
-      `/${adminBasePath}/analytics/overview?${params.toString()}`
+      `/admin/analytics/overview?${params.toString()}`
     );
     return response.data;
   },
 
   getUserAnalytics: async () => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
-    const response = await adminApiClient.get(`/${adminBasePath}/analytics/users`);
+    const response = await adminApiClient.get('/admin/analytics/users');
     return response.data;
   },
 
   getItemAnalytics: async () => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
-    const response = await adminApiClient.get(`/${adminBasePath}/analytics/items`);
+    const response = await adminApiClient.get('/admin/analytics/items');
     return response.data;
   },
 
   getExchangeAnalytics: async () => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
-    const response = await adminApiClient.get(`/${adminBasePath}/analytics/exchanges`);
+    const response = await adminApiClient.get('/admin/analytics/exchanges');
     return response.data;
   },
 
@@ -1006,8 +945,6 @@ export const adminApi = {
       requestId?: string;
     },
   ) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
@@ -1019,15 +956,13 @@ export const adminApi = {
     if (filters?.endDate) params.append('endDate', filters.endDate);
     if (filters?.requestId) params.append('requestId', filters.requestId);
     const response = await adminApiClient.get(
-      `/${adminBasePath}/logs?${params.toString()}`
+      `/admin/logs?${params.toString()}`
     );
     return response.data;
   },
 
   getLogById: async (id: string) => {
-    const adminBasePath =
-      process.env.NEXT_PUBLIC_ADMIN_BASE_PATH || ADMIN_BASE_PATH;
-    const response = await adminApiClient.get(`/${adminBasePath}/logs/${id}`);
+    const response = await adminApiClient.get(`/admin/logs/${id}`);
     return response.data;
   },
 };

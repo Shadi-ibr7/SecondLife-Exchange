@@ -2,7 +2,12 @@
  * FICHIER: admin.controller.ts
  *
  * DESCRIPTION:
- * Contrôleur admin avec routes secrètes basées sur ADMIN_BASE_PATH.
+ * Contrôleur admin avec routes API fixes sur /admin.
+ *
+ * IMPORTANT:
+ * - Routes API: /api/v1/admin/* (chemin fixe)
+ * - ADMIN_BASE_PATH sert UNIQUEMENT au routing Next.js (UI)
+ * - Tous les appels API utilisent strictement /api/v1/admin/...
  */
 
 import {
@@ -57,7 +62,9 @@ class GenerateMonthlyThemesDto {
 
 @ApiTags('Admin')
 @ApiBearerAuth()
-@Controller(process.env.ADMIN_BASE_PATH || 'admin') // Chemin secret depuis env
+// IMPORTANT: Utiliser un chemin fixe 'admin' pour les routes API
+// ADMIN_BASE_PATH sert UNIQUEMENT au routing Next.js (UI), pas aux appels API
+@Controller('admin')
 @UseGuards(AdminJwtGuard, AdminRoleGuard)
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
