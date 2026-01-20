@@ -315,6 +315,9 @@ importers:
       framer-motion:
         specifier: ^10.16.16
         version: 10.18.0(react-dom@18.3.1)(react@18.3.1)
+      idb:
+        specifier: ^8.0.3
+        version: 8.0.3
       lucide-react:
         specifier: ^0.303.0
         version: 0.303.0(react@18.3.1)
@@ -394,6 +397,9 @@ importers:
       eslint-config-next:
         specifier: ^15.0.0
         version: 15.5.6(eslint@8.57.1)(typescript@5.9.3)
+      fake-indexeddb:
+        specifier: ^6.2.5
+        version: 6.2.5
       jest:
         specifier: ^30.2.0
         version: 30.2.0(@types/node@20.19.24)
@@ -7936,6 +7942,11 @@ packages:
       tmp: 0.0.33
     dev: true
 
+  /fake-indexeddb@6.2.5:
+    resolution: {integrity: sha512-CGnyrvbhPlWYMngksqrSSUT1BAVP49dZocrHuK0SvtR0D5TMs5wP0o3j7jexDJW01KSadjBp1M/71o/KR3nD1w==}
+    engines: {node: '>=18'}
+    dev: true
+
   /fast-check@3.23.2:
     resolution: {integrity: sha512-h5+1OzzfCC3Ef7VbtKdcv7zsstUQwUDlYpUTvjeUsJAssPgLn7QzbboPtL5ro04Mq0rPOsMzl7q5hIbRs2wD1A==}
     engines: {node: '>=8.0.0'}
@@ -8656,6 +8667,10 @@ packages:
 
   /idb@7.1.1:
     resolution: {integrity: sha512-gchesWBzyvGHRO9W8tzUWFDycow5gwjvFKfyV9FF32Y7F50yZMp7mP+T2mJIWFx49zicqyC4uefHM17o6xKIVQ==}
+    dev: false
+
+  /idb@8.0.3:
+    resolution: {integrity: sha512-LtwtVyVYO5BqRvcsKuB2iUMnHwPVByPCXFXOpuU96IZPPoPN6xjOGxZQ74pgSVVLQWtUOYgyeL4GE98BY5D3wg==}
     dev: false
 
   /ieee754@1.2.1:

@@ -13,6 +13,8 @@ import { ReactNode, useState, useEffect } from 'react';
 import { AdminSidebar } from './AdminSidebar';
 import { AdminHeader } from './AdminHeader';
 import { MobileSidebar } from './MobileSidebar';
+import { useOnlineStatus } from '@/lib/network';
+import { useOfflineSync } from '@/hooks/useOfflineSync';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -20,6 +22,10 @@ interface AdminLayoutProps {
 
 export function AdminLayout({ children }: AdminLayoutProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const online = useOnlineStatus();
+
+  // Initialiser le moteur de synchro offline (écoute les évènements online)
+  useOfflineSync();
 
   // Bloquer le scroll du body quand le menu est ouvert
   useEffect(() => {
@@ -50,7 +56,17 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       <MobileSidebar isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
       <div className="lg:ml-60">
         <AdminHeader onMenuClick={() => setIsMenuOpen(true)} />
-        <main className="p-4 sm:p-6 lg:p-8 pt-[calc(63px+env(safe-area-inset-top)+1rem)] lg:pt-[calc(63px+2rem)]">{children}</main>
+        {/* Bannière globale hors-ligne */}
+        {!online && (
+          <div className="mx-4 mt-2 rounded-md border border-yellow-400/60 bg-yellow-100/80 px-3 py-2 text-xs sm:text-sm text-yellow-900 dark:border-yellow-500/60 dark:bg-yellow-900/30 dark:text-yellow-100">
+            Vous êtes actuellement <span className="font-semibold">hors ligne</span>. Les actions de
+            création seront enregistrées localement et synchronisées automatiquement dès que la
+            connexion reviendra.
+          </div>
+        )}
+        <main className="p-4 sm:p-6 lg:p-8 pt-[calc(63px+env(safe-area-inset-top)+1rem)] lg:pt-[calc(63px+2rem)]">
+          {children}
+        </main>
       </div>
     </div>
   );

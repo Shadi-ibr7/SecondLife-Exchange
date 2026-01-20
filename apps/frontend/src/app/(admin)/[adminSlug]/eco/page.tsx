@@ -11,6 +11,9 @@ import { toast } from 'react-hot-toast';
 import { adminApi } from '@/lib/admin.api';
 import { ADMIN_BASE_PATH } from '@/lib/admin.config';
 import type { AdminEcoContent, CreateEcoContentPayload } from '@/lib/admin.types';
+import { isOnline } from '@/lib/network';
+import { getJobsByType } from '@/lib/offline/queue';
+import { enqueueEcoCreateJob } from '@/lib/offline/sync';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -107,13 +110,58 @@ export default function AdminEcoPage() {
     queryFn: () => adminApi.getEcoContent(page, 20),
   });
 
+  const { data: offlineEcoJobs = [] } = useQuery({
+    queryKey: ['offline-queue', 'eco-create'],
+    queryFn: () => getJobsByType('ECO_CREATE'),
+    refetchInterval: 2000,
+  });
+
   const createMutation = useMutation({
-    mutationFn: (payload: CreateEcoContentPayload) => adminApi.createEcoContent(payload),
-    onSuccess: () => {
-      toast.success('Contenu créé avec succès');
+    mutationFn: async (payload: CreateEcoContentPayload) => {
+      if (!isOnline()) {
+        const job = await enqueueEcoCreateJob(payload);
+        return { __offline: true as const, job };
+      }
+      const created = await adminApi.createEcoContent(payload);
+      return { __offline: false as const, created };
+    },
+    onSuccess: (result) => {
+      if (result.__offline) {
+        toast.success('Enregistré hors ligne, synchronisation dès reconnexion');
+      } else {
+        toast.success('Contenu créé avec succès');
+      }
+
       setCreateDialogOpen(false);
       resetCreateForm();
-      queryClient.invalidateQueries({ queryKey: ['admin-eco'] });
+
+      if (result.__offline) {
+        const payload = result.job.payload as CreateEcoContentPayload;
+        const optimisticItem: AdminEcoContent & {
+          __offline?: { jobId: string; status: 'PENDING' | 'FAILED'; error?: string | null };
+        } = {
+          id: result.job.id,
+          title: payload.title,
+          url: payload.url,
+          kind: payload.kind,
+          locale: payload.locale,
+          summary: payload.summary,
+          source: payload.source,
+          tags: payload.tags,
+          publishedAt: payload.published ? new Date().toISOString() : null,
+          createdAt: result.job.createdAt,
+          updatedAt: result.job.updatedAt,
+          __offline: { jobId: result.job.id, status: 'PENDING', error: null },
+        };
+
+        queryClient.setQueriesData({ queryKey: ['admin-eco'] }, (old: any) => {
+          if (!old) return old;
+          if (!Array.isArray(old.content)) return old;
+          return { ...old, content: [optimisticItem, ...old.content] };
+        });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['admin-eco'] });
+      }
     },
     onError: (error: any) => {
       toast.error(error?.response?.data?.message || 'Erreur lors de la création');
@@ -179,6 +227,38 @@ export default function AdminEcoPage() {
 
   const featuredContent = data?.content?.[0] || null;
 
+  const offlineRows: Array<
+    AdminEcoContent & {
+      __offline?: { jobId: string; status: 'PENDING' | 'FAILED'; error?: string | null };
+    }
+  > = offlineEcoJobs.map((job: any) => {
+    const payload = job.payload as CreateEcoContentPayload;
+    const status = job.status === 'FAILED' ? 'FAILED' : 'PENDING';
+    return {
+      id: job.id,
+      title: payload.title,
+      url: payload.url,
+      kind: payload.kind,
+      locale: payload.locale,
+      summary: payload.summary,
+      source: payload.source,
+      tags: payload.tags,
+      publishedAt: payload.published ? new Date().toISOString() : null,
+      createdAt: job.createdAt,
+      updatedAt: job.updatedAt,
+      __offline: { jobId: job.id, status, error: job.error },
+    };
+  });
+
+  const rows = [
+    ...offlineRows,
+    ...(data?.content || []),
+  ] as Array<
+    AdminEcoContent & {
+      __offline?: { jobId: string; status: 'PENDING' | 'FAILED'; error?: string | null };
+    }
+  >;
+
   const getTypeBadge = (kind: string) => {
     const variants: Record<string, { className: string; label: string }> = {
       ARTICLE: { className: 'bg-[#1a1a1c] text-[#9a9a9d]', label: 'Article' },
@@ -193,7 +273,24 @@ export default function AdminEcoPage() {
     );
   };
 
-  const getStatusBadge = (publishedAt: string | null) => {
+  const getStatusBadge = (
+    publishedAt: string | null,
+    offline?: { status: 'PENDING' | 'FAILED'; error?: string | null } | null
+  ) => {
+    if (offline?.status === 'FAILED') {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-red-100 text-red-900 dark:bg-red-900/30 dark:text-red-100">
+          Échec
+        </span>
+      );
+    }
+    if (offline?.status === 'PENDING') {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-yellow-100 text-yellow-900 dark:bg-yellow-900/30 dark:text-yellow-100">
+          En attente
+        </span>
+      );
+    }
     if (publishedAt) {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal bg-[rgba(45,90,69,0.1)] text-[#2d5a45]">
@@ -292,7 +389,7 @@ export default function AdminEcoPage() {
                   <h4 className="text-base font-normal text-foreground leading-[24px] tracking-[-0.3125px]">
                     Contenu mis en avant
                   </h4>
-                  {getStatusBadge(featuredContent.publishedAt)}
+                  {getStatusBadge(featuredContent.publishedAt, null)}
                 </div>
                 <p className="text-sm text-muted-foreground font-normal leading-[20px] tracking-[-0.1504px]">
                   Article le plus consulté ce mois
@@ -363,9 +460,9 @@ export default function AdminEcoPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data?.content?.length > 0 ? (
-                  data.content.map((item: any, index: number) => {
-                    const isLast = index === data.content.length - 1;
+                {rows?.length > 0 ? (
+                  rows.map((item: any, index: number) => {
+                    const isLast = index === rows.length - 1;
                     return (
                       <tr
                         key={item.id}
@@ -381,7 +478,7 @@ export default function AdminEcoPage() {
                           </p>
                         </td>
                         <td className="px-4">{getTypeBadge(item.kind || 'ARTICLE')}</td>
-                        <td className="px-4">{getStatusBadge(item.publishedAt)}</td>
+                        <td className="px-4">{getStatusBadge(item.publishedAt, item.__offline || null)}</td>
                         <td className="px-4">
                           <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
                             {item.views || '-'}
@@ -404,7 +501,13 @@ export default function AdminEcoPage() {
                               className="w-[39.978px] h-[31.986px] rounded-[6px]"
                               asChild
                             >
-                              <Link href={`/${ADMIN_BASE_PATH}/eco/${item.id}`}>
+                              <Link
+                                href={
+                                  item.__offline
+                                    ? `/${ADMIN_BASE_PATH}/sync`
+                                    : `/${ADMIN_BASE_PATH}/eco/${item.id}`
+                                }
+                              >
                                 <Eye className="w-4 h-4 text-muted-foreground" />
                               </Link>
                             </Button>
@@ -414,7 +517,13 @@ export default function AdminEcoPage() {
                               className="w-[39.978px] h-[31.986px] rounded-[6px]"
                               asChild
                             >
-                              <Link href={`/${ADMIN_BASE_PATH}/eco/${item.id}`}>
+                              <Link
+                                href={
+                                  item.__offline
+                                    ? `/${ADMIN_BASE_PATH}/sync`
+                                    : `/${ADMIN_BASE_PATH}/eco/${item.id}`
+                                }
+                              >
                                 <Edit className="w-4 h-4 text-muted-foreground" />
                               </Link>
                             </Button>
@@ -423,6 +532,7 @@ export default function AdminEcoPage() {
                               size="icon"
                               className="w-[39.978px] h-[31.986px] rounded-[6px]"
                               onClick={() => handleDeleteClick(item)}
+                              disabled={!!item.__offline}
                             >
                               <Trash2 className="w-4 h-4 text-muted-foreground" />
                             </Button>
