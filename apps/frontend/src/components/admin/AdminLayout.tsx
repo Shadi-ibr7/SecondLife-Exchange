@@ -14,7 +14,6 @@ import { AdminSidebar } from './AdminSidebar';
 import { AdminHeader } from './AdminHeader';
 import { MobileSidebar } from './MobileSidebar';
 import { useOnlineStatus } from '@/lib/network';
-import { useOfflineSync } from '@/hooks/useOfflineSync';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -23,9 +22,6 @@ interface AdminLayoutProps {
 export function AdminLayout({ children }: AdminLayoutProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const online = useOnlineStatus();
-
-  // Initialiser le moteur de synchro offline (écoute les évènements online)
-  useOfflineSync();
 
   // Bloquer le scroll du body quand le menu est ouvert
   useEffect(() => {

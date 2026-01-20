@@ -66,6 +66,8 @@ import { CreateItemDto, UpdateItemDto } from '@/types';
 import { useAuthStore } from '@/store/auth';
 import { toast } from 'react-hot-toast';
 import { useEffect } from 'react';
+import { isOnline } from '@/lib/network';
+import { enqueueItemCreateJob } from '@/lib/offline/sync';
 
 /**
  * COMPOSANT: NewItemPage
@@ -193,6 +195,13 @@ export default function NewItemPage() {
    */
   const handleSubmit = async (data: CreateItemDto | UpdateItemDto) => {
     try {
+      // Mode offline-first: si pas de connexion, enregistrer dans la queue locale
+      if (!isOnline()) {
+        await enqueueItemCreateJob(data as CreateItemDto);
+        toast.success('Objet enregistré hors ligne, synchronisation dès reconnexion');
+        return;
+      }
+
       /**
        * Appeler l'API pour créer l'item
        *

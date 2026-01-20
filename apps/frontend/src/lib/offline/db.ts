@@ -17,7 +17,8 @@ import { openDB } from 'idb';
 export type OfflineJobStatus = 'PENDING' | 'SYNCING' | 'FAILED' | 'DONE';
 
 export type OfflineJobType =
-  | 'ECO_CREATE'; // pourra être étendu (ITEM_CREATE, EXCHANGE_CREATE, etc.)
+  | 'ECO_CREATE'
+  | 'ITEM_CREATE'; // pourra être étendu (EXCHANGE_CREATE, etc.)
 
 export interface OfflineJob<TPayload = any> {
   id: string;

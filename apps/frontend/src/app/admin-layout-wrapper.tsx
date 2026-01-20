@@ -11,10 +11,14 @@ import { usePathname } from 'next/navigation';
 import { ADMIN_BASE_PATH } from '@/lib/admin.config';
 import { Navbar } from '@/components/layout/navbar';
 import { MobileDockNav } from '@/components/mobile/MobileDockNav';
+import { useOfflineSync } from '@/hooks/useOfflineSync';
 
 export function AdminLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdminRoute = pathname?.startsWith(`/${ADMIN_BASE_PATH}`);
+
+  // Initialiser le moteur de synchro offline globalement (admin + public)
+  useOfflineSync();
 
   // Si on est sur une route admin, ne pas afficher Navbar et MobileDockNav
   if (isAdminRoute) {

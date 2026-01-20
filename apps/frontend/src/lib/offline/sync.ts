@@ -14,6 +14,7 @@
 'use client';
 
 import { adminApi } from '@/lib/admin.api';
+import { itemsApi } from '@/lib/items.api';
 import {
   enqueueJob,
   getNextPendingJob,
@@ -22,6 +23,7 @@ import {
   type OfflineJob,
 } from './queue';
 import type { CreateEcoContentPayload } from '@/lib/admin.types';
+import type { CreateItemDto } from '@/types';
 
 type SyncCallbacks = {
   onJobSuccess?: (job: OfflineJob, serverResult: any) => void;
@@ -58,6 +60,11 @@ async function processJob(job: OfflineJob, callbacks?: SyncCallbacks): Promise<v
       case 'ECO_CREATE': {
         const payload = job.payload as CreateEcoContentPayload;
         result = await adminApi.createEcoContent(payload);
+        break;
+      }
+      case 'ITEM_CREATE': {
+        const payload = job.payload as CreateItemDto;
+        result = await itemsApi.createItem(payload);
         break;
       }
       default: {
@@ -157,4 +164,12 @@ export async function syncPendingQueue(callbacks?: SyncCallbacks): Promise<void>
 export async function enqueueEcoCreateJob(payload: CreateEcoContentPayload) {
   return enqueueJob<CreateEcoContentPayload>('ECO_CREATE', payload);
 }
+
+/**
+ * Helper pour créer un job ITEM_CREATE depuis l'UI publique.
+ */
+export async function enqueueItemCreateJob(payload: CreateItemDto) {
+  return enqueueJob<CreateItemDto>('ITEM_CREATE', payload);
+}
+
 
