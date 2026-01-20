@@ -93,7 +93,7 @@ import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/store/auth';
 
 // Import des icônes
-import { Eye, EyeOff, Mail, Lock, User, UserCheck } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, UserCheck, Check, X } from 'lucide-react';
 
 /**
  * SCHÉMA DE VALIDATION: registerSchema
@@ -155,21 +155,36 @@ const registerSchema = z
     /**
      * Mot de passe de l'utilisateur
      * - Type: string
-     * - Validation: minimum 10 caractères (exigence de sécurité)
+     * - Validation: minimum 10 caractères + majuscule + minuscule + chiffre + caractère spécial
      * - Message d'erreur: "Le mot de passe doit contenir au moins 10 caractères"
      *
      * SÉCURITÉ:
      * - Minimum 10 caractères pour éviter les mots de passe trop courts
+     * - Doit contenir au moins une majuscule (A-Z)
+     * - Doit contenir au moins une minuscule (a-z)
+     * - Doit contenir au moins un chiffre (0-9)
+     * - Doit contenir au moins un caractère spécial (@$!%*?&)
      * - Le mot de passe est hashé côté serveur avec bcrypt
      * - Le mot de passe n'est jamais stocké en clair
      *
+     * REGEX:
+     * - (?=.*[a-z]): Au moins une minuscule
+     * - (?=.*[A-Z]): Au moins une majuscule
+     * - (?=.*\d): Au moins un chiffre
+     * - (?=.*[@$!%*?&]): Au moins un caractère spécial
+     * - [A-Za-z\d@$!%*?&]: Caractères autorisés
+     *
      * EXEMPLES:
-     * - "password123" (11 caractères) -> valide
+     * - "Password123!" (12 caractères) -> valide
      * - "pass123" (7 caractères) -> invalide (erreur: "Le mot de passe doit contenir au moins 10 caractères")
      */
     password: z
       .string()
-      .min(10, 'Le mot de passe doit contenir au moins 10 caractères'),
+      .min(10, 'Le mot de passe doit contenir au moins 10 caractères')
+      .regex(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+        'Le mot de passe doit contenir au moins une majuscule, une minuscule, un chiffre et un caractère spécial',
+      ),
 
     /**
      * Confirmation du mot de passe
@@ -327,6 +342,7 @@ export default function RegisterPage() {
     register, // Fonction pour enregistrer les champs (spread sur les inputs)
     handleSubmit, // Fonction wrapper pour gérer la soumission avec validation
     formState: { errors }, // Erreurs de validation par champ
+    watch, // Surveille les valeurs de champs en temps réel
   } = useForm<RegisterForm>({
     /**
      * Résolveur Zod pour la validation
@@ -335,6 +351,28 @@ export default function RegisterPage() {
      */
     resolver: zodResolver(registerSchema),
   });
+
+  /**
+   * Surveiller la valeur du champ password en temps réel
+   * pour afficher les checkmarks de validation visuelle
+   */
+  const passwordValue = watch('password') || '';
+
+  // ============================================
+  // FONCTIONS: Validation visuelle du mot de passe
+  // ============================================
+
+  /**
+   * Vérifie si le mot de passe respecte chaque critère
+   * Ces fonctions sont utilisées pour afficher les checkmarks en temps réel
+   */
+  const passwordValidations = {
+    minLength: passwordValue.length >= 10,
+    hasLowercase: /[a-z]/.test(passwordValue),
+    hasUppercase: /[A-Z]/.test(passwordValue),
+    hasDigit: /\d/.test(passwordValue),
+    hasSpecialChar: /[@$!%*?&]/.test(passwordValue),
+  };
 
   // ============================================
   // FONCTION: onSubmit
@@ -628,6 +666,96 @@ export default function RegisterPage() {
                     {showPassword ? <EyeOff /> : <Eye />}
                   </button>
                 </div>
+                {/* Validation visuelle du mot de passe avec checkmarks */}
+                {passwordValue && (
+                  <div className="mt-2 space-y-1.5 rounded-md border border-border bg-muted/30 p-3">
+                    <p className="mb-2 text-xs font-medium text-muted-foreground">
+                      Le mot de passe doit contenir :
+                    </p>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-xs">
+                        {passwordValidations.minLength ? (
+                          <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                        ) : (
+                          <X className="h-3.5 w-3.5 text-muted-foreground" />
+                        )}
+                        <span
+                          className={
+                            passwordValidations.minLength
+                              ? 'text-green-600 dark:text-green-400'
+                              : 'text-muted-foreground'
+                          }
+                        >
+                          Au moins 10 caractères
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        {passwordValidations.hasLowercase ? (
+                          <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                        ) : (
+                          <X className="h-3.5 w-3.5 text-muted-foreground" />
+                        )}
+                        <span
+                          className={
+                            passwordValidations.hasLowercase
+                              ? 'text-green-600 dark:text-green-400'
+                              : 'text-muted-foreground'
+                          }
+                        >
+                          Au moins une lettre minuscule (a-z)
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        {passwordValidations.hasUppercase ? (
+                          <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                        ) : (
+                          <X className="h-3.5 w-3.5 text-muted-foreground" />
+                        )}
+                        <span
+                          className={
+                            passwordValidations.hasUppercase
+                              ? 'text-green-600 dark:text-green-400'
+                              : 'text-muted-foreground'
+                          }
+                        >
+                          Au moins une lettre majuscule (A-Z)
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        {passwordValidations.hasDigit ? (
+                          <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                        ) : (
+                          <X className="h-3.5 w-3.5 text-muted-foreground" />
+                        )}
+                        <span
+                          className={
+                            passwordValidations.hasDigit
+                              ? 'text-green-600 dark:text-green-400'
+                              : 'text-muted-foreground'
+                          }
+                        >
+                          Au moins un chiffre (0-9)
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        {passwordValidations.hasSpecialChar ? (
+                          <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                        ) : (
+                          <X className="h-3.5 w-3.5 text-muted-foreground" />
+                        )}
+                        <span
+                          className={
+                            passwordValidations.hasSpecialChar
+                              ? 'text-green-600 dark:text-green-400'
+                              : 'text-muted-foreground'
+                          }
+                        >
+                          Au moins un caractère spécial (@$!%*?&)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {/* Affichage de l'erreur de validation */}
                 {errors.password && (
                   <p className="text-sm text-destructive">
