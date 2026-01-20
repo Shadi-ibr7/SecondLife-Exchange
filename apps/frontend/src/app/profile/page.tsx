@@ -1294,6 +1294,9 @@ function ProfilePageContent() {
                 <Button variant="outline" className="w-full" asChild>
                   <a href="/explore">Explorer les objets</a>
                 </Button>
+                <Button variant="outline" className="w-full" asChild>
+                  <a href="/sync">Synchronisation hors ligne</a>
+                </Button>
               </CardContent>
             </Card>
 
