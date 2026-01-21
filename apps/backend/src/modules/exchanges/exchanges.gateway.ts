@@ -49,12 +49,27 @@ import { JwtAccessGuard } from '../../common/guards/jwt-access.guard';
  * Gateway WebSocket pour la communication en temps réel dans les échanges.
  *
  * @WebSocketGateway: Configure le serveur WebSocket avec CORS
- * - cors.origin: URL du frontend autorisée
+ * - cors.origin: Liste des URLs frontend autorisées (FRONTEND_ORIGINS ou CORS_ORIGIN)
  * - cors.credentials: Autorise l'envoi de cookies/credentials
+ *
+ * IMPORTANT:
+ * - On utilise la même logique que la config CORS HTTP (FRONTEND_ORIGINS),
+ *   pour éviter les décalages entre HTTP et WebSocket.
  */
 @WebSocketGateway({
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: (() => {
+      // Préférer FRONTEND_ORIGINS (liste séparée par des virgules), sinon fallback sur CORS_ORIGIN
+      const origins =
+        process.env.FRONTEND_ORIGINS ||
+        process.env.CORS_ORIGIN ||
+        'http://localhost:3000';
+
+      return origins
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter((origin) => origin.length > 0);
+    })(),
     credentials: true,
   },
 })
