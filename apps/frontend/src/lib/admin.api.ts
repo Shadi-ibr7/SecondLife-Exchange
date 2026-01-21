@@ -1063,4 +1063,31 @@ export const adminApi = {
     const response = await adminApiClient.get(`/admin/logs/${id}`);
     return response.data;
   },
+
+  // Notifications
+  getNotifications: async (params?: { page?: number; limit?: number; unreadOnly?: boolean }) => {
+    const { page = 1, limit = 20, unreadOnly = false } = params || {};
+    const response = await adminApiClient.get('/notifications', {
+      params: { page, limit, unreadOnly },
+    });
+    return response.data;
+  },
+
+  getUnreadCount: async () => {
+    const response = await adminApiClient.get('/notifications/unread-count');
+    return response.data.count || 0;
+  },
+
+  markNotificationAsRead: async (id: string) => {
+    const response = await adminApiClient.patch(`/notifications/${id}/read`);
+    return response.data;
+  },
+
+  markAllNotificationsAsRead: async () => {
+    const response = await adminApiClient.patch('/notifications/read-all');
+    return response.data;
+  },
 };
+
+// Export adminApiClient pour les hooks
+export { adminApiClient };

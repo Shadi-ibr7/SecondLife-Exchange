@@ -91,6 +91,7 @@ export class NotificationsService {
    */
   async createNotification(
     payload: CreateNotificationPayload,
+    sendPush = true,
   ): Promise<NotificationResponse | null> {
     try {
       const notification = await this.prisma.notification.create({
@@ -106,6 +107,21 @@ export class NotificationsService {
       this.logger.log(
         `Notification créée pour user ${payload.userId} - type: ${payload.type}`,
       );
+
+      // Envoyer push automatiquement si demandé (sauf si déjà géré par notifyNewMessage, etc.)
+      if (sendPush) {
+        // Envoi push non bloquant (best effort)
+        this.sendPushToUser(payload.userId, {
+          title: payload.title,
+          body: payload.body,
+          tag: payload.data?.type || payload.type.toLowerCase(),
+          data: payload.data || {},
+        }).catch((err) => {
+          // Erreur silencieuse pour ne pas impacter la création de la notification
+          this.logger.debug(`Push notification échoué (non bloquant): ${err.message}`);
+        });
+      }
+
       return this.mapNotificationToResponse(notification);
     } catch (error) {
       this.logger.error(
@@ -406,7 +422,7 @@ export class NotificationsService {
     messagePreview: string,
   ): Promise<void> {
     try {
-      // Créer notification in-app
+      // Créer notification in-app (avec push automatique)
       await this.createNotification({
         userId: recipientUserId,
         type: NotificationType.MESSAGE,
@@ -415,19 +431,8 @@ export class NotificationsService {
           messagePreview.length > 100
             ? `${messagePreview.substring(0, 100)}...`
             : messagePreview,
-        data: { exchangeId, url: `/exchanges/${exchangeId}` },
-      });
-
-      // Envoyer push (best effort)
-      await this.sendPushToUser(recipientUserId, {
-        title: `Nouveau message de ${senderName}`,
-        body:
-          messagePreview.length > 100
-            ? `${messagePreview.substring(0, 100)}...`
-            : messagePreview,
-        tag: `message-${exchangeId}`,
         data: { type: 'MESSAGE', exchangeId, url: `/exchanges/${exchangeId}` },
-      });
+      }, true); // sendPush = true (déjà géré dans createNotification)
     } catch (error) {
       this.logger.error(`Erreur notifyNewMessage: ${error.message}`);
     }
@@ -443,24 +448,18 @@ export class NotificationsService {
     itemTitle: string,
   ): Promise<void> {
     try {
+      // Créer notification avec push automatique
       await this.createNotification({
         userId: recipientUserId,
         type: NotificationType.EXCHANGE_REQUEST,
         title: "Nouvelle demande d'échange",
         body: `${requesterName} souhaite échanger "${itemTitle}"`,
-        data: { exchangeId, url: `/exchanges/${exchangeId}` },
-      });
-
-      await this.sendPushToUser(recipientUserId, {
-        title: "Nouvelle demande d'échange",
-        body: `${requesterName} souhaite échanger "${itemTitle}"`,
-        tag: `exchange-${exchangeId}`,
         data: {
           type: 'EXCHANGE_REQUEST',
           exchangeId,
           url: `/exchanges/${exchangeId}`,
         },
-      });
+      }, true);
     } catch (error) {
       this.logger.error(`Erreur notifyExchangeRequest: ${error.message}`);
     }
@@ -485,25 +484,19 @@ export class NotificationsService {
     const message = statusMessages[status] || "Statut d'échange mis à jour";
 
     try {
+      // Créer notification avec push automatique
       await this.createNotification({
         userId: recipientUserId,
         type: NotificationType.EXCHANGE_STATUS,
         title: 'SecondLife Exchange',
         body: message,
-        data: { exchangeId, status, url: `/exchanges/${exchangeId}` },
-      });
-
-      await this.sendPushToUser(recipientUserId, {
-        title: 'SecondLife Exchange',
-        body: message,
-        tag: `exchange-status-${exchangeId}`,
         data: {
           type: 'EXCHANGE_STATUS',
           exchangeId,
           status,
           url: `/exchanges/${exchangeId}`,
         },
-      });
+      }, true);
     } catch (error) {
       this.logger.error(`Erreur notifyExchangeStatus: ${error.message}`);
     }
@@ -620,16 +613,16 @@ export class NotificationsService {
   ): Promise<SendNotificationResponse> {
     const { userId = currentUserId, title, body } = input;
 
-    // Créer notification in-app
+    // Créer notification in-app sans push automatique (on le fait manuellement après)
     await this.createNotification({
       userId,
       type: NotificationType.SYSTEM,
       title: title || 'Test Notification',
       body: body || 'Ceci est une notification de test',
-      data: { type: 'test' },
-    });
+      data: { type: 'test', url: '/notifications' },
+    }, false); // sendPush = false car on le fait manuellement
 
-    // Envoyer push
+    // Envoyer push manuellement pour avoir le retour sent/failed
     const { sent, failed } = await this.sendPushToUser(userId, {
       title: title || 'Test Notification',
       body: body || 'Ceci est une notification de test',
@@ -681,24 +674,18 @@ export class NotificationsService {
 
       for (const { userId } of usersWithTokens) {
         try {
+          // Créer notification avec push automatique
           await this.createNotification({
             userId,
             type: NotificationType.WEEKLY_THEME,
             title: 'Nouveau thème de la semaine',
             body: `Découvrez le thème: ${currentTheme.title}`,
-            data: { themeId: currentTheme.id, url: '/themes' },
-          });
-
-          await this.sendPushToUser(userId, {
-            title: 'Nouveau thème de la semaine',
-            body: `Découvrez le thème: ${currentTheme.title}`,
-            tag: `theme-${currentTheme.id}`,
             data: {
               type: 'WEEKLY_THEME',
               themeId: currentTheme.id,
               url: '/themes',
             },
-          });
+          }, true);
         } catch (error) {
           this.logger.error(
             `Erreur rappel hebdo pour user ${userId}: ${error.message}`,

@@ -15,7 +15,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { adminApi } from '@/lib/admin.api';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
-import { useNotifications } from '@/hooks/useNotifications';
+import { useAdminNotifications } from '@/hooks/useAdminNotifications';
+import { AdminNotificationDropdown } from './AdminNotificationDropdown';
 
 interface AdminHeaderProps {
   onMenuClick: () => void;
@@ -23,7 +24,7 @@ interface AdminHeaderProps {
 
 export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
   const router = useRouter();
-  const { unreadCount } = useNotifications();
+  const { unreadCount } = useAdminNotifications();
 
   const handleLogout = async () => {
     // Appeler adminApi.logout() qui:
@@ -64,19 +65,8 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
             <ThemeToggle />
           </div>
 
-          {/* Notifications Bell */}
-          <Link
-            href="/notifications"
-            className="relative w-10 h-8 rounded-lg flex items-center justify-center hover:bg-[rgba(0,0,0,0.04)] dark:hover:bg-[rgba(255,255,255,0.04)] transition-colors"
-            aria-label="Notifications"
-          >
-            <Bell className="w-5 h-5 text-[#1e1e20] dark:text-[#ececed]" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-medium">
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </span>
-            )}
-          </Link>
+          {/* Notifications Bell avec dropdown */}
+          <AdminNotificationDropdown />
 
           {/* Admin Badge - Visible à partir de sm */}
           <span className="hidden sm:inline-flex h-5 px-2.5 py-0.5 rounded-full text-xs bg-[rgba(27,56,40,0.1)] dark:bg-[rgba(45,90,69,0.1)] text-[#1b3828] dark:text-[#2d5a45] font-normal leading-4 whitespace-nowrap">
