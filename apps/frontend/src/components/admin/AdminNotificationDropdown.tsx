@@ -7,14 +7,13 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Bell, Check, CheckCheck, X } from 'lucide-react';
+import { useState } from 'react';
+import { Bell, Check, CheckCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { useAdminNotifications, type AppNotification } from '@/hooks/useAdminNotifications';
 import { formatDistanceToNow } from 'date-fns';
