@@ -267,7 +267,6 @@ export class UploadsService {
       timestamp,
       folder,
       public_id: publicId,
-      resource_type: 'image', // LIMITE STRICTE: images uniquement
       transformation,
     };
 
@@ -302,7 +301,6 @@ export class UploadsService {
       allowed_formats: allowedFormats, // Validation côté serveur uniquement
       max_bytes: maxBytes, // Validation côté serveur uniquement
       transformation,
-      resource_type: 'image', // LIMITE STRICTE: images uniquement
       api_key: this.cloudinaryConfig.apiKey, // Clé API publique (pas le secret)
       cloud_name: this.cloudinaryConfig.cloudName, // Nom du cloud (publique)
     };
@@ -640,19 +638,11 @@ export class UploadsService {
       timestamp,
       folder,
       public_id,
-      resource_type,
       transformation,
     } = params;
 
     if (!signature || !timestamp || !folder || !public_id) {
       throw new BadRequestException("Paramètres d'upload manquants");
-    }
-
-    // Vérifier que resource_type est 'image' uniquement
-    if (resource_type && resource_type !== 'image') {
-      throw new BadRequestException(
-        `Resource type non autorisé: ${resource_type}. Seul 'image' est autorisé.`,
-      );
     }
 
     // Vérifier la signature
@@ -662,7 +652,6 @@ export class UploadsService {
       timestamp,
       folder,
       public_id,
-      resource_type: 'image',
       transformation: transformationValue,
     });
 

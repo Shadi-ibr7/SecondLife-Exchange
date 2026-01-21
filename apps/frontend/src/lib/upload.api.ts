@@ -198,15 +198,11 @@ export const uploadApi = {
     }
 
     /**
-     * Ajouter resource_type pour limiter à 'image' uniquement
-     * Sécurité renforcée: empêche l'upload de vidéos ou autres types
+     * IMPORTANT:
+     * Ne PAS envoyer `resource_type` dans le FormData.
+     * Pour Cloudinary, le resource type est déterminé par l'URL (/image/upload),
+     * et l'inclure dans les params signés peut provoquer "Invalid Signature".
      */
-    if (signature.resource_type) {
-      formData.append('resource_type', signature.resource_type);
-    } else {
-      // Fallback par défaut pour compatibilité
-      formData.append('resource_type', 'image');
-    }
 
     /**
      * Ajouter les transformations si spécifiées dans la signature
@@ -230,7 +226,6 @@ export const uploadApi = {
         folder: signature.folder,
         public_id: signature.public_id,
         timestamp: signature.timestamp,
-        resource_type: signature.resource_type || 'image',
         transformation: signature.transformation,
         // allowed_formats et max_bytes sont des validations serveur uniquement,
         // ils ne sont PAS envoyés dans le FormData.
@@ -254,9 +249,8 @@ export const uploadApi = {
        * {resource_type}: type de ressource ('image' uniquement)
        * upload: endpoint pour uploader
        */
-      const resourceType = signature.resource_type || 'image';
       const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${signature.cloud_name}/${resourceType}/upload`,
+        `https://api.cloudinary.com/v1_1/${signature.cloud_name}/image/upload`,
         {
           method: 'POST', // Méthode HTTP POST pour envoyer le fichier
           body: formData, // Corps de la requête (FormData avec le fichier et les paramètres)
