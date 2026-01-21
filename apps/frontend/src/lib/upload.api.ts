@@ -218,6 +218,29 @@ export const uploadApi = {
     }
 
     /**
+     * DEBUG: logger les paramètres (hors fichier) envoyés à Cloudinary.
+     * Utile pour vérifier qu'ils correspondent exactement aux params signés côté backend.
+     * À désactiver si bruit excessif en production.
+     */
+    try {
+      const debugPayload = {
+        cloud_name: signature.cloud_name,
+        // Ne pas logger l'api_key en clair pour éviter les copies accidentelles
+        api_key_present: Boolean(signature.api_key),
+        folder: signature.folder,
+        public_id: signature.public_id,
+        timestamp: signature.timestamp,
+        resource_type: signature.resource_type || 'image',
+        transformation: signature.transformation,
+        // allowed_formats et max_bytes sont des validations serveur uniquement,
+        // ils ne sont PAS envoyés dans le FormData.
+      };
+      console.debug('[CloudinaryUpload][frontend] Payload vers Cloudinary (sans fichier):', debugPayload);
+    } catch {
+      // Ne jamais casser l’upload à cause du logging
+    }
+
+    /**
      * Envoyer la requête POST vers l'API Cloudinary
      * On utilise fetch() natif car c'est plus simple pour les uploads de fichiers
      * que d'utiliser axios (qui nécessite des configurations supplémentaires)

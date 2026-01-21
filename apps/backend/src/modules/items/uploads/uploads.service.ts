@@ -35,8 +35,8 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
 // Import de Cloudinary SDK
 import { v2 as cloudinary } from 'cloudinary';
 
-// Import de crypto pour générer les signatures
-import { createHash } from 'crypto';
+// Import de crypto pour générer des identifiants de requête
+import { randomUUID } from 'crypto';
 
 /**
  * INTERFACE: SignedUploadParams
@@ -260,7 +260,9 @@ export class UploadsService {
     const transformation = 'f_webp,q_auto,w_800,h_600,c_fill';
 
     // Créer la signature Cloudinary avec TOUS les paramètres qui seront envoyés
-    // IMPORTANT: resource_type doit être inclus pour limiter à 'image' uniquement
+    // IMPORTANT:
+    // - Seuls les paramètres effectivement envoyés à Cloudinary doivent être signés
+    // - La signature DOIT inclure le timestamp
     const paramsToSign = {
       timestamp,
       folder,
@@ -268,6 +270,25 @@ export class UploadsService {
       resource_type: 'image', // LIMITE STRICTE: images uniquement
       transformation,
     };
+
+    // Logging DEBUG (sans secret) pour diagnostiquer les problèmes de signature
+    const requestId = randomUUID();
+    const sortedParamsString = Object.keys(paramsToSign)
+      .sort()
+      .map((key) => `${key}=${paramsToSign[key]}`)
+      .join('&');
+
+    // NOTE: ne jamais logger le secret Cloudinary
+    // Ces logs peuvent être activés temporairement en production pour diagnostiquer
+    console.log('[CloudinaryUpload][getSignedUploadParams]', {
+      requestId,
+      userId,
+      folder,
+      publicId,
+      timestamp,
+      paramsToSign,
+      stringToSign: sortedParamsString,
+    });
 
     const signature = this.createSignature(paramsToSign);
 
@@ -573,14 +594,28 @@ export class UploadsService {
    * @returns Signature SHA1 en hexadécimal
    */
   private createSignature(params: Record<string, any>): string {
-    const sortedParams = Object.keys(params)
-      .sort()
-      .map((key) => `${key}=${params[key]}`)
-      .join('&');
+    /**
+     * Utiliser l'implémentation officielle Cloudinary pour générer la signature.
+     * Cela garantit que la chaîne à signer est construite exactement comme côté Cloudinary
+     * (tri des clés, exclusion des valeurs null/undefined, etc.).
+     *
+     * IMPORTANT:
+     * - Ne jamais inclure file, api_key ou cloud_name dans les paramètres signés
+     * - La fonction api_sign_request ne prend en compte que les clés présentes
+     */
+    // Nettoyer les paramètres (supprimer undefined/null/chaînes vides)
+    const cleanedParams: Record<string, any> = {};
+    for (const [key, value] of Object.entries(params)) {
+      if (value === undefined || value === null || value === '') {
+        continue;
+      }
+      cleanedParams[key] = value;
+    }
 
-    return createHash('sha1')
-      .update(sortedParams + this.cloudinaryConfig.apiSecret)
-      .digest('hex');
+    return cloudinary.utils.api_sign_request(
+      cleanedParams,
+      this.cloudinaryConfig.apiSecret,
+    );
   }
 
   // ============================================
