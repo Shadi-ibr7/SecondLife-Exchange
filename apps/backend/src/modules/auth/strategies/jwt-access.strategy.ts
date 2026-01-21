@@ -25,6 +25,9 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 
+// Import pour extraire le token depuis les cookies httpOnly
+import { extractAccessToken } from '../../../common/utils/cookie.utils';
+
 // Import des services nécessaires
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../common/prisma/prisma.service';
@@ -73,9 +76,20 @@ export class JwtAccessStrategy extends PassportStrategy(
     private prisma: PrismaService,
   ) {
     super({
-      // Extraire le token depuis le header Authorization
-      // Format attendu: "Authorization: Bearer <token>"
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      /**
+       * Extraire le token JWT:
+       * - Priorité 1: Header Authorization (Bearer <token>)
+       * - Fallback: Cookie httpOnly `sl_access_token` (cross-origin, PWA, etc.)
+       *
+       * IMPORTANT:
+       * Le projet utilise des cookies httpOnly en prod. Sans ce fallback,
+       * certaines requêtes POST (ex: /uploads/cloudinary/sign) peuvent échouer
+       * et déclencher une redirection /login côté frontend.
+       */
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        (req: any) => extractAccessToken(req?.cookies) || null,
+      ]),
 
       // Ne pas ignorer l'expiration (vérifier que le token n'est pas expiré)
       ignoreExpiration: false,
