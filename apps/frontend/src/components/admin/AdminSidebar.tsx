@@ -63,7 +63,7 @@ export function AdminSidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4">
+        <nav className="flex-1 px-3 py-4 overflow-y-auto">
           <ul className="space-y-1">
             {menuItems.map((item) => {
               const Icon = item.icon;
