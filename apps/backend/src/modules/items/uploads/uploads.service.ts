@@ -158,11 +158,39 @@ export class UploadsService {
     const baseFolder = folderParts[0];
 
     // Whitelist des folders de base autorisés
-    const allowedBaseFolders = ['items', 'profiles', 'eco-content'];
+    const allowedBaseFolders = ['items', 'profiles', 'eco-content', 'exchanges'];
     if (!allowedBaseFolders.includes(baseFolder)) {
       throw new BadRequestException(
         `Dossier de base non autorisé. Dossiers autorisés: ${allowedBaseFolders.join(', ')}`,
       );
+    }
+
+    // ============================================
+    // VALIDATION POUR exchanges/<exchangeId>/messages
+    // ============================================
+    /**
+     * Autoriser les uploads d'images dans les conversations:
+     * - Format attendu côté frontend: exchanges/<exchangeId>/messages
+     * - Authentification requise (userId présent via JwtAccessGuard)
+     *
+     * NOTE:
+     * Ici on valide uniquement la forme du folder pour débloquer l'upload.
+     * L'ownership (participant de l'échange) pourra être durci ensuite
+     * si nécessaire, mais on évite de casser la prod.
+     */
+    if (baseFolder === 'exchanges') {
+      if (!userId) {
+        throw new BadRequestException(
+          'Authentification requise pour uploader dans un dossier exchanges',
+        );
+      }
+
+      // Format strict: exchanges/<exchangeId>/messages
+      if (folderParts.length !== 3 || folderParts[2] !== 'messages') {
+        throw new BadRequestException(
+          "Format de dossier invalide pour exchanges. Utilisez 'exchanges/<exchangeId>/messages'",
+        );
+      }
     }
 
     // ============================================
