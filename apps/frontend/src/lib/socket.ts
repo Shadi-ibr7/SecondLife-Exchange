@@ -59,8 +59,23 @@ class SocketService {
     // Ne pas reconnecter si déjà connecté
     if (this.socket?.connected) return;
 
-    // URL de base du serveur (depuis les variables d'environnement ou localhost)
-    const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    /**
+     * IMPORTANT (prod):
+     * `NEXT_PUBLIC_API_URL` peut contenir un path (`/api` ou `/api/v1`) car il sert au client HTTP.
+     * Socket.IO doit se connecter à l'ORIGIN (ex: https://api.example.com) sinon il va tenter
+     * d'atteindre `/api/v1/socket.io` et la connexion échoue silencieusement (messages "en attente").
+     */
+    const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const baseURL = (() => {
+      try {
+        return new URL(rawApiUrl).origin;
+      } catch {
+        // Fallback: retirer les suffixes /api et /api/v1 si présents
+        return rawApiUrl
+          .replace(/\/api\/v1\/?$/, '')
+          .replace(/\/api\/?$/, '');
+      }
+    })();
 
     // Créer la connexion Socket.IO
     this.socket = io(baseURL, {
