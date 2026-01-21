@@ -16,7 +16,7 @@
  * - Cookies httpOnly pour empêcher accès JavaScript (XSS)
  */
 
-import { Injectable, UnauthorizedException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -66,6 +66,8 @@ interface AdminJwtPayload {
 
 @Injectable()
 export class AuthAdminService {
+  private readonly logger = new Logger(AuthAdminService.name);
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
@@ -398,25 +400,37 @@ export class AuthAdminService {
     // ============================================
     // DÉTECTION DE REPLAY ATTACK
     // ============================================
-    // Si le token a déjà été révoqué, c'est une tentative de réutilisation
-    // → Un attaquant a probablement volé un ancien token
-    // → Révoquer TOUS les tokens de la famille pour forcer une reconnexion
+    // Si le token a déjà été révoqué, vérifier si c'est un vrai replay attack
+    // ou juste une requête concurrente (fenêtre de grâce de 5 secondes)
     if (matchedToken.revokedAt) {
-      console.warn(
-        `[SECURITY] Replay attack détecté! Token réutilisé pour user ${decoded.sub}, family ${matchedToken.familyId}`,
-      );
+      const revokedSince = Date.now() - matchedToken.revokedAt.getTime();
+      const GRACE_PERIOD_MS = 5000; // 5 secondes de grâce pour les requêtes concurrentes
 
-      // Révoquer tous les tokens de la famille
-      if (matchedToken.familyId) {
-        await this.prisma.refreshToken.updateMany({
-          where: { familyId: matchedToken.familyId },
-          data: { revokedAt: new Date() },
-        });
+      // Si le token a été révoqué il y a plus de 5 secondes, c'est probablement un vrai replay attack
+      if (revokedSince > GRACE_PERIOD_MS) {
+        // Log uniquement si c'est probablement un vrai replay attack (pas une requête concurrente)
+        this.logger.warn(
+          `[SECURITY] Replay attack détecté! Token réutilisé pour user ${decoded.sub}, family ${matchedToken.familyId || 'null'} (révoqué il y a ${Math.round(revokedSince / 1000)}s)`,
+        );
+
+        // Révoquer tous les tokens de la famille
+        if (matchedToken.familyId) {
+          await this.prisma.refreshToken.updateMany({
+            where: { familyId: matchedToken.familyId },
+            data: { revokedAt: new Date() },
+          });
+        }
+
+        throw new UnauthorizedException(
+          'Session invalide. Veuillez vous reconnecter.',
+        );
+      } else {
+        // Token révoqué récemment (< 5s) = probablement une requête concurrente
+        // On retourne simplement une erreur sans log de sécurité (pour éviter le bruit)
+        throw new UnauthorizedException(
+          'Token déjà utilisé. Veuillez réessayer.',
+        );
       }
-
-      throw new UnauthorizedException(
-        'Session invalide. Veuillez vous reconnecter.',
-      );
     }
 
     // Vérifier l'expiration
