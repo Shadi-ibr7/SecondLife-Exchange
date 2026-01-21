@@ -521,7 +521,7 @@ export class AdminService {
       // Notifier l'utilisateur propriétaire de l'item
       const item = await this.prisma.item.findUnique({
         where: { id: report.targetItemId },
-        select: { ownerId: true, title: true },
+        select: { id: true, ownerId: true, title: true },
       });
 
       if (item) {
