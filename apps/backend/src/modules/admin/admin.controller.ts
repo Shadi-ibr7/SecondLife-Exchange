@@ -234,7 +234,14 @@ export class AdminController {
     @Body() resolveDto: ResolveReportDto,
     @Request() req: any,
   ) {
-    return this.adminService.resolveReport(id, req.user.id, resolveDto.banUser, req);
+    return this.adminService.resolveReport(
+      id,
+      req.user.id,
+      resolveDto.banUser || false,
+      resolveDto.deleteItem || false,
+      resolveDto.archive || false,
+      req,
+    );
   }
 
   @Delete('reports/:id')

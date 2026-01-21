@@ -25,6 +25,9 @@
 
 'use client';
 
+// Import de React
+import { useState } from 'react';
+
 // Import de Next.js pour la navigation
 import Link from 'next/link';
 
@@ -34,6 +37,7 @@ import { motion } from 'framer-motion';
 // Import des composants UI
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 // Import des types
 import { Item } from '@/types';
@@ -42,7 +46,13 @@ import { Item } from '@/types';
 import { ITEM_CATEGORY_LABELS, ITEM_CONDITION_LABELS } from '@/lib/constants';
 
 // Import des icônes
-import { MapPin, Calendar } from 'lucide-react';
+import { MapPin, Calendar, Flag } from 'lucide-react';
+
+// Import du store auth
+import { useAuthStore } from '@/store/auth';
+
+// Import du composant de signalement
+import { ReportModal } from '@/components/reports/ReportModal';
 
 // Import de date-fns pour le formatage des dates
 import { formatDistanceToNow } from 'date-fns';
@@ -68,6 +78,10 @@ interface ItemCardProps {
  * @param index - Index pour l'animation progressive (défaut: 0)
  */
 export function ItemCard({ item, index = 0 }: ItemCardProps) {
+  const { user } = useAuthStore();
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const isOwner = Boolean(user && user.id === item.ownerId);
+
   // ============================================
   // FONCTION: formatRelativeTime
   // ============================================
@@ -153,7 +167,24 @@ export function ItemCard({ item, index = 0 }: ItemCardProps) {
         transition-shadow: transition fluide pour l'ombre
         hover:shadow-lg: ombre plus prononcée au survol
       */}
-        <Card className="h-full cursor-pointer transition-shadow hover:shadow-lg">
+        <Card className="relative h-full cursor-pointer transition-shadow hover:shadow-lg">
+          {/* Bouton de signalement (coin supérieur droit) */}
+          {!isOwner && user && !isMock && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-2 top-2 z-10 h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm hover:bg-destructive/10"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setReportModalOpen(true);
+              }}
+              title="Signaler cette annonce"
+            >
+              <Flag className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+            </Button>
+          )}
+
           {/*
           Lien vers la page de détail de l'item
           href: URL vers la page de détail (ou /explore pour les items mock)
@@ -315,6 +346,17 @@ export function ItemCard({ item, index = 0 }: ItemCardProps) {
               )}
             </CardContent>
           </Link>
+
+          {/* Modal de signalement */}
+          {!isMock && (
+            <ReportModal
+              open={reportModalOpen}
+              onOpenChange={setReportModalOpen}
+              type="ITEM"
+              targetItemId={item.id}
+              targetName={item.title}
+            />
+          )}
         </Card>
       </motion.div>
     </>

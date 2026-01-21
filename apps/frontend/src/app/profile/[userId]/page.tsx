@@ -22,7 +22,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowLeft, User, Calendar, Package } from 'lucide-react';
+import { ArrowLeft, User, Calendar, Package, Flag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -31,6 +31,8 @@ import apiClient from '@/lib/api';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
+import { useAuthStore } from '@/store/auth';
+import { ReportModal } from '@/components/reports/ReportModal';
 
 interface PublicProfile {
   id: string;
@@ -53,9 +55,13 @@ export default function PublicProfilePage() {
   const params = useParams();
   const router = useRouter();
   const userId = params?.userId as string;
+  const { user } = useAuthStore();
 
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+
+  const isOwnProfile = Boolean(user && user.id === userId);
 
   useEffect(() => {
     if (!userId) return;
@@ -149,7 +155,21 @@ export default function PublicProfilePage() {
 
                 {/* Informations */}
                 <div className="flex-1">
-                  <h1 className="text-3xl font-bold mb-2">{profile.displayName}</h1>
+                  <div className="flex items-center gap-3 mb-2">
+                    <h1 className="text-3xl font-bold">{profile.displayName}</h1>
+                    {/* Bouton de signalement */}
+                    {!isOwnProfile && user && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => setReportModalOpen(true)}
+                      >
+                        <Flag className="h-4 w-4" />
+                        Signaler
+                      </Button>
+                    )}
+                  </div>
                   <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
@@ -215,6 +235,17 @@ export default function PublicProfilePage() {
             </div>
           )}
         </motion.div>
+
+        {/* Modal de signalement */}
+        {profile && (
+          <ReportModal
+            open={reportModalOpen}
+            onOpenChange={setReportModalOpen}
+            type="USER"
+            targetUserId={profile.id}
+            targetName={profile.displayName}
+          />
+        )}
       </div>
     </div>
   );

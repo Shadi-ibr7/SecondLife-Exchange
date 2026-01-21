@@ -153,7 +153,7 @@ export function MessageBubble({
         L'avatar est cliquable pour voir le profil public (seulement si ce n'est pas notre propre message)
       */}
       {!isOwn && displaySender?.id ? (
-        <Link 
+        <Link
           href={`/profile/${displaySender.id}`}
           onClick={(e) => {
             if (!displaySender?.id) {

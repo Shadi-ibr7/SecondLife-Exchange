@@ -715,10 +715,10 @@ export const adminApi = {
     return response.data;
   },
 
-  resolveReport: async (id: string, banUser = false) => {
+  resolveReport: async (id: string, banUser = false, deleteItem = false, archive = false) => {
     const response = await adminApiClient.patch(
       `/admin/reports/${id}/resolve`,
-      { banUser }
+      { banUser, deleteItem, archive }
     );
     return response.data;
   },

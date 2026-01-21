@@ -484,7 +484,14 @@ export class AdminService {
     };
   }
 
-  async resolveReport(reportId: string, adminId: string, banUser = false, req?: Request) {
+  async resolveReport(
+    reportId: string,
+    adminId: string,
+    banUser = false,
+    deleteItem = false,
+    archive = false,
+    req?: Request,
+  ) {
     const report = await this.prisma.report.findUnique({
       where: { id: reportId },
     });
@@ -492,6 +499,70 @@ export class AdminService {
       throw new NotFoundException('Signalement non trouvé');
     }
 
+    // Si archivé, on marque juste comme résolu sans action
+    if (archive) {
+      await this.prisma.report.update({
+        where: { id: reportId },
+        data: {
+          resolved: true,
+          resolvedAt: new Date(),
+          resolvedBy: adminId,
+        },
+      });
+
+      await this.logAction(adminId, 'ARCHIVE_REPORT', 'Report', reportId, undefined, req);
+      return { success: true };
+    }
+
+    // Supprimer l'item si demandé et si c'est un signalement d'item
+    if (deleteItem && report.targetItemId) {
+      await this.deleteItem(report.targetItemId, adminId, req);
+
+      // Notifier l'utilisateur propriétaire de l'item
+      const item = await this.prisma.item.findUnique({
+        where: { id: report.targetItemId },
+        select: { ownerId: true, title: true },
+      });
+
+      if (item) {
+        await this.notificationsService.createNotification(item.ownerId, {
+          type: 'ITEM_DELETED',
+          title: 'Annonce supprimée',
+          message: `Votre annonce "${item.title}" a été supprimée suite à un signalement.`,
+          link: null,
+        });
+      }
+    }
+
+    // Bannir l'utilisateur si demandé
+    if (banUser && report.targetUserId) {
+      await this.banUser(
+        report.targetUserId,
+        adminId,
+        `Banni suite au signalement #${reportId}`,
+        req,
+      );
+
+      // Notifier l'utilisateur banni
+      const targetUser = await this.prisma.user.findUnique({
+        where: { id: report.targetUserId },
+        select: { email: true, displayName: true },
+      });
+
+      if (targetUser) {
+        await this.notificationsService.createNotification(report.targetUserId, {
+          type: 'USER_BANNED',
+          title: 'Compte banni',
+          message: `Votre compte a été banni suite à un signalement. Raison: Signalement #${reportId}`,
+          link: null,
+        });
+
+        // TODO: Envoyer un email de notification (à implémenter avec un service d'email)
+        // Pour l'instant, on utilise seulement les notifications in-app
+      }
+    }
+
+    // Marquer le signalement comme résolu
     await this.prisma.report.update({
       where: { id: reportId },
       data: {
@@ -501,17 +572,9 @@ export class AdminService {
       },
     });
 
-    if (banUser && report.targetUserId) {
-      await this.banUser(
-        report.targetUserId,
-        adminId,
-        `Banni suite au signalement #${reportId}`,
-        req,
-      );
-    }
-
     await this.logAction(adminId, 'RESOLVE_REPORT', 'Report', reportId, {
       banUser,
+      deleteItem,
     }, req);
     return { success: true };
   }

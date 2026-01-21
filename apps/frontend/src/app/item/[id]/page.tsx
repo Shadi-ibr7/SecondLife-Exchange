@@ -72,6 +72,7 @@
 
 'use client';
 
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -82,6 +83,7 @@ import { ItemPhotos } from '@/components/items/ItemPhotos';
 import { ItemOwnerActions } from '@/components/items/ItemOwnerActions';
 import { ProposeExchangeModal } from '@/components/exchanges/ProposeExchangeModal';
 import { MatchBanner } from '@/components/matching/MatchBanner';
+import { ReportModal } from '@/components/reports/ReportModal';
 import { itemsApi } from '@/lib/items.api';
 import { useAuthStore } from '@/store/auth';
 import {
@@ -98,6 +100,7 @@ import {
   User,
   Sparkles,
   Wrench,
+  Flag,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -154,6 +157,8 @@ export default function ItemDetailPage() {
    * - Utilisé pour afficher conditionnellement certaines actions
    */
   const { user } = useAuthStore();
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
 
   /**
    * ID de l'item extrait des paramètres de route
@@ -918,7 +923,7 @@ export default function ItemDetailPage() {
                    * - hover:ring-2 hover:ring-primary/50: Effet au survol
                    */}
                   {item.owner.id ? (
-                    <Link 
+                    <Link
                       href={`/profile/${item.owner.id}`}
                       onClick={(e) => {
                         if (!item.owner?.id) {
@@ -1116,6 +1121,42 @@ export default function ItemDetailPage() {
                   )}
                 </CardContent>
               </Card>
+            )}
+
+            {/* ============================================
+                BOUTON DE SIGNALEMENT
+                ============================================ */}
+            {/* Bouton de signalement (affiché pour tous sauf le propriétaire)
+             *
+             * CONDITION:
+             * - Affiche seulement si !isOwner (pas le propriétaire)
+             * - Nécessite une authentification (user doit exister)
+             */}
+            {!isOwner && user && (
+              <Card>
+                <CardContent className="p-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full gap-2 text-muted-foreground"
+                    onClick={() => setReportModalOpen(true)}
+                  >
+                    <Flag className="h-4 w-4" />
+                    Signaler cette annonce
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Modal de signalement */}
+            {item && (
+              <ReportModal
+                open={reportModalOpen}
+                onOpenChange={setReportModalOpen}
+                type="ITEM"
+                targetItemId={item.id}
+                targetName={item.title}
+              />
             )}
           </div>
         </div>

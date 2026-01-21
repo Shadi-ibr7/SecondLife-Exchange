@@ -51,6 +51,8 @@ export default function AdminReportsPage() {
   const [selectedReport, setSelectedReport] = useState<any>(null);
   const [resolveDialogOpen, setResolveDialogOpen] = useState(false);
   const [banUser, setBanUser] = useState(false);
+  const [deleteItem, setDeleteItem] = useState(false);
+  const [archive, setArchive] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-reports', page, resolvedFilter],
@@ -70,10 +72,12 @@ export default function AdminReportsPage() {
   const confirmResolve = async () => {
     if (!selectedReport) return;
     try {
-      await adminApi.resolveReport(selectedReport.id, banUser);
+      await adminApi.resolveReport(selectedReport.id, banUser, deleteItem, archive);
       toast.success('Signalement résolu avec succès');
       setResolveDialogOpen(false);
       setBanUser(false);
+      setDeleteItem(false);
+      setArchive(false);
       setSelectedReport(null);
       queryClient.invalidateQueries({ queryKey: ['admin-reports'] });
     } catch (error: any) {
@@ -344,6 +348,21 @@ export default function AdminReportsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {selectedReport?.targetItemId && (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="delete-item"
+                  checked={deleteItem}
+                  onCheckedChange={(checked) => setDeleteItem(checked as boolean)}
+                />
+                <label
+                  htmlFor="delete-item"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Supprimer l'annonce signalée
+                </label>
+              </div>
+            )}
             {selectedReport?.targetUserId && (
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -359,6 +378,19 @@ export default function AdminReportsPage() {
                 </label>
               </div>
             )}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="archive"
+                checked={archive}
+                onCheckedChange={(checked) => setArchive(checked as boolean)}
+              />
+              <label
+                htmlFor="archive"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Archiver le signalement (aucune action)
+              </label>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setResolveDialogOpen(false)}>

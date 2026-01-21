@@ -1269,6 +1269,27 @@ class ApiClient {
     return response.data;
   }
 
+  // ============================================
+  // ENDPOINTS SIGNALEMENTS
+  // ============================================
+
+  /**
+   * Crée un signalement (item ou utilisateur).
+   *
+   * @param data - Données du signalement (type, reason, message, targetItemId ou targetUserId)
+   * @returns Signalement créé
+   */
+  async createReport(data: {
+    type: 'ITEM' | 'USER';
+    reason: 'INAPPROPRIATE_CONTENT' | 'SPAM_ADVERTISEMENT' | 'ILLEGAL_CONTENT' | 'HARASSMENT' | 'FALSE_INFORMATION' | 'OTHER';
+    message?: string;
+    targetItemId?: string;
+    targetUserId?: string;
+  }): Promise<{ id: string; type: string; message: string; createdAt: string }> {
+    const response = await this.client.post('/reports', data);
+    return response.data;
+  }
+
   /**
    * Récupère les tags populaires des contenus éco.
    * Endpoint public sans authentification.
