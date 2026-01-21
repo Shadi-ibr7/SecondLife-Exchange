@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { useAdminNotifications } from '@/hooks/useAdminNotifications';
+import { useAdminNotifications, type AppNotification } from '@/hooks/useAdminNotifications';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -59,7 +59,7 @@ export function AdminNotificationDropdown() {
     }
   };
 
-  const getNotificationUrl = (notification: any) => {
+  const getNotificationUrl = (notification: AppNotification) => {
     if (notification.data?.url) {
       // Si c'est une URL relative, la préfixer avec ADMIN_BASE_PATH si nécessaire
       const url = notification.data.url;

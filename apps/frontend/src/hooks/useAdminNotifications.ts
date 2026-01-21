@@ -15,7 +15,7 @@ import { adminApi } from '@/lib/admin.api';
 // Intervalle de polling en millisecondes (30 secondes)
 const POLLING_INTERVAL = 30000;
 
-interface AppNotification {
+export interface AppNotification {
   id: string;
   userId: string;
   type: string;
