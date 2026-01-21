@@ -7,7 +7,7 @@
 
 import { Injectable, NotFoundException, Logger, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { ItemStatus } from '@prisma/client';
+import { ItemStatus, NotificationType } from '@prisma/client';
 import { ThemesService } from '../themes/themes.service';
 import {
   SuggestionsService,
@@ -525,11 +525,15 @@ export class AdminService {
       });
 
       if (item) {
-        await this.notificationsService.createNotification(item.ownerId, {
-          type: 'ITEM_DELETED',
+        await this.notificationsService.createNotification({
+          userId: item.ownerId,
+          type: NotificationType.ADMIN_ACTION,
           title: 'Annonce supprimée',
-          message: `Votre annonce "${item.title}" a été supprimée suite à un signalement.`,
-          link: null,
+          body: `Votre annonce "${item.title}" a été supprimée suite à un signalement.`,
+          data: {
+            itemId: item.id,
+            reportId: reportId,
+          },
         });
       }
     }
@@ -550,11 +554,15 @@ export class AdminService {
       });
 
       if (targetUser) {
-        await this.notificationsService.createNotification(report.targetUserId, {
-          type: 'USER_BANNED',
+        await this.notificationsService.createNotification({
+          userId: report.targetUserId,
+          type: NotificationType.ADMIN_ACTION,
           title: 'Compte banni',
-          message: `Votre compte a été banni suite à un signalement. Raison: Signalement #${reportId}`,
-          link: null,
+          body: `Votre compte a été banni suite à un signalement. Raison: Signalement #${reportId}`,
+          data: {
+            reportId: reportId,
+            reason: `Signalement #${reportId}`,
+          },
         });
 
         // TODO: Envoyer un email de notification (à implémenter avec un service d'email)

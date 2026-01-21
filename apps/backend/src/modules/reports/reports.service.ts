@@ -9,6 +9,7 @@ import { Injectable, BadRequestException, ConflictException, NotFoundException }
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateReportDto } from './dtos/create-report.dto';
 import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '@prisma/client';
 
 @Injectable()
 export class ReportsService {
@@ -115,11 +116,15 @@ export class ReportsService {
       // Créer une notification pour chaque admin
       await Promise.all(
         admins.map((admin) =>
-          this.notificationsService.createNotification(admin.id, {
-            type: 'REPORT_CREATED',
+          this.notificationsService.createNotification({
+            userId: admin.id,
+            type: NotificationType.ADMIN_ACTION,
             title: 'Nouveau signalement',
-            message: `Un nouveau signalement a été créé (#${reportId})`,
-            link: `/admin/reports/${reportId}`,
+            body: `Un nouveau signalement a été créé (#${reportId})`,
+            data: {
+              url: `/admin/reports/${reportId}`,
+              reportId,
+            },
           }),
         ),
       );
