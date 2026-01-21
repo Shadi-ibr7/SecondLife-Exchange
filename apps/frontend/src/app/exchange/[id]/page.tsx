@@ -189,12 +189,25 @@ function ExchangeDetailPageContent() {
   useEffect(() => {
     if (!exchangeId || !user) return;
 
+    // Connexion socket + join de la room de l'échange
     socketService.connect();
-    socketService.connectToExchange(exchangeId);
+    console.log('[ExchangeDetail] socket isConnected après connect():', socketService.isConnected());
+    socketService.connectToExchange(exchangeId, user.id);
+    console.log('[ExchangeDetail] join room exchange', { exchangeId, userId: user.id });
 
     const handleNewMessage = (message: ChatMessage) => {
+      console.log('[ExchangeDetail] Nouveau message reçu via WS', message);
       setMessages((prev) => [...prev, message]);
-      setOptimisticMessages((prev) => prev.filter((m) => m.id !== message.id));
+      // Retirer le message optimiste le plus ancien correspondant (même sender + même exchange)
+      setOptimisticMessages((prev) => {
+        const indexToRemove = prev.findIndex(
+          (m) =>
+            m.exchangeId === message.exchangeId &&
+            m.senderId === message.senderId
+        );
+        if (indexToRemove === -1) return prev;
+        return prev.filter((_, idx) => idx !== indexToRemove);
+      });
     };
 
     socketService.onMessage(handleNewMessage);
@@ -329,6 +342,14 @@ function ExchangeDetailPageContent() {
       }),
     };
 
+    console.log('[ExchangeDetail] Envoi message (optimiste)', {
+      exchangeId,
+      content: optimisticMessage.content,
+      images: uploadedImages.map((img) => img.url),
+      userId: user.id,
+      socketConnected: socketService.isConnected(),
+    });
+
     setOptimisticMessages((prev) => [...prev, optimisticMessage]);
 
     try {
@@ -338,6 +359,7 @@ function ExchangeDetailPageContent() {
       const imageUrls = uploadedImages.map((img) => img.url);
       socketService.sendMessage(exchangeId, contentToSend, imageUrls, user?.id);
     } catch (error) {
+      console.error('[ExchangeDetail] Erreur lors de l’envoi du message via WS', error);
       toast.error("Erreur lors de l'envoi du message");
       setOptimisticMessages((prev) =>
         prev.filter((m) => m.id !== optimisticMessage.id)

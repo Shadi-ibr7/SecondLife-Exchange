@@ -109,11 +109,12 @@ class SocketService {
    * FONCTIONNEMENT:
    * - Si le socket n'est pas connecté, le connecte d'abord
    * - Quitte la room précédente si on change d'échange
-   * - Rejoint la nouvelle room
+   * - Rejoint la nouvelle room avec un payload complet { exchangeId, userId }
    *
    * @param exchangeId - ID de l'échange (room) à rejoindre
+   * @param userId - ID de l'utilisateur courant (pour le mapping côté backend)
    */
-  connectToExchange(exchangeId: string) {
+  connectToExchange(exchangeId: string, userId: string) {
     // Connecter si nécessaire
     if (!this.socket) {
       this.connect();
@@ -123,11 +124,11 @@ class SocketService {
     if (this.currentExchangeId !== exchangeId) {
       // Quitter la room précédente si elle existe
       if (this.currentExchangeId) {
-        this.socket?.emit('leave', this.currentExchangeId);
+        this.socket?.emit('leave', { exchangeId: this.currentExchangeId });
       }
 
       // Rejoindre la nouvelle room
-      this.socket?.emit('join', exchangeId);
+      this.socket?.emit('join', { exchangeId, userId });
       this.currentExchangeId = exchangeId;
     }
   }
@@ -141,7 +142,7 @@ class SocketService {
    */
   leaveExchange() {
     if (this.socket && this.currentExchangeId) {
-      this.socket.emit('leave', this.currentExchangeId);
+      this.socket.emit('leave', { exchangeId: this.currentExchangeId });
       this.currentExchangeId = null;
     }
   }

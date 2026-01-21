@@ -162,7 +162,7 @@ export function ChatBox({
 
     // Étape 2: Rejoindre la "room" (salle) spécifique à cet échange
     // Les rooms permettent d'envoyer des messages uniquement aux participants de cet échange
-    socketService.connectToExchange(exchangeId);
+    socketService.connectToExchange(exchangeId, user.id);
 
     // ============================================
     // GESTIONNAIRE D'ÉVÉNEMENT: Nouveau message reçu
