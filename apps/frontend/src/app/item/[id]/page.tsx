@@ -158,7 +158,6 @@ export default function ItemDetailPage() {
    */
   const { user } = useAuthStore();
   const [reportModalOpen, setReportModalOpen] = useState(false);
-  const [reportModalOpen, setReportModalOpen] = useState(false);
 
   /**
    * ID de l'item extrait des paramètres de route
