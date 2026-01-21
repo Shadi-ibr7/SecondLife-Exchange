@@ -278,6 +278,15 @@ adminApiClient.interceptors.response.use(
 
     // Si erreur 401 et pas déjà en retry
     if (error.response?.status === 401 && !originalRequest?._retry) {
+      const url = originalRequest?.url || '';
+
+      // Cas explicite: /auth/admin/me ne doit PAS tenter de refresh
+      // (sinon boucle inutile sur la page de login quand aucune session n'existe)
+      if (url.includes('/auth/admin/me')) {
+        console.log('[Admin API] 401 sur /auth/admin/me, arrêt (pas de refresh)');
+        return Promise.reject(error);
+      }
+
       // Ne pas retry pour les endpoints d'auth eux-mêmes
       if (
         originalRequest?.url?.includes('/auth/admin/login') ||
