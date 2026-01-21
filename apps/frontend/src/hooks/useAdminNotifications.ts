@@ -38,19 +38,47 @@ interface PaginatedNotifications {
 
 export function useAdminNotifications() {
   // Récupérer le compteur de non lues
+  // IMPORTANT: retry: false et retryOnMount: false pour éviter les boucles infinies
+  // Si les notifications échouent (401), on ne bloque pas la page
   const { data: unreadCount = 0, refetch: refetchUnreadCount } = useQuery({
     queryKey: ['admin-notifications-unread-count'],
-    queryFn: () => adminApi.getUnreadCount(),
+    queryFn: async () => {
+      try {
+        return await adminApi.getUnreadCount();
+      } catch (error: any) {
+        // Si erreur 401, retourner 0 sans déclencher de refresh
+        if (error?.response?.status === 401) {
+          console.debug('[Admin Notifications] 401 sur unread-count, retour 0');
+          return 0;
+        }
+        throw error;
+      }
+    },
     refetchInterval: POLLING_INTERVAL,
     refetchOnWindowFocus: true,
+    retry: false, // Ne pas retry automatiquement
+    retryOnMount: false, // Ne pas retry au mount
   });
 
   // Récupérer les notifications récentes (5 dernières non lues)
   const { data: recentNotifications, refetch: refetchNotifications } = useQuery({
     queryKey: ['admin-notifications-recent'],
-    queryFn: () => adminApi.getNotifications({ page: 1, limit: 5, unreadOnly: true }),
+    queryFn: async () => {
+      try {
+        return await adminApi.getNotifications({ page: 1, limit: 5, unreadOnly: true });
+      } catch (error: any) {
+        // Si erreur 401, retourner une liste vide sans déclencher de refresh
+        if (error?.response?.status === 401) {
+          console.debug('[Admin Notifications] 401 sur notifications, retour liste vide');
+          return { items: [], total: 0, page: 1, limit: 5, totalPages: 0, unreadCount: 0 };
+        }
+        throw error;
+      }
+    },
     refetchInterval: POLLING_INTERVAL,
     refetchOnWindowFocus: true,
+    retry: false, // Ne pas retry automatiquement
+    retryOnMount: false, // Ne pas retry au mount
   });
 
   /**

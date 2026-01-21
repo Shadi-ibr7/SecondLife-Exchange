@@ -307,6 +307,19 @@ adminApiClient.interceptors.response.use(
         return Promise.reject(error);
       }
 
+      // IMPORTANT: Ne pas tenter de refresh pour les endpoints de notifications
+      // Si les notifications retournent 401, c'est probablement que l'endpoint
+      // n'accepte pas les tokens admin. On ne veut pas déclencher un refresh
+      // qui pourrait échouer et créer une boucle infinie.
+      if (
+        originalRequest?.url?.includes('/notifications') &&
+        !originalRequest?.url?.includes('/auth/admin')
+      ) {
+        console.log('[Admin API] 401 sur notifications, arrêt (pas de refresh pour éviter boucle)');
+        // Retourner l'erreur sans tenter de refresh
+        return Promise.reject(error);
+      }
+
       originalRequest._retry = true;
 
       try {
