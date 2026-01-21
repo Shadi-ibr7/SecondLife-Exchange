@@ -301,6 +301,9 @@ export class UploadsService {
       allowed_formats: allowedFormats, // Validation côté serveur uniquement
       max_bytes: maxBytes, // Validation côté serveur uniquement
       transformation,
+      // On conserve resource_type dans le type retourné (pour compatibilité),
+      // mais il n'est plus signé ni envoyé dans le FormData.
+      resource_type: 'image',
       api_key: this.cloudinaryConfig.apiKey, // Clé API publique (pas le secret)
       cloud_name: this.cloudinaryConfig.cloudName, // Nom du cloud (publique)
     };
