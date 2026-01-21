@@ -23,6 +23,7 @@ import {
   Patch, // Décorateur pour une route PATCH (mise à jour partielle)
   Delete, // Décorateur pour une route DELETE
   Body, // Décorateur pour extraire le body
+  Param, // Décorateur pour extraire les paramètres d'URL
   UseGuards, // Décorateur pour appliquer des guards
   Request, // Décorateur pour accéder à la requête (req.user)
   HttpCode, // Décorateur pour définir le code HTTP
@@ -43,11 +44,17 @@ import { LoggingInterceptor } from '../../common/interceptors/logging.intercepto
 /**
  * CONTRÔLEUR: UsersController
  *
- * Toutes les routes de ce contrôleur nécessitent une authentification JWT.
+ * Routes protégées (nécessitent authentification JWT):
+ * - GET /api/v1/users/me
+ * - PATCH /api/v1/users/me
+ * - DELETE /api/v1/users/me
+ *
+ * Routes publiques (accessibles sans authentification):
+ * - GET /api/v1/users/:id (profil public uniquement)
+ *
  * Le préfixe 'users' signifie que les routes commencent par /api/v1/users
  */
 @Controller('users')
-@UseGuards(JwtAccessGuard) // Protection globale: toutes les routes nécessitent un token JWT
 @UseInterceptors(LoggingInterceptor) // Logger toutes les requêtes
 export class UsersController {
   /**
@@ -58,11 +65,14 @@ export class UsersController {
   constructor(private usersService: UsersService) {}
 
   // ============================================
-  // ROUTE: GET /api/v1/users/me
+  // ROUTE: GET /api/v1/users/me (PROTÉGÉE)
   // ============================================
 
   /**
    * Endpoint pour récupérer les informations de l'utilisateur connecté.
+   *
+   * IMPORTANT: Cette route doit être définie AVANT @Get(':id')
+   * pour éviter que '/users/me' soit interprété comme '/users/:id' avec id='me'
    *
    * @param req - La requête HTTP (contient req.user ajouté par JwtAccessGuard)
    * @returns Informations de l'utilisateur avec son profil
@@ -74,9 +84,32 @@ export class UsersController {
    * Il contient les informations de l'utilisateur extraites du token.
    */
   @Get('me')
+  @UseGuards(JwtAccessGuard) // Protection: nécessite authentification
   async getMe(@Request() req) {
     // Récupérer l'ID de l'utilisateur depuis le token JWT (ajouté par JwtAccessGuard)
     return this.usersService.getMe(req.user.id);
+  }
+
+  // ============================================
+  // ROUTE: GET /api/v1/users/:id (PUBLIQUE)
+  // ============================================
+
+  /**
+   * Endpoint pour récupérer le profil public d'un utilisateur.
+   *
+   * SÉCURITÉ:
+   * - Route PUBLIQUE (pas de guard JWT)
+   * - Retourne uniquement les données publiques (pas d'email, téléphone, etc.)
+   * - Inclut seulement les objets publiés/actifs (pas archivés/supprimés)
+   *
+   * @param id - ID de l'utilisateur dont on veut voir le profil
+   * @returns Profil public avec objets publiés uniquement
+   *
+   * Code HTTP: 200 (OK) ou 404 (Not Found)
+   */
+  @Get(':id')
+  async getPublicProfile(@Param('id') id: string) {
+    return this.usersService.getPublicProfile(id);
   }
 
   // ============================================
@@ -97,6 +130,7 @@ export class UsersController {
    * - Les règles de validation sont définies dans UpdateProfileDto
    */
   @Patch('me')
+  @UseGuards(JwtAccessGuard) // Protection: nécessite authentification
   async updateMe(@Request() req, @Body() updateProfileDto: UpdateProfileDto) {
     // Mettre à jour le profil de l'utilisateur connecté
     return this.usersService.updateMe(req.user.id, updateProfileDto);
@@ -122,6 +156,7 @@ export class UsersController {
    * - Et potentiellement les items, échanges, etc. (selon la configuration)
    */
   @Delete('me')
+  @UseGuards(JwtAccessGuard) // Protection: nécessite authentification
   @HttpCode(HttpStatus.NO_CONTENT) // Code HTTP 204 (pas de contenu)
   async deleteMe(@Request() req) {
     // Supprimer le compte de l'utilisateur connecté

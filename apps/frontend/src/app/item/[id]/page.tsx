@@ -908,43 +908,72 @@ export default function ItemDetailPage() {
                  * - Localisation (si disponible)
                  */}
                 <div className="flex items-center gap-3">
-                  {/* Conteneur de l'avatar
+                  {/* Conteneur de l'avatar (cliquable pour voir le profil public)
                    *
                    * STYLE:
                    * - h-10 w-10: Taille de 40px (cercle)
                    * - rounded-full: Forme circulaire
                    * - bg-primary/10: Fond avec opacité 10% de la couleur primaire
+                   * - cursor-pointer: Curseur pointeur pour indiquer que c'est cliquable
+                   * - hover:ring-2 hover:ring-primary/50: Effet au survol
                    */}
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                    {/* Image de l'avatar (affichage conditionnel)
-                     *
-                     * CONDITION:
-                     * - Affiche l'image si item.owner.avatarUrl existe
-                     * - Sinon, affiche l'icône User
-                     *
-                     * STYLE:
-                     * - h-full w-full: Taille complète du conteneur
-                     * - rounded-full: Forme circulaire
-                     * - object-cover: Couvre tout l'espace sans déformation
-                     */}
-                    {item.owner.avatarUrl ? (
-                      <img
-                        src={item.owner.avatarUrl}
-                        alt={item.owner.displayName}
-                        className="h-full w-full rounded-full object-cover"
-                      />
-                    ) : (
-                      /* Icône User si pas d'avatar
-                       * - h-5 w-5: Taille de 20px
-                       */
-                      <User className="h-5 w-5" />
-                    )}
-                  </div>
+                  {item.owner.id ? (
+                    <Link href={`/profile/${item.owner.id}`}>
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
+                        {/* Image de l'avatar (affichage conditionnel)
+                         *
+                         * CONDITION:
+                         * - Affiche l'image si item.owner.avatarUrl existe
+                         * - Sinon, affiche l'icône User
+                         *
+                         * STYLE:
+                         * - h-full w-full: Taille complète du conteneur
+                         * - rounded-full: Forme circulaire
+                         * - object-cover: Couvre tout l'espace sans déformation
+                         */}
+                        {item.owner.avatarUrl ? (
+                          <img
+                            src={item.owner.avatarUrl}
+                            alt={item.owner.displayName}
+                            className="h-full w-full rounded-full object-cover"
+                          />
+                        ) : (
+                          /* Icône User si pas d'avatar
+                           * - h-5 w-5: Taille de 20px
+                           */
+                          <User className="h-5 w-5" />
+                        )}
+                      </div>
+                    </Link>
+                  ) : (
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                      {item.owner.avatarUrl ? (
+                        <img
+                          src={item.owner.avatarUrl}
+                          alt={item.owner.displayName}
+                          className="h-full w-full rounded-full object-cover"
+                        />
+                      ) : (
+                        <User className="h-5 w-5" />
+                      )}
+                    </div>
+                  )}
                   <div>
-                    {/* Nom d'affichage du propriétaire
+                    {/* Nom d'affichage du propriétaire (cliquable pour voir le profil public)
                      * - font-medium: Poids de police moyen
+                     * - hover:text-primary: Changement de couleur au survol
+                     * - cursor-pointer: Curseur pointeur
                      */}
-                    <p className="font-medium">{item.owner.displayName}</p>
+                    {item.owner.id ? (
+                      <Link
+                        href={`/profile/${item.owner.id}`}
+                        className="font-medium hover:text-primary transition-colors cursor-pointer"
+                      >
+                        {item.owner.displayName}
+                      </Link>
+                    ) : (
+                      <p className="font-medium">{item.owner.displayName}</p>
+                    )}
                     {/* Localisation (affichage conditionnel)
                      *
                      * CONDITION:

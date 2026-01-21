@@ -1171,6 +1171,40 @@ class ApiClient {
   }
 
   /**
+   * Récupère le profil public d'un utilisateur par son ID.
+   * Route publique (pas d'authentification requise).
+   *
+   * DONNÉES RETOURNÉES:
+   * - id, displayName, avatarUrl, createdAt
+   * - items: Liste des objets publiés/actifs uniquement
+   *
+   * DONNÉES MASQUÉES:
+   * - email, téléphone, adresse, date de naissance, etc.
+   *
+   * @param userId - ID de l'utilisateur
+   * @returns Profil public avec objets publiés uniquement
+   */
+  async getPublicProfile(userId: string): Promise<{
+    id: string;
+    displayName: string;
+    avatarUrl: string | null;
+    createdAt: string;
+    items: Array<{
+      id: string;
+      title: string;
+      description: string | null;
+      category: string;
+      condition: string;
+      photos: Array<{ id: string; url: string }>;
+      createdAt: string;
+      updatedAt: string;
+    }>;
+  }> {
+    const response = await this.client.get(`/users/${userId}`);
+    return response.data;
+  }
+
+  /**
    * Met à jour le profil de l'utilisateur connecté.
    *
    * @param userData - Données à mettre à jour (displayName, avatarUrl, bio, etc.)

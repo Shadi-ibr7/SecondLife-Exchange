@@ -33,6 +33,7 @@ import { useAuthStore } from '@/store/auth';
 
 // Import de Next.js Image pour optimiser le chargement des images
 import Image from 'next/image';
+import Link from 'next/link';
 
 // Import de useState pour gérer l'état local (ouverture de la lightbox)
 import { useState } from 'react';
@@ -148,18 +149,36 @@ export function MessageBubble({
         L'avatar s'affiche à droite si c'est notre message, à gauche sinon
         h-10 w-10: taille de 40px x 40px
         flex-shrink-0: empêche l'avatar de rétrécir
+
+        L'avatar est cliquable pour voir le profil public (seulement si ce n'est pas notre propre message)
       */}
-      <Avatar className="h-10 w-10 flex-shrink-0">
-        {/* Image de l'avatar si elle existe */}
-        <AvatarImage src={avatarUrl} alt={displaySender?.displayName || ''} />
-        {/*
-          Fallback: si l'image n'existe pas, afficher la première lettre du nom
-          en majuscule dans un cercle coloré
-        */}
-        <AvatarFallback>
-          {displaySender?.displayName?.charAt(0).toUpperCase() || 'U'}
-        </AvatarFallback>
-      </Avatar>
+      {!isOwn && displaySender?.id ? (
+        <Link href={`/profile/${displaySender.id}`}>
+          <Avatar className="h-10 w-10 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
+            {/* Image de l'avatar si elle existe */}
+            <AvatarImage src={avatarUrl} alt={displaySender?.displayName || ''} />
+            {/*
+              Fallback: si l'image n'existe pas, afficher la première lettre du nom
+              en majuscule dans un cercle coloré
+            */}
+            <AvatarFallback>
+              {displaySender?.displayName?.charAt(0).toUpperCase() || 'U'}
+            </AvatarFallback>
+          </Avatar>
+        </Link>
+      ) : (
+        <Avatar className="h-10 w-10 flex-shrink-0">
+          {/* Image de l'avatar si elle existe */}
+          <AvatarImage src={avatarUrl} alt={displaySender?.displayName || ''} />
+          {/*
+            Fallback: si l'image n'existe pas, afficher la première lettre du nom
+            en majuscule dans un cercle coloré
+          */}
+          <AvatarFallback>
+            {displaySender?.displayName?.charAt(0).toUpperCase() || 'U'}
+          </AvatarFallback>
+        </Avatar>
+      )}
 
       {/* ============================================
           CONTENEUR PRINCIPAL DU MESSAGE
@@ -176,12 +195,20 @@ export function MessageBubble({
           {/*
             Afficher le nom de l'expéditeur seulement si ce n'est pas notre message
             (on ne montre pas notre propre nom)
+            Le nom est cliquable pour voir le profil public
           */}
-          {!isOwn && (
+          {!isOwn && sender.id ? (
+            <Link
+              href={`/profile/${sender.id}`}
+              className="text-sm text-muted-foreground hover:text-primary transition-colors cursor-pointer font-medium"
+            >
+              {sender.displayName}
+            </Link>
+          ) : !isOwn ? (
             <span className="text-sm text-muted-foreground">
               {sender.displayName}
             </span>
-          )}
+          ) : null}
           {/* Afficher l'heure du message si elle existe */}
           {message.createdAt && (
             <span className="text-xs text-muted-foreground">

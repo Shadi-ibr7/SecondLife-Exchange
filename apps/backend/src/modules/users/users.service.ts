@@ -179,6 +179,83 @@ export class UsersService {
   }
 
   // ============================================
+  // MÉTHODE: getPublicProfile (Récupérer profil public)
+  // ============================================
+
+  /**
+   * Récupère le profil public d'un utilisateur (sans données personnelles).
+   *
+   * DONNÉES RETOURNÉES:
+   * - id: ID de l'utilisateur
+   * - displayName: Nom d'affichage
+   * - avatarUrl: URL de l'avatar
+   * - createdAt: Date de création du profil
+   * - items: Liste des objets publiés/actifs (pas archivés/supprimés)
+   *
+   * DONNÉES MASQUÉES (sécurité):
+   * - email: Non retourné
+   * - téléphone: Non retourné
+   * - adresse: Non retourné
+   * - date de naissance: Non retourné
+   * - autres données personnelles: Non retournées
+   *
+   * @param userId - ID de l'utilisateur dont on veut voir le profil
+   * @returns Profil public avec objets publiés uniquement
+   * @throws NotFoundException si l'utilisateur n'existe pas
+   */
+  async getPublicProfile(userId: string) {
+    // Récupérer l'utilisateur avec ses items publiés uniquement
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        displayName: true,
+        avatarUrl: true,
+        createdAt: true,
+        items: {
+          where: {
+            // Seulement les items disponibles (pas archivés, pas échangés)
+            status: 'AVAILABLE',
+          },
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            category: true,
+            condition: true,
+            photos: {
+              select: {
+                id: true,
+                url: true,
+              },
+              take: 1, // Première photo seulement pour la vignette
+            },
+            createdAt: true,
+            updatedAt: true,
+          },
+          orderBy: {
+            createdAt: 'desc', // Plus récents en premier
+          },
+        },
+      },
+    });
+
+    // Vérifier que l'utilisateur existe
+    if (!user) {
+      throw new NotFoundException('Utilisateur non trouvé');
+    }
+
+    // Retourner le profil public (sans données personnelles)
+    return {
+      id: user.id,
+      displayName: user.displayName,
+      avatarUrl: user.avatarUrl,
+      createdAt: user.createdAt,
+      items: user.items, // Seulement les objets publiés/actifs
+    };
+  }
+
+  // ============================================
   // MÉTHODE: deleteMe (Supprimer mon compte)
   // ============================================
 
