@@ -9,7 +9,7 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '@/lib/admin.api';
 
 // Intervalle de polling en millisecondes (30 secondes)
