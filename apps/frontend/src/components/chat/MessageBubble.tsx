@@ -153,7 +153,15 @@ export function MessageBubble({
         L'avatar est cliquable pour voir le profil public (seulement si ce n'est pas notre propre message)
       */}
       {!isOwn && displaySender?.id ? (
-        <Link href={`/profile/${displaySender.id}`}>
+        <Link 
+          href={`/profile/${displaySender.id}`}
+          onClick={(e) => {
+            if (!displaySender?.id) {
+              e.preventDefault();
+              console.error('[MessageBubble] displaySender.id manquant:', displaySender);
+            }
+          }}
+        >
           <Avatar className="h-10 w-10 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
             {/* Image de l'avatar si elle existe */}
             <AvatarImage src={avatarUrl} alt={displaySender?.displayName || ''} />
@@ -200,6 +208,12 @@ export function MessageBubble({
           {!isOwn && sender.id ? (
             <Link
               href={`/profile/${sender.id}`}
+              onClick={(e) => {
+                if (!sender?.id) {
+                  e.preventDefault();
+                  console.error('[MessageBubble] sender.id manquant:', sender);
+                }
+              }}
               className="text-sm text-muted-foreground hover:text-primary transition-colors cursor-pointer font-medium"
             >
               {sender.displayName}

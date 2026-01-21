@@ -918,7 +918,15 @@ export default function ItemDetailPage() {
                    * - hover:ring-2 hover:ring-primary/50: Effet au survol
                    */}
                   {item.owner.id ? (
-                    <Link href={`/profile/${item.owner.id}`}>
+                    <Link 
+                      href={`/profile/${item.owner.id}`}
+                      onClick={(e) => {
+                        if (!item.owner?.id) {
+                          e.preventDefault();
+                          console.error('[ItemDetail] item.owner.id manquant:', item.owner);
+                        }
+                      }}
+                    >
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
                         {/* Image de l'avatar (affichage conditionnel)
                          *
@@ -967,6 +975,12 @@ export default function ItemDetailPage() {
                     {item.owner.id ? (
                       <Link
                         href={`/profile/${item.owner.id}`}
+                        onClick={(e) => {
+                          if (!item.owner?.id) {
+                            e.preventDefault();
+                            console.error('[ItemDetail] item.owner.id manquant:', item.owner);
+                          }
+                        }}
                         className="font-medium hover:text-primary transition-colors cursor-pointer"
                       >
                         {item.owner.displayName}

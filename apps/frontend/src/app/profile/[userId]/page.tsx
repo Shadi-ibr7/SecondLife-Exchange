@@ -63,15 +63,22 @@ export default function PublicProfilePage() {
     const fetchProfile = async () => {
       try {
         setIsLoading(true);
+        console.log('[PublicProfile] Chargement du profil pour userId:', userId);
         const data = await apiClient.getPublicProfile(userId);
+        console.log('[PublicProfile] Profil chargé:', data);
         setProfile(data);
       } catch (error: any) {
-        console.error('Erreur lors du chargement du profil:', error);
+        console.error('[PublicProfile] Erreur lors du chargement du profil:', error);
+        console.error('[PublicProfile] Détails:', {
+          status: error.response?.status,
+          data: error.response?.data,
+          message: error.message,
+        });
         if (error.response?.status === 404) {
           toast.error('Profil utilisateur non trouvé');
           router.push('/');
         } else {
-          toast.error('Erreur lors du chargement du profil');
+          toast.error(`Erreur lors du chargement du profil: ${error.response?.data?.message || error.message}`);
         }
       } finally {
         setIsLoading(false);
