@@ -125,7 +125,7 @@ export function AdminNotificationDropdown() {
           ) : (
             <div className="py-2">
               <AnimatePresence>
-                {recentNotifications.map((notification) => (
+                {recentNotifications.map((notification: AppNotification) => (
                   <motion.div
                     key={notification.id}
                     initial={{ opacity: 0, y: -10 }}
