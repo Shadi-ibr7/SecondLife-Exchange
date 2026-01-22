@@ -63,6 +63,20 @@ export const communityApi = {
   },
 
   /**
+   * Toggle like sur un post
+   */
+  async togglePostLike(
+    threadId: string,
+    postId: string
+  ): Promise<{ isLiked: boolean; likesCount: number }> {
+    const response = await apiClient.client.put<{
+      isLiked: boolean;
+      likesCount: number;
+    }>(`/threads/${threadId}/posts/${postId}/like`);
+    return response.data;
+  },
+
+  /**
    * Récupère un post par ID
    */
   async getPost(threadId: string, postId: string): Promise<Post> {

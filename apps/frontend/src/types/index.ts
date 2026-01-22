@@ -453,10 +453,21 @@ export interface EcoContentStats {
 }
 
 // Types pour la communauté
+export type ThreadCategory =
+  | 'MOBILIER'
+  | 'MODE'
+  | 'DIY'
+  | 'VINTAGE'
+  | 'LOCAL'
+  | 'ARTISANAT';
+
+export type ThreadSortBy = 'trending' | 'recent' | 'popular';
+
 export interface Thread {
   id: string;
   scope: 'THEME' | 'CATEGORY' | 'ITEM' | 'GENERAL';
   scopeRef?: string;
+  category?: ThreadCategory;
   title: string;
   authorId: string;
   author: {
@@ -465,6 +476,8 @@ export interface Thread {
     avatarUrl?: string;
   };
   postsCount: number;
+  likesCount: number;
+  isTrending?: boolean;
   lastPostAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -484,6 +497,8 @@ export interface Post {
     avatarUrl?: string;
   };
   repliesCount: number;
+  likesCount: number;
+  isLiked?: boolean;
   isEdited: boolean;
 }
 
@@ -506,7 +521,9 @@ export interface PaginatedPostsResponse {
 export interface ListThreadsParams {
   scope?: 'THEME' | 'CATEGORY' | 'ITEM' | 'GENERAL';
   ref?: string;
+  category?: ThreadCategory;
   q?: string;
+  sortBy?: ThreadSortBy;
   page?: number;
   limit?: number;
 }
@@ -519,6 +536,7 @@ export interface ListPostsParams {
 export interface CreateThreadDto {
   scope: 'THEME' | 'CATEGORY' | 'ITEM' | 'GENERAL';
   scopeRef?: string;
+  category?: ThreadCategory;
   title: string;
   contentFirst: string;
 }
