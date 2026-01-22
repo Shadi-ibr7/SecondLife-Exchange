@@ -24,6 +24,7 @@ import { ThreadsController } from './threads.controller';
 import { PostsController } from './posts.controller';
 import { ThreadsService } from './threads.service';
 import { PostsService } from './posts.service';
+import { PostLikesService } from './post-likes.service';
 import { CommunityGateway } from './community.gateway';
 
 // Import des modules dépendants
@@ -42,9 +43,9 @@ import { PrismaModule } from '../../common/prisma/prisma.module';
   controllers: [ThreadsController, PostsController],
 
   // Services fournis par ce module
-  providers: [ThreadsService, PostsService, CommunityGateway],
+  providers: [ThreadsService, PostsService, PostLikesService, CommunityGateway],
 
   // Services exportés pour être utilisés dans d'autres modules
-  exports: [ThreadsService, PostsService, CommunityGateway],
+  exports: [ThreadsService, PostsService, PostLikesService, CommunityGateway],
 })
 export class CommunityModule {}

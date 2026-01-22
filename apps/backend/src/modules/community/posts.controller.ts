@@ -28,6 +28,7 @@ import {
   HttpStatus,
   UseInterceptors,
   Request,
+  Put,
 } from '@nestjs/common';
 
 // Import des décorateurs Swagger
@@ -40,8 +41,9 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 
-// Import du service
+// Import des services
 import { PostsService } from './posts.service';
+import { PostLikesService } from './post-likes.service';
 
 // Import des DTOs
 import {
@@ -71,7 +73,10 @@ export class PostsController {
    *
    * Injection du service de posts
    */
-  constructor(private readonly postsService: PostsService) {}
+  constructor(
+    private readonly postsService: PostsService,
+    private readonly postLikesService: PostLikesService,
+  ) {}
 
   @Get()
   @ApiOperation({
@@ -105,8 +110,10 @@ export class PostsController {
   async listPosts(
     @Param('threadId') threadId: string,
     @Query() query: ListPostsDto,
+    @Request() req: any,
   ): Promise<PaginatedPostsResponse> {
-    return this.postsService.listPosts(threadId, query);
+    const userId = req.user?.id;
+    return this.postsService.listPosts(threadId, query, userId);
   }
 
   @Get(':id')
@@ -133,8 +140,10 @@ export class PostsController {
   async getPostById(
     @Param('threadId') threadId: string,
     @Param('id') id: string,
+    @Request() req: any,
   ): Promise<PostResponse> {
-    return this.postsService.getPostById(id);
+    const userId = req.user?.id;
+    return this.postsService.getPostById(id, userId);
   }
 
   @Post()
@@ -260,5 +269,50 @@ export class PostsController {
     @Param('id') id: string,
   ): Promise<void> {
     return this.postsService.deletePost(id, req.user.id, req.user.roles);
+  }
+
+  @Put(':id/like')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Toggle like sur un post',
+    description: 'Like ou unlike un post',
+  })
+  @ApiParam({
+    name: 'threadId',
+    description: 'ID du thread',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID du post',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Like togglé avec succès',
+    schema: {
+      type: 'object',
+      properties: {
+        isLiked: { type: 'boolean' },
+        likesCount: { type: 'number' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Non authentifié',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Post non trouvé',
+  })
+  async toggleLike(
+    @Request() req: any,
+    @Param('threadId') threadId: string,
+    @Param('id') id: string,
+  ): Promise<{ isLiked: boolean; likesCount: number }> {
+    const isLiked = await this.postLikesService.toggleLike(id, req.user.id);
+    const likesCount = await this.postLikesService.getLikesCount(id);
+    return { isLiked, likesCount };
   }
 }

@@ -17,10 +17,28 @@ export enum ThreadScope {
   GENERAL = 'GENERAL',
 }
 
+// Types pour les catégories utilisateur
+export enum ThreadCategory {
+  MOBILIER = 'MOBILIER',
+  MODE = 'MODE',
+  DIY = 'DIY',
+  VINTAGE = 'VINTAGE',
+  LOCAL = 'LOCAL',
+  ARTISANAT = 'ARTISANAT',
+}
+
+// Types pour le tri
+export enum ThreadSortBy {
+  TRENDING = 'trending',
+  RECENT = 'recent',
+  POPULAR = 'popular',
+}
+
 // Schémas Zod pour la validation
 export const CreateThreadSchema = z.object({
   scope: z.enum(['THEME', 'CATEGORY', 'ITEM', 'GENERAL']),
   scopeRef: z.string().optional(),
+  category: z.enum(['MOBILIER', 'MODE', 'DIY', 'VINTAGE', 'LOCAL', 'ARTISANAT']).optional(),
   title: z
     .string()
     .min(1, 'Le titre est requis')
@@ -34,7 +52,9 @@ export const CreateThreadSchema = z.object({
 export const ListThreadsSchema = z.object({
   scope: z.enum(['THEME', 'CATEGORY', 'ITEM', 'GENERAL']).optional(),
   ref: z.string().optional(),
+  category: z.enum(['MOBILIER', 'MODE', 'DIY', 'VINTAGE', 'LOCAL', 'ARTISANAT']).optional(),
   q: z.string().optional(),
+  sortBy: z.enum(['trending', 'recent', 'popular']).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
@@ -50,6 +70,10 @@ export class CreateThreadDto {
   @IsOptional()
   @IsString()
   scopeRef?: string;
+
+  @IsOptional()
+  @IsEnum(ThreadCategory)
+  category?: ThreadCategory;
 
   @IsString()
   @IsNotEmpty()
@@ -76,8 +100,16 @@ export class ListThreadsDto {
   ref?: string;
 
   @IsOptional()
+  @IsEnum(ThreadCategory)
+  category?: ThreadCategory;
+
+  @IsOptional()
   @IsString()
   q?: string;
+
+  @IsOptional()
+  @IsEnum(ThreadSortBy)
+  sortBy?: ThreadSortBy;
 
   @IsOptional()
   @Transform(({ value }) => parseInt(value))
@@ -93,6 +125,7 @@ export interface ThreadResponse {
   id: string;
   scope: string;
   scopeRef?: string;
+  category?: string;
   title: string;
   authorId: string;
   author: {
@@ -101,7 +134,9 @@ export interface ThreadResponse {
     avatarUrl?: string;
   };
   postsCount: number;
+  likesCount: number; // Total des likes sur tous les posts du thread
   lastPostAt?: string;
+  isTrending?: boolean; // Calculé selon l'algorithme
   createdAt: string;
   updatedAt: string;
 }

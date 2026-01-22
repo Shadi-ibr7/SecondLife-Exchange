@@ -83,6 +83,8 @@ export interface PostResponse {
     avatarUrl?: string;
   };
   repliesCount: number;
+  likesCount: number;
+  isLiked?: boolean; // Si l'utilisateur actuel a liké ce post
   isEdited: boolean;
 }
 

@@ -28,6 +28,7 @@ model User {
   profile            UserProfile?
   threads            Thread[]
   posts              Post[]
+  postLikes          PostLike[]
   notificationTokens NotificationToken[]
   notifications      Notification[] // Notifications in-app
   chatMessages       ChatMessage[]       @relation("MessageSender")
@@ -224,6 +225,7 @@ model Thread {
   id        String   @id @default(cuid())
   scope     String
   scopeRef  String?
+  category  String?  // Catégorie utilisateur: MOBILIER, MODE, DIY, VINTAGE, LOCAL, ARTISANAT
   title     String
   authorId  String
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
@@ -232,6 +234,7 @@ model Thread {
   posts     Post[]
 
   @@index([scope, scopeRef])
+  @@index([category])
   @@index([createdAt])
   @@map("threads")
 }
@@ -248,10 +251,25 @@ model Post {
   parent    Post?     @relation("PostReplies", fields: [repliesTo], references: [id])
   replies   Post[]    @relation("PostReplies")
   thread    Thread    @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  likes     PostLike[]
 
   @@index([threadId])
   @@index([createdAt])
   @@map("posts")
+}
+
+model PostLike {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+  @@map("post_likes")
 }
 
 model NotificationToken {

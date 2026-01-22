@@ -69,6 +69,7 @@ export class PostsService {
   async listPosts(
     threadId: string,
     query: ListPostsInput,
+    userId?: string,
   ): Promise<PaginatedPostsResponse> {
     const { page = 1, limit = 20 } = query;
     const skip = (page - 1) * limit;
@@ -99,6 +100,7 @@ export class PostsService {
           _count: {
             select: {
               replies: true,
+              likes: true,
             },
           },
         },
@@ -106,8 +108,23 @@ export class PostsService {
       this.prisma.post.count({ where: { threadId } }),
     ]);
 
+    // Récupérer les likes de l'utilisateur si connecté
+    const userLikedPostIds = userId
+      ? await this.prisma.postLike
+          .findMany({
+            where: {
+              userId,
+              postId: { in: posts.map((p) => p.id) },
+            },
+            select: { postId: true },
+          })
+          .then((likes) => new Set(likes.map((l) => l.postId)))
+      : new Set<string>();
+
     return {
-      items: posts.map(this.mapToResponse),
+      items: posts.map((post) =>
+        this.mapToResponse(post, userLikedPostIds.has(post.id)),
+      ),
       total,
       page,
       limit,
@@ -126,7 +143,7 @@ export class PostsService {
    * @returns Post avec auteur et nombre de réponses
    * @throws NotFoundException si le post n'existe pas
    */
-  async getPostById(id: string): Promise<PostResponse> {
+  async getPostById(id: string, userId?: string): Promise<PostResponse> {
     const post = await this.prisma.post.findUnique({
       where: { id },
       include: {
@@ -140,6 +157,7 @@ export class PostsService {
         _count: {
           select: {
             replies: true,
+            likes: true,
           },
         },
       },
@@ -149,7 +167,19 @@ export class PostsService {
       throw new NotFoundException('Post non trouvé');
     }
 
-    return this.mapToResponse(post);
+    // Vérifier si l'utilisateur a liké ce post
+    const isLiked = userId
+      ? !!(await this.prisma.postLike.findUnique({
+          where: {
+            postId_userId: {
+              postId: id,
+              userId,
+            },
+          },
+        }))
+      : false;
+
+    return this.mapToResponse(post, isLiked);
   }
 
   // ============================================
@@ -363,9 +393,10 @@ export class PostsService {
    * avec les informations nécessaires pour le frontend.
    *
    * @param post - Post depuis Prisma
+   * @param isLiked - Si l'utilisateur actuel a liké ce post
    * @returns Post formaté pour la réponse API
    */
-  private mapToResponse(post: any): PostResponse {
+  private mapToResponse(post: any, isLiked: boolean = false): PostResponse {
     return {
       id: post.id,
       threadId: post.threadId,
@@ -376,6 +407,8 @@ export class PostsService {
       repliesTo: post.repliesTo,
       author: post.author,
       repliesCount: post._count?.replies || 0,
+      likesCount: post._count?.likes || 0,
+      isLiked,
       isEdited: !!post.editedAt,
     };
   }

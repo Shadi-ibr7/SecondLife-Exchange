@@ -35,6 +35,7 @@ import {
   ListThreadsInput,
   ThreadResponse,
   PaginatedThreadsResponse,
+  ThreadSortBy,
 } from './dtos/threads.dto';
 
 /**
@@ -69,7 +70,7 @@ export class ThreadsService {
   async listThreads(
     query: ListThreadsInput,
   ): Promise<PaginatedThreadsResponse> {
-    const { page = 1, limit = 20, scope, ref, q } = query;
+    const { page = 1, limit = 20, scope, ref, category, q, sortBy } = query;
     const skip = (page - 1) * limit;
 
     const where: any = {};
@@ -83,6 +84,10 @@ export class ThreadsService {
       where.scopeRef = ref;
     }
 
+    if (category) {
+      where.category = category;
+    }
+
     if (q) {
       where.OR = [
         { title: { contains: q, mode: 'insensitive' } },
@@ -90,12 +95,22 @@ export class ThreadsService {
       ];
     }
 
+    // Déterminer l'ordre de tri
+    let orderBy: any = { updatedAt: 'desc' };
+    if (sortBy === ThreadSortBy.RECENT) {
+      orderBy = { createdAt: 'desc' };
+    } else if (sortBy === ThreadSortBy.POPULAR) {
+      // Tri par nombre de posts (popularité = activité)
+      orderBy = { posts: { _count: 'desc' } };
+    }
+    // Pour TRENDING, on triera après avoir calculé isTrending
+
     const [threads, total] = await Promise.all([
       this.prisma.thread.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { updatedAt: 'desc' },
+        orderBy,
         include: {
           author: {
             select: {
@@ -122,8 +137,46 @@ export class ThreadsService {
       this.prisma.thread.count({ where }),
     ]);
 
+    // Calculer likesCount et isTrending pour chaque thread
+    const threadsWithStats = await Promise.all(
+      threads.map(async (thread) => {
+        // Compter les likes sur tous les posts du thread
+        const likesCount = await this.prisma.postLike.count({
+          where: {
+            post: {
+              threadId: thread.id,
+            },
+          },
+        });
+
+        // Calculer isTrending (algorithme combinant plusieurs critères)
+        const isTrending = await this.calculateIsTrending(thread.id);
+
+        return {
+          ...thread,
+          _likesCount: likesCount,
+          _isTrending: isTrending,
+        };
+      }),
+    );
+
+    // Si tri par trending, réordonner
+    if (sortBy === ThreadSortBy.TRENDING) {
+      threadsWithStats.sort((a, b) => {
+        // Priorité aux threads trending
+        if (a._isTrending && !b._isTrending) return -1;
+        if (!a._isTrending && b._isTrending) return 1;
+        // Ensuite par likesCount
+        if (a._likesCount !== b._likesCount) {
+          return b._likesCount - a._likesCount;
+        }
+        // Enfin par date de mise à jour
+        return b.updatedAt.getTime() - a.updatedAt.getTime();
+      });
+    }
+
     return {
-      items: threads.map(this.mapToResponse),
+      items: threadsWithStats.map(this.mapToResponse),
       total,
       page,
       limit,
@@ -204,6 +257,7 @@ export class ThreadsService {
         data: {
           scope: input.scope,
           scopeRef: input.scopeRef,
+          category: input.category,
           title: input.title,
           authorId,
         },
@@ -297,13 +351,64 @@ export class ThreadsService {
       id: thread.id,
       scope: thread.scope,
       scopeRef: thread.scopeRef,
+      category: thread.category,
       title: thread.title,
       authorId: thread.authorId,
       author: thread.author,
       postsCount: thread._count?.posts || 0,
+      likesCount: thread._likesCount || 0,
+      isTrending: thread._isTrending || false,
       lastPostAt: lastPost?.createdAt?.toISOString(),
       createdAt: thread.createdAt.toISOString(),
       updatedAt: thread.updatedAt.toISOString(),
     };
+  }
+
+  /**
+   * Calcule si un thread est "tendance" selon un algorithme combinant plusieurs critères.
+   *
+   * ALGORITHME:
+   * - Nombre de commentaires récents (dans les 24h) > 5
+   * - Nombre de likes total > 10
+   * - Activité récente (dernier post dans les 6h)
+   *
+   * @param threadId - ID du thread
+   * @returns true si le thread est tendance
+   */
+  private async calculateIsTrending(threadId: string): Promise<boolean> {
+    const now = new Date();
+    const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const last6h = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+
+    // Compter les posts récents (24h)
+    const recentPostsCount = await this.prisma.post.count({
+      where: {
+        threadId,
+        createdAt: { gte: last24h },
+      },
+    });
+
+    // Compter les likes totaux
+    const totalLikes = await this.prisma.postLike.count({
+      where: {
+        post: {
+          threadId,
+        },
+      },
+    });
+
+    // Vérifier l'activité récente (dernier post dans les 6h)
+    const lastPost = await this.prisma.post.findFirst({
+      where: { threadId },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
+    });
+
+    const hasRecentActivity = lastPost && lastPost.createdAt >= last6h;
+
+    // Critères pour être "tendance"
+    return (
+      (recentPostsCount > 5 || totalLikes > 10) && hasRecentActivity
+    );
   }
 }
