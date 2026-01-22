@@ -1,44 +1,34 @@
-'use client';
-
 /**
  * FICHIER: app/thread/[id]/page.tsx
  *
  * DESCRIPTION:
- * Page de détail d'un thread de la communauté. Elle affiche les informations
- * principales du thread (titre, scope, auteur) ainsi que la liste paginée des
- * posts avec possibilité de créer/éditer/supprimer ses messages.
- *
- * FONCTIONNALITÉS:
- * - Récupération du thread et des posts via communityApi
- * - Pagination simple des posts (page/limit)
- * - Création de posts (CreatePostDto) et édition/suppression conditionnée
- * - Formulaire inline pour répondre, avec validation basique
- * - Rafraîchissement du cache (invalidations React Query)
- *
- * UX:
- * - Bouton retour
- * - Animations Framer Motion
- * - Badge indiquant le scope, avatar auteur, timestamps formatés
+ * Page de détail d'un thread avec bulles de chat selon le design Figma.
+ * Affiche les messages en bulles de chat (gauche/droite selon l'auteur).
  */
 
-import { useState, useEffect } from 'react';
+'use client';
+
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import { Container } from '@/components/common/Container';
-import { PostList } from '@/components/community/PostList';
+import { PostBubble } from '@/components/community/PostBubble';
 import { communityApi } from '@/lib/community.api';
 import { useAuthStore } from '@/store/auth';
-import { ListPostsParams, Post, CreatePostDto } from '@/types';
+import { ListPostsParams, CreatePostDto } from '@/types';
 import { toast } from 'react-hot-toast';
-import { MessageSquare, ArrowLeft, Send, Edit, Trash2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  Send,
+  Loader2,
+  TrendingUp,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { formatDistanceToNow } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { Card, CardContent } from '@/components/ui/card';
+import { THREAD_CATEGORY_LABELS } from '@/lib/constants';
 
 export default function ThreadPage() {
   const params = useParams();
@@ -48,14 +38,12 @@ export default function ThreadPage() {
 
   const threadId = params.id as string;
 
-  const [filters, setFilters] = useState<ListPostsParams>({
+  const [filters] = useState<ListPostsParams>({
     page: 1,
-    limit: 20,
+    limit: 50, // Afficher plus de messages pour une discussion
   });
   const [newPostContent, setNewPostContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [editingPost, setEditingPost] = useState<Post | null>(null);
-  const [editContent, setEditContent] = useState('');
 
   // Récupérer le thread
   const {
@@ -73,20 +61,33 @@ export default function ThreadPage() {
     data: postsData,
     isLoading: postsLoading,
     error: postsError,
-    refetch: refetchPosts,
   } = useQuery({
     queryKey: ['thread-posts', threadId, filters],
     queryFn: () => communityApi.listPosts(threadId, filters),
     retry: false,
   });
 
-  const handleRefresh = () => {
-    refetchPosts();
-  };
+  // Mutation pour créer un post
+  const createPostMutation = useMutation({
+    mutationFn: (data: CreatePostDto) =>
+      communityApi.createPost(threadId, data),
+    onSuccess: () => {
+      setNewPostContent('');
+      queryClient.invalidateQueries({ queryKey: ['thread-posts', threadId] });
+      queryClient.invalidateQueries({ queryKey: ['thread', threadId] });
+      toast.success('Message envoyé !');
+    },
+    onError: (error: any) => {
+      toast.error(
+        error?.response?.data?.message || 'Erreur lors de l\'envoi du message'
+      );
+    },
+  });
 
   const handleCreatePost = async () => {
     if (!isAuthenticated) {
       toast.error('Vous devez être connecté pour participer');
+      router.push(`/login?next=/thread/${threadId}`);
       return;
     }
 
@@ -97,311 +98,160 @@ export default function ThreadPage() {
 
     setIsSubmitting(true);
     try {
-      const postData: CreatePostDto = {
+      await createPostMutation.mutateAsync({
         content: newPostContent.trim(),
-      };
-
-      await communityApi.createPost(threadId, postData);
-      setNewPostContent('');
-      toast.success('Message publié !');
-
-      // Invalider le cache pour rafraîchir les données
-      queryClient.invalidateQueries({ queryKey: ['thread-posts'] });
-    } catch (error: any) {
-      toast.error(`Erreur: ${error.message}`);
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleEditPost = async (post: Post) => {
-    if (!editContent.trim()) {
-      toast.error('Le message ne peut pas être vide');
-      return;
-    }
-
-    try {
-      await communityApi.updatePost(threadId, post.id, {
-        content: editContent.trim(),
-      });
-
-      setEditingPost(null);
-      setEditContent('');
-      toast.success('Message modifié !');
-
-      // Invalider le cache pour rafraîchir les données
-      queryClient.invalidateQueries({ queryKey: ['thread-posts'] });
-    } catch (error: any) {
-      toast.error(`Erreur: ${error.message}`);
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      handleCreatePost();
     }
   };
 
-  const handleDeletePost = async (post: Post) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce message ?')) return;
-
-    try {
-      await communityApi.deletePost(threadId, post.id);
-      toast.success('Message supprimé !');
-
-      // Invalider le cache pour rafraîchir les données
-      queryClient.invalidateQueries({ queryKey: ['thread-posts'] });
-    } catch (error: any) {
-      toast.error(`Erreur: ${error.message}`);
-    }
-  };
-
-  const handleReply = (post: Post) => {
-    setNewPostContent(`@${post.author.displayName} `);
-    // TODO: Focus sur le champ de saisie
-  };
-
-  const startEdit = (post: Post) => {
-    setEditingPost(post);
-    setEditContent(post.content);
-  };
-
-  const cancelEdit = () => {
-    setEditingPost(null);
-    setEditContent('');
-  };
-
-  if (threadLoading) {
+  if (threadLoading || postsLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted">
-        <Container>
-          <div className="py-8">
-            <div className="h-96 animate-pulse rounded-lg bg-muted/50" />
-          </div>
-        </Container>
-      </div>
+      <Container className="py-8">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </Container>
     );
   }
 
   if (threadError || !thread) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted">
-        <Container>
-          <div className="py-8">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="text-center"
-            >
-              <MessageSquare className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
-              <h1 className="mb-2 text-2xl font-bold text-foreground">
-                Discussion non trouvée
-              </h1>
-              <p className="mb-6 text-muted-foreground">
-                Cette discussion n'existe pas ou a été supprimée
-              </p>
-              <Button onClick={() => router.back()} variant="outline">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Retour
-              </Button>
-            </motion.div>
-          </div>
-        </Container>
-      </div>
+      <Container className="py-8">
+        <div className="text-center py-12">
+          <p className="text-destructive mb-4">Discussion non trouvée</p>
+          <Button onClick={() => router.push('/community')}>
+            Retour à la communauté
+          </Button>
+        </div>
+      </Container>
     );
   }
 
+  const categoryLabel = thread.category
+    ? THREAD_CATEGORY_LABELS[thread.category]
+    : null;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
-      <Container>
-        <div className="py-8">
-          {/* Navigation */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="mb-6"
+    <div className="min-h-screen bg-background">
+      <Container className="py-8">
+        {/* En-tête avec retour et badges */}
+        <div className="mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => router.back()}
+            className="mb-4 gap-2"
           >
-            <Button
-              onClick={() => router.back()}
-              variant="outline"
-              className="mb-4"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Retour
-            </Button>
-          </motion.div>
+            <ArrowLeft className="h-4 w-4" />
+            Retour
+          </Button>
 
-          {/* En-tête du thread */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="mb-8"
-          >
-            <Card>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="mb-2 flex items-center gap-2">
-                      <Badge variant="secondary" className="text-xs">
-                        {thread.scope}
-                      </Badge>
-                      {thread.scopeRef && (
-                        <Badge variant="outline" className="text-xs">
-                          {thread.scopeRef}
-                        </Badge>
-                      )}
-                    </div>
-                    <CardTitle className="mb-4 text-2xl font-bold text-foreground">
-                      {thread.title}
-                    </CardTitle>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage
-                      src={thread.author.avatarUrl}
-                      alt={thread.author.displayName}
-                    />
-                    <AvatarFallback>
-                      {thread.author.displayName.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-foreground">
-                        {thread.author.displayName}
-                      </span>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Créé{' '}
-                      {formatDistanceToNow(new Date(thread.createdAt), {
-                        addSuffix: true,
-                        locale: fr,
-                      })}
-                    </div>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {thread.postsCount} message
-                    {thread.postsCount > 1 ? 's' : ''}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+          <div className="flex items-center gap-2 mb-4">
+            {categoryLabel && (
+              <Badge variant="secondary">{categoryLabel}</Badge>
+            )}
+            {thread.isTrending && (
+              <Badge
+                variant="default"
+                className="bg-primary text-primary-foreground flex items-center gap-1"
+              >
+                <TrendingUp className="h-3 w-3" />
+                Tendance
+              </Badge>
+            )}
+          </div>
 
-          {/* Liste des posts */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="mb-8"
-          >
-            <PostList
-              posts={postsData?.items || []}
-              isLoading={postsLoading}
-              onRefresh={handleRefresh}
-              onEdit={startEdit}
-              onDelete={handleDeletePost}
-              onReply={handleReply}
-              showActions={isAuthenticated}
-            />
-          </motion.div>
-
-          {/* Formulaire de nouveau post */}
-          {isAuthenticated && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.6 }}
-            >
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5" />
-                    {editingPost ? 'Modifier le message' : 'Nouveau message'}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {editingPost ? (
-                    <div className="space-y-4">
-                      <div className="text-sm text-muted-foreground">
-                        Modification du message de{' '}
-                        {editingPost.author.displayName}
-                      </div>
-                      <div className="flex gap-2">
-                        <Input
-                          value={editContent}
-                          onChange={(e) => setEditContent(e.target.value)}
-                          placeholder="Votre message..."
-                          className="flex-1"
-                        />
-                        <Button
-                          onClick={() => handleEditPost(editingPost)}
-                          disabled={isSubmitting}
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          Modifier
-                        </Button>
-                        <Button onClick={cancelEdit} variant="outline">
-                          Annuler
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="flex gap-2">
-                        <Input
-                          value={newPostContent}
-                          onChange={(e) => setNewPostContent(e.target.value)}
-                          placeholder="Participez à la discussion..."
-                          className="flex-1"
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter' && e.ctrlKey) {
-                              handleCreatePost();
-                            }
-                          }}
-                        />
-                        <Button
-                          onClick={handleCreatePost}
-                          disabled={isSubmitting || !newPostContent.trim()}
-                        >
-                          <Send className="mr-2 h-4 w-4" />
-                          {isSubmitting ? 'Publication...' : 'Publier'}
-                        </Button>
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Appuyez sur Ctrl+Entrée pour publier rapidement
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-
-          {/* Message pour les utilisateurs non connectés */}
-          {!isAuthenticated && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.6 }}
-            >
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <MessageSquare className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-                  <h3 className="mb-2 text-lg font-semibold text-foreground">
-                    Connectez-vous pour participer
-                  </h3>
-                  <p className="mb-4 text-muted-foreground">
-                    Vous devez être connecté pour publier des messages
-                  </p>
-                  <Button asChild>
-                    <a href="/login">Se connecter</a>
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
+          <h1 className="text-3xl font-bold mb-2">{thread.title}</h1>
         </div>
+
+        {/* Zone de messages */}
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            {postsError && (
+              <div className="text-center py-8">
+                <p className="text-destructive mb-4">
+                  Erreur lors du chargement des messages
+                </p>
+              </div>
+            )}
+
+            {postsData && postsData.items.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">
+                  Aucun message pour le moment. Soyez le premier à participer !
+                </p>
+              </div>
+            )}
+
+            {postsData && postsData.items.length > 0 && (
+              <div className="space-y-4">
+                {postsData.items.map((post) => (
+                  <PostBubble key={post.id} post={post} threadId={threadId} />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Zone de réponse */}
+        {isAuthenticated && (
+          <Card>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <Textarea
+                  placeholder="Écrivez votre réponse..."
+                  value={newPostContent}
+                  onChange={(e) => setNewPostContent(e.target.value)}
+                  onKeyDown={handleKeyPress}
+                  className="min-h-[100px] resize-none"
+                  disabled={isSubmitting}
+                />
+                <div className="flex justify-end">
+                  <Button
+                    onClick={handleCreatePost}
+                    disabled={isSubmitting || !newPostContent.trim()}
+                    className="gap-2"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Envoi...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4" />
+                        Répondre
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground text-right">
+                  Appuyez sur Cmd/Ctrl + Entrée pour envoyer
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {!isAuthenticated && (
+          <Card>
+            <CardContent className="p-6 text-center">
+              <p className="text-muted-foreground mb-4">
+                Vous devez être connecté pour participer à la discussion
+              </p>
+              <Button onClick={() => router.push(`/login?next=/thread/${threadId}`)}>
+                Se connecter
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </Container>
     </div>
   );

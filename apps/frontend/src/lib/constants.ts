@@ -14,6 +14,7 @@
  * - Options de tri pour les listes d'items (date, titre, etc.)
  * - Labels traduits en français pour l'affichage dans l'interface
  * - Configuration des uploads de photos (taille max, types autorisés, nombre max)
+ * - Catégories de threads du forum (MOBILIER, MODE, DIY, etc.)
  *
  * UTILISATION:
  * Ces constantes sont importées et utilisées dans:
@@ -21,6 +22,7 @@
  * - Les filtres (ItemFilters) pour les options de filtrage
  * - Les composants d'affichage (ItemCard, ItemGrid) pour les labels
  * - Les validations (Zod schemas) pour les valeurs autorisées
+ * - Les composants du forum (ThreadCard, CategoryList) pour les catégories
  *
  * AVANTAGES:
  * - Source unique de vérité pour toutes les valeurs possibles
@@ -315,3 +317,51 @@ export const UPLOAD_CONFIG = {
    */
   maxFiles: 5, // Nombre maximum de photos par item
 } as const;
+
+// ============================================
+// CONSTANTES: Forum / Communauté
+// ============================================
+
+/**
+ * CONSTANTE: THREAD_CATEGORIES
+ *
+ * Liste de toutes les catégories de threads disponibles dans le forum.
+ * Utilisée dans les filtres et l'affichage des discussions.
+ */
+export const THREAD_CATEGORIES = [
+  'MOBILIER',
+  'MODE',
+  'DIY',
+  'VINTAGE',
+  'LOCAL',
+  'ARTISANAT',
+] as const;
+
+/**
+ * CONSTANTE: THREAD_CATEGORY_LABELS
+ *
+ * Labels en français pour les catégories de threads.
+ * Utilisé pour l'affichage dans l'interface utilisateur.
+ */
+export const THREAD_CATEGORY_LABELS: Record<
+  (typeof THREAD_CATEGORIES)[number],
+  string
+> = {
+  MOBILIER: 'Mobilier',
+  MODE: 'Mode',
+  DIY: 'DIY',
+  VINTAGE: 'Vintage',
+  LOCAL: 'Local',
+  ARTISANAT: 'Artisanat',
+};
+
+/**
+ * CONSTANTE: THREAD_SORT_OPTIONS
+ *
+ * Options de tri pour les threads du forum.
+ */
+export const THREAD_SORT_OPTIONS = [
+  { value: 'trending', label: 'Tendances', icon: 'TrendingUp' },
+  { value: 'recent', label: 'Récentes', icon: 'Clock' },
+  { value: 'popular', label: 'Populaires', icon: 'Heart' },
+] as const;

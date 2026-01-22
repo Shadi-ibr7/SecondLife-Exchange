@@ -1,56 +1,49 @@
-'use client';
-
 /**
  * FICHIER: app/community/page.tsx
  *
  * DESCRIPTION:
- * Page principale de la communauté. Elle affiche la liste des discussions
- * (threads) et permet de filtrer/rechercher selon différents scopes.
- *
- * FONCTIONNALITÉS:
- * - Filtrer par scope (GENERAL, THEME, CATEGORY, ITEM)
- * - Recherche textuelle dans les titres/contenus
- * - Rafraîchissement manuel de la liste
- * - Pagination client simple (affiche 5 pages max)
- * - Bouton pour initier la création d'un thread (à implémenter)
- *
- * DONNÉES:
- * - useQuery (React Query) pour récupérer les threads via communityApi
- * - State local pour gérer les filtres, la recherche et la pagination
- *
- * UX:
- * - Animations d'apparition via Framer Motion
- * - Badges affichant les filtres actifs
- * - Boutons Précédent/Suivant pour la pagination
+ * Page principale de la communauté selon le design Figma.
+ * Affiche la liste des discussions avec filtres, catégories et recherche.
  */
+
+'use client';
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import { Container } from '@/components/common/Container';
-import { ThreadList } from '@/components/community/ThreadList';
+import { ThreadCard } from '@/components/community/ThreadCard';
+import { CategoryList } from '@/components/community/CategoryList';
 import { communityApi } from '@/lib/community.api';
-import { ListThreadsParams } from '@/types';
+import { ListThreadsParams, ThreadCategory, ThreadSortBy } from '@/types';
 import { toast } from 'react-hot-toast';
-import { MessageSquare, Search, Filter } from 'lucide-react';
+import {
+  Search,
+  Plus,
+  TrendingUp,
+  Clock,
+  Heart,
+  Loader2,
+} from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { useAuthStore } from '@/store/auth';
+import { THREAD_SORT_OPTIONS } from '@/lib/constants';
 
 export default function CommunityPage() {
+  const router = useRouter();
+  const { isAuthenticated } = useAuthStore();
   const [filters, setFilters] = useState<ListThreadsParams>({
     scope: 'GENERAL',
     page: 1,
     limit: 20,
   });
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<
+    ThreadCategory | null
+  >(null);
+  const [sortBy, setSortBy] = useState<ThreadSortBy>('trending');
 
   // Récupérer les threads
   const {
@@ -64,10 +57,31 @@ export default function CommunityPage() {
     retry: false,
   });
 
-  const handleScopeChange = (scope: string) => {
+  // Calculer les compteurs de catégories
+  const categoryCounts: Record<string, number> = {};
+  if (threadsData) {
+    threadsData.items.forEach((thread) => {
+      if (thread.category) {
+        categoryCounts[thread.category] =
+          (categoryCounts[thread.category] || 0) + 1;
+      }
+    });
+  }
+
+  const handleCategorySelect = (category: ThreadCategory | null) => {
+    setSelectedCategory(category);
     setFilters({
       ...filters,
-      scope: scope as any,
+      category: category || undefined,
+      page: 1,
+    });
+  };
+
+  const handleSortChange = (newSortBy: ThreadSortBy) => {
+    setSortBy(newSortBy);
+    setFilters({
+      ...filters,
+      sortBy: newSortBy,
       page: 1,
     });
   };
@@ -86,190 +100,154 @@ export default function CommunityPage() {
     }
   };
 
-  const handleRefresh = () => {
-    refetchThreads();
-  };
-
   const handleCreateNew = () => {
-    // TODO: Implémenter la création de thread
-    toast.success('Fonctionnalité de création de thread à venir !');
+    if (!isAuthenticated) {
+      toast.error('Vous devez être connecté pour créer une discussion');
+      router.push('/login?next=/community/new');
+      return;
+    }
+    router.push('/community/new');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
-      <Container>
-        <div className="py-8">
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="mb-8"
-          >
-            <div className="mb-4 flex items-center gap-3">
-              <div className="rounded-lg bg-blue-500/10 p-2">
-                <MessageSquare className="h-6 w-6 text-blue-500" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-foreground">
-                  Communauté
-                </h1>
-                <p className="text-muted-foreground">
-                  Participez aux discussions de la communauté SecondLife
-                </p>
-              </div>
+    <div className="min-h-screen bg-background">
+      <Container className="py-8">
+        {/* En-tête */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">Communauté</h1>
+              <p className="text-muted-foreground">
+                Partagez conseils, astuces et histoires d'échange
+              </p>
             </div>
-          </motion.div>
+            <Button onClick={handleCreateNew} size="lg" className="gap-2">
+              <Plus className="h-4 w-4" />
+              Nouvelle discussion
+            </Button>
+          </div>
 
-          {/* Filtres */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="mb-8"
-          >
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              {/* Recherche */}
-              <div className="flex flex-1 gap-2">
-                <Input
-                  placeholder="Rechercher dans les discussions..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={handleSearchKeyPress}
-                  className="flex-1"
-                />
-                <Button onClick={handleSearch} size="sm">
-                  <Search className="h-4 w-4" />
-                </Button>
-              </div>
+          {/* Barre de recherche */}
+          <div className="flex gap-2 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher une discussion..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={handleSearchKeyPress}
+                className="pl-10"
+              />
+            </div>
+            <Button onClick={handleSearch}>Rechercher</Button>
+          </div>
 
-              {/* Filtres */}
-              <div className="flex gap-2">
-                <Select
-                  value={filters.scope || 'GENERAL'}
-                  onValueChange={handleScopeChange}
+          {/* Filtres de tri */}
+          <div className="flex gap-2">
+            {THREAD_SORT_OPTIONS.map((option) => {
+              const Icon =
+                option.icon === 'TrendingUp'
+                  ? TrendingUp
+                  : option.icon === 'Clock'
+                    ? Clock
+                    : Heart;
+              const isActive = sortBy === option.value;
+
+              return (
+                <Button
+                  key={option.value}
+                  variant={isActive ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleSortChange(option.value as ThreadSortBy)}
+                  className="gap-2"
                 >
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Type de discussion" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="GENERAL">Général</SelectItem>
-                    <SelectItem value="THEME">Thèmes</SelectItem>
-                    <SelectItem value="CATEGORY">Catégories</SelectItem>
-                    <SelectItem value="ITEM">Objets</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+                  <Icon className="h-4 w-4" />
+                  {option.label}
+                </Button>
+              );
+            })}
+          </div>
+        </div>
 
-            {/* Filtres actifs */}
-            {(filters.scope !== 'GENERAL' || filters.q) && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {filters.scope && filters.scope !== 'GENERAL' && (
-                  <Badge
-                    variant="secondary"
-                    className="flex items-center gap-1"
-                  >
-                    <Filter className="h-3 w-3" />
-                    {filters.scope}
-                    <button
-                      onClick={() => handleScopeChange('GENERAL')}
-                      className="ml-1 hover:text-destructive"
-                    >
-                      ×
-                    </button>
-                  </Badge>
-                )}
-                {filters.q && (
-                  <Badge
-                    variant="secondary"
-                    className="flex items-center gap-1"
-                  >
-                    <Search className="h-3 w-3" />
-                    {filters.q}
-                    <button
-                      onClick={() => {
-                        setSearchQuery('');
-                        setFilters({ ...filters, q: undefined, page: 1 });
-                      }}
-                      className="ml-1 hover:text-destructive"
-                    >
-                      ×
-                    </button>
-                  </Badge>
-                )}
+        {/* Contenu principal */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Sidebar - Catégories */}
+          <div className="lg:col-span-1">
+            <CategoryList
+              selectedCategory={selectedCategory}
+              onCategorySelect={handleCategorySelect}
+              categoryCounts={categoryCounts}
+              totalCount={threadsData?.total || 0}
+            />
+          </div>
+
+          {/* Liste des discussions */}
+          <div className="lg:col-span-3">
+            {threadsLoading && (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             )}
-          </motion.div>
 
-          {/* Liste des threads */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-          >
-            <ThreadList
-              threads={threadsData?.items || []}
-              isLoading={threadsLoading}
-              onRefresh={handleRefresh}
-              onCreateNew={handleCreateNew}
-              showCreateButton={true}
-            />
-          </motion.div>
-
-          {/* Pagination */}
-          {threadsData && threadsData.totalPages > 1 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.6 }}
-              className="mt-8 flex justify-center"
-            >
-              <div className="flex gap-2">
-                <button
-                  onClick={() =>
-                    setFilters({ ...filters, page: (filters.page || 1) - 1 })
-                  }
-                  disabled={filters.page === 1}
-                  className="rounded-lg border border-border bg-card px-4 py-2 transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Précédent
-                </button>
-
-                <div className="flex items-center gap-2">
-                  {Array.from(
-                    { length: Math.min(5, threadsData.totalPages) },
-                    (_, i) => {
-                      const page = i + 1;
-                      return (
-                        <button
-                          key={page}
-                          onClick={() => setFilters({ ...filters, page })}
-                          className={`rounded-lg px-3 py-2 transition-colors ${
-                            filters.page === page
-                              ? 'bg-primary text-primary-foreground'
-                              : 'border border-border bg-card hover:bg-muted'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      );
-                    }
-                  )}
-                </div>
-
-                <button
-                  onClick={() =>
-                    setFilters({ ...filters, page: (filters.page || 1) + 1 })
-                  }
-                  disabled={filters.page === threadsData.totalPages}
-                  className="rounded-lg border border-border bg-card px-4 py-2 transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Suivant
-                </button>
+            {threadsError && (
+              <div className="text-center py-12">
+                <p className="text-destructive mb-4">
+                  Erreur lors du chargement des discussions
+                </p>
+                <Button onClick={() => refetchThreads()}>Réessayer</Button>
               </div>
-            </motion.div>
-          )}
+            )}
+
+            {!threadsLoading && !threadsError && threadsData && (
+              <>
+                {threadsData.items.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground mb-4">
+                      Aucune discussion trouvée
+                    </p>
+                    {isAuthenticated && (
+                      <Button onClick={handleCreateNew}>
+                        Créer la première discussion
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {threadsData.items.map((thread) => (
+                      <ThreadCard key={thread.id} thread={thread} />
+                    ))}
+                  </div>
+                )}
+
+                {/* Pagination */}
+                {threadsData.totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 mt-8">
+                    <Button
+                      variant="outline"
+                      disabled={filters.page === 1}
+                      onClick={() =>
+                        setFilters({ ...filters, page: (filters.page || 1) - 1 })
+                      }
+                    >
+                      Précédent
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      Page {filters.page} sur {threadsData.totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      disabled={filters.page === threadsData.totalPages}
+                      onClick={() =>
+                        setFilters({ ...filters, page: (filters.page || 1) + 1 })
+                      }
+                    >
+                      Suivant
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </Container>
     </div>
