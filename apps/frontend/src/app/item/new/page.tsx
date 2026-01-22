@@ -62,7 +62,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ItemForm } from '@/components/items/ItemForm';
 import { itemsApi } from '@/lib/items.api';
-import { CreateItemDto, UpdateItemDto } from '@/types';
+import { CreateItemDto, UpdateItemDto, PhotoMeta } from '@/types';
 import { useAuthStore } from '@/store/auth';
 import { toast } from 'react-hot-toast';
 import { useEffect } from 'react';
@@ -247,7 +247,6 @@ export default function NewItemPage() {
       if (photos && photos.length > 0) {
         try {
           const { uploadApi } = await import('@/lib/upload.api');
-          const { PhotoMeta } = await import('@/types');
 
           // Upload toutes les photos
           const uploadPromises = photos.map(async (file) => {

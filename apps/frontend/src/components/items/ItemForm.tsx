@@ -277,7 +277,7 @@ export function ItemForm({
    * - Vide en mode édition (les photos existantes sont gérées ailleurs)
    */
   const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
-  
+
   /**
    * État pour l'erreur de validation des photos
    */
