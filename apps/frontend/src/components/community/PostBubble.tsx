@@ -30,6 +30,8 @@ export function PostBubble({ post, threadId }: PostBubbleProps) {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const [isLiking, setIsLiking] = useState(false);
+  const [localLikesCount, setLocalLikesCount] = useState(post.likesCount);
+  const [localIsLiked, setLocalIsLiked] = useState(post.isLiked || false);
   const isOwnPost = user?.id === post.authorId;
 
   const timeAgo = formatDistanceToNow(new Date(post.createdAt), {
@@ -50,6 +52,10 @@ export function PostBubble({ post, threadId }: PostBubbleProps) {
     try {
       const result = await communityApi.togglePostLike(threadId, post.id);
 
+      // Mettre à jour l'état local immédiatement pour un feedback instantané
+      setLocalLikesCount(result.likesCount);
+      setLocalIsLiked(result.isLiked);
+
       // Mettre à jour le cache React Query
       queryClient.setQueryData(
         ['thread-posts', threadId],
@@ -67,6 +73,9 @@ export function PostBubble({ post, threadId }: PostBubbleProps) {
       );
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Erreur lors du like');
+      // Revenir à l'état précédent en cas d'erreur
+      setLocalLikesCount(post.likesCount);
+      setLocalIsLiked(post.isLiked || false);
     } finally {
       setIsLiking(false);
     }
@@ -143,16 +152,16 @@ export function PostBubble({ post, threadId }: PostBubbleProps) {
             disabled={isLiking}
             className={cn(
               'flex items-center gap-1.5 hover:text-primary transition-colors',
-              post.isLiked && 'text-primary'
+              localIsLiked && 'text-primary'
             )}
           >
             <Heart
               className={cn(
                 'h-4 w-4',
-                post.isLiked && 'fill-current'
+                localIsLiked && 'fill-current'
               )}
             />
-            <span>{post.likesCount}</span>
+            <span>{localLikesCount}</span>
           </button>
           {post.repliesCount > 0 && (
             <div className="flex items-center gap-1.5">

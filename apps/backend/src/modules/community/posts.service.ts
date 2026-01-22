@@ -27,6 +27,7 @@ import {
 
 // Import du service Prisma
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 // Import des DTOs
 import {
@@ -47,9 +48,12 @@ export class PostsService {
   /**
    * CONSTRUCTEUR
    *
-   * Injection du service Prisma
+   * Injection du service Prisma et NotificationsService
    */
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService,
+  ) {}
 
   // ============================================
   // MÉTHODE: listPosts (Lister les posts)
@@ -265,7 +269,78 @@ export class PostsService {
       data: { updatedAt: new Date() },
     });
 
+    // Envoyer des notifications (non bloquant)
+    this.sendPostNotifications(post, thread, input.repliesTo, authorId).catch(
+      (err) => {
+        console.error('Erreur notifications post:', err);
+      },
+    );
+
     return this.mapToResponse(post);
+  }
+
+  /**
+   * Envoie les notifications appropriées lors de la création d'un post.
+   *
+   * @param post - Le post créé
+   * @param thread - Le thread contenant le post
+   * @param repliesTo - ID du post parent si c'est une réponse
+   * @param authorId - ID de l'auteur du nouveau post
+   */
+  private async sendPostNotifications(
+    post: any,
+    thread: any,
+    repliesTo: string | undefined,
+    authorId: string,
+  ): Promise<void> {
+    // Récupérer l'auteur du nouveau post pour le nom
+    const postAuthor = await this.prisma.user.findUnique({
+      where: { id: authorId },
+      select: { displayName: true },
+    });
+
+    if (repliesTo) {
+      // C'est une réponse à un post spécifique
+      // Notifier l'auteur du post parent (sauf si c'est lui qui répond)
+      const parentPost = await this.prisma.post.findUnique({
+        where: { id: repliesTo },
+        select: { authorId: true },
+      });
+
+      if (parentPost && parentPost.authorId !== authorId) {
+        await this.notificationsService.createNotification({
+          userId: parentPost.authorId,
+          type: 'POST_REPLY',
+          title: 'Nouvelle réponse',
+          body: `${postAuthor?.displayName || 'Quelqu\'un'} a répondu à votre message`,
+          data: {
+            postId: post.id,
+            threadId: thread.id,
+            threadTitle: thread.title,
+            replyAuthorId: authorId,
+            replyAuthorName: postAuthor?.displayName,
+          },
+        });
+      }
+    } else {
+      // C'est une nouvelle réponse dans le thread (pas une réponse à un post spécifique)
+      // Notifier l'auteur du thread (sauf si c'est lui qui répond)
+      if (thread.authorId !== authorId) {
+        await this.notificationsService.createNotification({
+          userId: thread.authorId,
+          type: 'THREAD_REPLY',
+          title: 'Nouvelle réponse',
+          body: `${postAuthor?.displayName || 'Quelqu\'un'} a répondu à votre discussion "${thread.title}"`,
+          data: {
+            postId: post.id,
+            threadId: thread.id,
+            threadTitle: thread.title,
+            replyAuthorId: authorId,
+            replyAuthorName: postAuthor?.displayName,
+          },
+        });
+      }
+    }
   }
 
   // ============================================

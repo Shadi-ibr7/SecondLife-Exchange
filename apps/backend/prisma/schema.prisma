@@ -319,6 +319,9 @@ enum NotificationType {
   MATCH_FOUND // Correspondance trouvée pour un objet
   WEEKLY_THEME // Nouveau thème de la semaine
   SYSTEM // Notification système générale
+  POST_LIKED // Quelqu'un a liké un post
+  THREAD_REPLY // Nouvelle réponse dans une discussion
+  POST_REPLY // Réponse à un post spécifique
 }
 
 enum UserRole {

@@ -8,6 +8,7 @@
 
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 /**
  * SERVICE: PostLikesService
@@ -16,7 +17,10 @@ import { PrismaService } from '../../common/prisma/prisma.service';
  */
 @Injectable()
 export class PostLikesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService,
+  ) {}
 
   /**
    * Toggle le like d'un post (like si pas liké, unlike si déjà liké).
@@ -27,9 +31,14 @@ export class PostLikesService {
    * @throws NotFoundException si le post n'existe pas
    */
   async toggleLike(postId: string, userId: string): Promise<boolean> {
-    // Vérifier que le post existe
+    // Vérifier que le post existe et récupérer l'auteur
     const post = await this.prisma.post.findUnique({
       where: { id: postId },
+      select: {
+        id: true,
+        authorId: true,
+        threadId: true,
+      },
     });
 
     if (!post) {
@@ -65,6 +74,41 @@ export class PostLikesService {
           userId,
         },
       });
+
+      // Notifier l'auteur du post (sauf si c'est lui qui like)
+      if (post.authorId !== userId) {
+        // Récupérer l'auteur du post pour le nom
+        const postAuthor = await this.prisma.user.findUnique({
+          where: { id: post.authorId },
+          select: { displayName: true },
+        });
+
+        // Récupérer l'utilisateur qui like pour le nom
+        const liker = await this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { displayName: true },
+        });
+
+        // Créer la notification (non bloquant)
+        this.notificationsService
+          .createNotification({
+            userId: post.authorId,
+            type: 'POST_LIKED',
+            title: 'Nouveau like',
+            body: `${liker?.displayName || 'Quelqu\'un'} a aimé votre message`,
+            data: {
+              postId,
+              threadId: post.threadId,
+              likerId: userId,
+              likerName: liker?.displayName,
+            },
+          })
+          .catch((err) => {
+            // Erreur silencieuse pour ne pas bloquer le like
+            console.error('Erreur notification like:', err);
+          });
+      }
+
       return true;
     }
   }

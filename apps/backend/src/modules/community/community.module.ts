@@ -29,6 +29,7 @@ import { CommunityGateway } from './community.gateway';
 
 // Import des modules dépendants
 import { PrismaModule } from '../../common/prisma/prisma.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 /**
  * MODULE: CommunityModule
@@ -37,7 +38,7 @@ import { PrismaModule } from '../../common/prisma/prisma.module';
  */
 @Module({
   // Modules importés nécessaires
-  imports: [PrismaModule], // Accès à la base de données
+  imports: [PrismaModule, NotificationsModule], // Accès à la base de données + notifications
 
   // Contrôleurs qui exposent les routes HTTP
   controllers: [ThreadsController, PostsController],
