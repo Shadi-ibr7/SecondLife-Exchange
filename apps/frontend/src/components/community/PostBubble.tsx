@@ -49,7 +49,7 @@ export function PostBubble({ post, threadId }: PostBubbleProps) {
     setIsLiking(true);
     try {
       const result = await communityApi.togglePostLike(threadId, post.id);
-      
+
       // Mettre à jour le cache React Query
       queryClient.setQueryData(
         ['thread-posts', threadId],
