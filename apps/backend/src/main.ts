@@ -436,7 +436,7 @@ async function bootstrap() {
         return callback(null, false);
       },
       credentials: true, // OBLIGATOIRE pour les cookies cross-origin
-      methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], // PUT retiré (utiliser PATCH)
+      methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'], // PUT ajouté pour l'endpoint /like
       allowedHeaders: [
         'Content-Type',
         'Authorization',
