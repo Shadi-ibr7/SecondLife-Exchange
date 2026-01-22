@@ -83,6 +83,7 @@ import {
   ITEM_CONDITIONS,
   ITEM_CATEGORY_LABELS,
   ITEM_CONDITION_LABELS,
+  UPLOAD_CONFIG,
 } from '@/lib/constants';
 
 // Import des types
@@ -99,6 +100,9 @@ import { toast } from 'react-hot-toast';
 
 // Import des icônes
 import { Sparkles, Tag, X } from 'lucide-react';
+
+// Import du composant de sélection de photos
+import { PhotoSelector } from './PhotoSelector';
 
 /**
  * SCHÉMA DE VALIDATION: itemSchema
@@ -200,7 +204,7 @@ type ItemFormData = z.infer<typeof itemSchema>;
 interface ItemFormProps {
   mode: 'create' | 'edit'; // Mode création ou édition
   initialData?: Item; // Données initiales (pour édition)
-  onSubmit: (data: CreateItemDto | UpdateItemDto) => Promise<void>; // Fonction de soumission
+  onSubmit: (data: CreateItemDto | UpdateItemDto, photos?: File[]) => Promise<void>; // Fonction de soumission avec photos optionnelles
   isLoading?: boolean; // État de chargement
 }
 
@@ -263,6 +267,21 @@ export function ItemForm({
    * - Réinitialisé à '' après ajout d'un tag
    */
   const [newTag, setNewTag] = useState('');
+
+  /**
+   * État pour les photos sélectionnées (mode création uniquement)
+   *
+   * UTILISATION:
+   * - Stocke les fichiers sélectionnés avant la création
+   * - Les photos seront uploadées après la création de l'objet
+   * - Vide en mode édition (les photos existantes sont gérées ailleurs)
+   */
+  const [selectedPhotos, setSelectedPhotos] = useState<File[]>([]);
+  
+  /**
+   * État pour l'erreur de validation des photos
+   */
+  const [photosError, setPhotosError] = useState<string | undefined>();
 
   // ============================================
   // CONFIGURATION DE REACT HOOK FORM
@@ -439,14 +458,19 @@ export function ItemForm({
    *
    * FLUX:
    * 1. Les données sont déjà validées par Zod (via handleSubmit)
-   * 2. Transforme les données pour correspondre au format API
-   * 3. Appelle onSubmit avec les données transformées
-   * 4. Affiche un toast d'erreur si la soumission échoue
+   * 2. Valide les photos (obligatoires en mode création)
+   * 3. Transforme les données pour correspondre au format API
+   * 4. Appelle onSubmit avec les données transformées et les photos
+   * 5. Affiche un toast d'erreur si la soumission échoue
    *
    * TRANSFORMATIONS:
    * - tags: Convertit en undefined si vide (pour ne pas envoyer un tableau vide)
    * - category: Cast en ItemCategory (type-safe)
    * - condition: Cast en ItemCondition (type-safe)
+   *
+   * VALIDATION PHOTOS:
+   * - En mode création: les photos sont obligatoires (au moins 1)
+   * - En mode édition: les photos sont optionnelles (on peut modifier sans changer les photos)
    *
    * GESTION D'ERREUR:
    * - Si onSubmit échoue (erreur API, validation serveur, etc.)
@@ -457,6 +481,14 @@ export function ItemForm({
    */
   const handleFormSubmit = async (data: ItemFormData) => {
     try {
+      // Validation des photos en mode création
+      if (mode === 'create' && selectedPhotos.length === 0) {
+        setPhotosError('Au moins une photo est requise');
+        toast.error('Veuillez sélectionner au moins une photo');
+        return;
+      }
+      setPhotosError(undefined);
+
       /**
        * Transformer les données pour correspondre au format API
        *
@@ -475,11 +507,12 @@ export function ItemForm({
       };
 
       /**
-       * Appeler la fonction onSubmit du parent
+       * Appeler la fonction onSubmit du parent avec les photos
        * onSubmit est une fonction async qui fait l'appel API
        * (ex: createItem() ou updateItem())
+       * Les photos seront uploadées après la création de l'objet
        */
-      await onSubmit(submitData);
+      await onSubmit(submitData, mode === 'create' ? selectedPhotos : undefined);
     } catch (error) {
       /**
        * En cas d'erreur, afficher un toast d'erreur
@@ -602,6 +635,24 @@ export function ItemForm({
               </p>
             )}
           </div>
+
+          {/* ============================================
+              CHAMP: Photos (mode création uniquement)
+              ============================================ */}
+          {mode === 'create' && (
+            <div>
+              <Label>Photos *</Label>
+              <PhotoSelector
+                maxFiles={UPLOAD_CONFIG.maxFiles}
+                onPhotosChange={(files) => {
+                  setSelectedPhotos(files);
+                  setPhotosError(undefined);
+                }}
+                required={true}
+                error={photosError}
+              />
+            </div>
+          )}
 
           {/* ============================================
               CHAMP: État (Condition)

@@ -165,8 +165,9 @@ export default function NewItemPage() {
    * 2. Appelle itemsApi.createItem() avec les données validées
    * 3. L'API crée l'item dans la base de données
    * 4. L'API retourne l'item créé avec son ID
-   * 5. Affiche un toast de succès
-   * 6. Redirige vers la page de détail de l'item créé (/item/[id])
+   * 5. Si des photos sont fournies, les uploader et les attacher à l'item
+   * 6. Affiche un toast de succès
+   * 7. Redirige vers la page de détail de l'item créé (/item/[id])
    *
    * DONNÉES ENVOYÉES:
    * - title: Titre de l'item
@@ -176,6 +177,11 @@ export default function NewItemPage() {
    * - tags: Tags personnalisés (optionnel)
    * - aiAuto: Aide IA activée ou non (optionnel)
    *
+   * PHOTOS:
+   * - Si des photos sont fournies (tableau de File)
+   * - Upload vers Cloudinary dans le dossier items/{itemId}
+   * - Attachement des photos à l'item via itemsApi.attachPhotos()
+   *
    * GESTION D'ERREUR:
    * - Si itemsApi.createItem() échoue (validation serveur, erreur réseau, etc.)
    * - Affiche un toast d'erreur
@@ -184,16 +190,17 @@ export default function NewItemPage() {
    *
    * REDIRECTION:
    * - Toujours vers /item/[id] après création réussie
-   * - L'utilisateur peut voir immédiatement son item créé
+   * - L'utilisateur peut voir immédiatement son item créé avec ses photos
    *
    * UX:
    * - Confirmation visuelle avec toast de succès
    * - Redirection automatique vers la page de détail
-   * - Permet de voir immédiatement le résultat
+   * - Permet de voir immédiatement le résultat avec les photos
    *
    * @param data - Données du formulaire validées par Zod (CreateItemDto | UpdateItemDto)
+   * @param photos - Tableau de fichiers photos à uploader (optionnel, mode création uniquement)
    */
-  const handleSubmit = async (data: CreateItemDto | UpdateItemDto) => {
+  const handleSubmit = async (data: CreateItemDto | UpdateItemDto, photos?: File[]) => {
     try {
       // Mode offline-first: si pas de connexion, enregistrer dans la queue locale
       if (!isOnline()) {
@@ -225,6 +232,61 @@ export default function NewItemPage() {
       const item = await itemsApi.createItem(data as CreateItemDto);
 
       /**
+       * Uploader les photos si fournies
+       *
+       * FLUX:
+       * 1. Pour chaque photo, récupérer une signature Cloudinary
+       * 2. Uploader la photo directement vers Cloudinary
+       * 3. Attacher les photos à l'item via itemsApi.attachPhotos()
+       *
+       * NOTE:
+       * - Les photos sont uploadées après la création de l'item
+       * - Cela permet d'avoir l'itemId pour le dossier Cloudinary
+       * - Si l'upload échoue, l'item est quand même créé (mais sans photos)
+       */
+      if (photos && photos.length > 0) {
+        try {
+          const { uploadApi } = await import('@/lib/upload.api');
+          const { PhotoMeta } = await import('@/types');
+
+          // Upload toutes les photos
+          const uploadPromises = photos.map(async (file) => {
+            // Récupérer la signature Cloudinary
+            const signature = await uploadApi.getUploadSignature({
+              folder: `items/${item.id}`,
+            });
+
+            // Vérifier que la signature est valide
+            if (!signature || !signature.signature || !signature.timestamp) {
+              throw new Error('Signature invalide reçue du serveur');
+            }
+
+            // Vérifier que la signature contient cloud_name et api_key
+            if (!signature.cloud_name || !signature.api_key) {
+              throw new Error(
+                'Signature incomplète: cloud_name ou api_key manquant. Vérifiez la configuration backend.'
+              );
+            }
+
+            // Upload vers Cloudinary
+            return uploadApi.uploadToCloudinary(file, signature);
+          });
+
+          const uploadedPhotos: PhotoMeta[] = await Promise.all(uploadPromises);
+
+          // Attacher les photos à l'item
+          if (uploadedPhotos.length > 0) {
+            await itemsApi.attachPhotos(item.id, uploadedPhotos);
+          }
+        } catch (photoError: any) {
+          // Si l'upload des photos échoue, on log l'erreur mais on continue
+          // L'item est créé, mais sans photos
+          console.error('Erreur lors de l\'upload des photos:', photoError);
+          toast.error('Objet créé mais erreur lors de l\'upload des photos');
+        }
+      }
+
+      /**
        * Afficher un toast de succès
        *
        * toast.success() affiche une notification verte en haut de l'écran
@@ -246,6 +308,7 @@ export default function NewItemPage() {
        * - /item/[id]: Page de détail de l'item créé
        * - L'utilisateur peut voir immédiatement son item avec toutes les informations
        * - L'item peut avoir été analysé par l'IA (si aiAuto === true)
+       * - Les photos sont déjà attachées et visibles
        */
       router.push(`/item/${item.id}`);
     } catch (error) {
