@@ -1222,6 +1222,14 @@ export class AdminService {
               avatarUrl: true,
             },
           },
+          posts: {
+            select: {
+              id: true,
+              createdAt: true,
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+          },
           _count: {
             select: { posts: true },
           },
@@ -1231,8 +1239,40 @@ export class AdminService {
       this.prisma.thread.count({ where }),
     ]);
 
+    // Calculer likesCount et isTrending pour chaque thread
+    const threadsWithStats = await Promise.all(
+      threads.map(async (thread) => {
+        // Compter les likes sur tous les posts du thread
+        const likesCount = await this.prisma.postLike.count({
+          where: {
+            post: {
+              threadId: thread.id,
+            },
+          },
+        });
+
+        // Calculer isTrending (algorithme simple basé sur activité récente)
+        const now = new Date();
+        const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        const recentPosts = await this.prisma.post.count({
+          where: {
+            threadId: thread.id,
+            createdAt: { gte: oneDayAgo },
+          },
+        });
+        const isTrending =
+          likesCount >= 5 || recentPosts >= 3 || (likesCount >= 2 && recentPosts >= 1);
+
+        return {
+          ...thread,
+          likesCount,
+          isTrending,
+        };
+      }),
+    );
+
     return {
-      threads,
+      threads: threadsWithStats,
       total,
       page,
       limit,

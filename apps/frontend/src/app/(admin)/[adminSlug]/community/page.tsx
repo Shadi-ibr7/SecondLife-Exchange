@@ -3,12 +3,13 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { MessageCircle, Trash2, Eye, Users, Search } from 'lucide-react';
+import { MessageCircle, Trash2, Eye, Users, Search, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 import { adminApi } from '@/lib/admin.api';
 import { ADMIN_BASE_PATH } from '@/lib/admin.config';
+import { THREAD_CATEGORY_LABELS } from '@/lib/constants';
 import { toast } from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -198,9 +199,11 @@ export default function AdminCommunityPage() {
                 <ResponsiveTable
                   headers={[
                     { key: 'title', label: 'Titre' },
+                    { key: 'category', label: 'Catégorie' },
                     { key: 'author', label: 'Auteur' },
                     { key: 'scope', label: 'Scope' },
                     { key: 'posts', label: 'Posts' },
+                    { key: 'likes', label: 'Likes' },
                     { key: 'date', label: 'Date' },
                     { key: 'actions', label: 'Actions', align: 'right' },
                   ]}
@@ -211,13 +214,31 @@ export default function AdminCommunityPage() {
                         key: 'title',
                         content: (
                           <div>
-                            <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5">
-                              {thread.title}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-normal text-[#1e1e20] dark:text-[#ececed] leading-5">
+                                {thread.title}
+                              </p>
+                              {thread.isTrending && (
+                                <Badge className="bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20">
+                                  <TrendingUp className="w-3 h-3 mr-1" />
+                                  Tendances
+                                </Badge>
+                              )}
+                            </div>
                             {thread.scopeRef && (
                               <p className="text-xs text-muted-foreground">Ref: {thread.scopeRef}</p>
                             )}
                           </div>
+                        ),
+                      },
+                      {
+                        key: 'category',
+                        content: thread.category ? (
+                          <Badge variant="outline" className="text-xs">
+                            {THREAD_CATEGORY_LABELS[thread.category as keyof typeof THREAD_CATEGORY_LABELS] || thread.category}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">-</span>
                         ),
                       },
                       {
@@ -248,6 +269,14 @@ export default function AdminCommunityPage() {
                         content: (
                           <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
                             {thread._count?.posts || 0}
+                          </p>
+                        ),
+                      },
+                      {
+                        key: 'likes',
+                        content: (
+                          <p className="text-sm font-normal text-[#6f6f73] dark:text-[#9a9a9d] leading-5">
+                            {thread.likesCount || 0}
                           </p>
                         ),
                       },
