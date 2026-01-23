@@ -213,7 +213,7 @@ export class GeoService {
         throw new Error(`Etalab API error: ${response.status} ${response.statusText}`);
       }
 
-      const data: EtalabApiResponse = await response.json();
+      const data = (await response.json()) as EtalabApiResponse;
 
       // Normaliser les résultats
       const suggestions = this.normalizeEtalabResponse(data.features);

@@ -74,14 +74,7 @@ export interface ItemWithPhotos extends Item {
     displayName: string;
     avatarUrl?: string;
   };
-  // Champs de localisation (optionnels)
-  city?: string | null;
-  postalCode?: string | null;
-  department?: string | null;
-  region?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
-  // Distance calculée (si lat/lng fournis dans la requête)
+  // Distance calculée (si lat/lng fournis dans la requête) - pas dans Prisma
   distanceKm?: number | null;
 }
 
