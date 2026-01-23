@@ -16,6 +16,7 @@ import {
   Activity,
   FileText,
   Eye,
+  Trash2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -58,6 +59,7 @@ export default function UserDetailPage() {
   const queryClient = useQueryClient();
   const [banDialogOpen, setBanDialogOpen] = useState(false);
   const [banReason, setBanReason] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const { data: user, isLoading } = useQuery({
     queryKey: ['admin-user-detail', id],
@@ -85,6 +87,16 @@ export default function UserDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     } catch (error: any) {
       toast.error(error.message || 'Erreur lors du débannissement');
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await adminApi.deleteUser(id);
+      toast.success('Utilisateur supprimé avec succès');
+      router.push(`/${ADMIN_BASE_PATH}/users`);
+    } catch (error: any) {
+      toast.error(error.message || 'Erreur lors de la suppression');
     }
   };
 
@@ -142,6 +154,14 @@ export default function UserDetailPage() {
               Bannir
             </Button>
           )}
+          <Button
+            variant="destructive"
+            onClick={() => setDeleteDialogOpen(true)}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Supprimer
+          </Button>
         </div>
       </div>
 
@@ -491,6 +511,36 @@ export default function UserDetailPage() {
             </Button>
             <Button variant="destructive" onClick={handleBan}>
               Bannir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer l'utilisateur</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer définitivement{' '}
+              <strong>{user.displayName}</strong> ({user.email}) ?
+              <br />
+              <br />
+              Cette action est <strong>irréversible</strong> et supprimera :
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Le compte utilisateur</li>
+                <li>Tous ses objets</li>
+                <li>Tous ses échanges</li>
+                <li>Son profil et ses données</li>
+              </ul>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              Supprimer définitivement
             </Button>
           </DialogFooter>
         </DialogContent>

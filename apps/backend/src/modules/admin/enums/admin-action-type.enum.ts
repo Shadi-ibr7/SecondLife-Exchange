@@ -20,6 +20,7 @@ export enum AdminActionType {
   // ============================================
   BAN_USER = 'BAN_USER',
   UNBAN_USER = 'UNBAN_USER',
+  DELETE_USER = 'DELETE_USER',
   CHANGE_USER_ROLE = 'CHANGE_USER_ROLE',
   ASSIGN_ADMIN_ROLE = 'ASSIGN_ADMIN_ROLE',
 

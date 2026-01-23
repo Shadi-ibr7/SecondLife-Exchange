@@ -5,7 +5,7 @@
  * Service principal pour toutes les opérations admin.
  */
 
-import { Injectable, NotFoundException, Logger, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, InternalServerErrorException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { ItemStatus, NotificationType } from '@prisma/client';
 import { ThemesService } from '../themes/themes.service';
@@ -253,6 +253,41 @@ export class AdminService {
     await this.prisma.ban.deleteMany({ where: { userId } });
     await this.logAction(adminId, 'UNBAN_USER', 'User', userId, undefined, req);
     return { success: true };
+  }
+
+  async deleteUser(userId: string, adminId: string, req?: Request) {
+    // Vérifier que l'utilisateur existe
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, roles: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Utilisateur non trouvé');
+    }
+
+    // Empêcher la suppression d'un admin (sécurité)
+    if (user.roles === 'ADMIN') {
+      throw new ForbiddenException('Impossible de supprimer un compte administrateur');
+    }
+
+    // Supprimer l'utilisateur (cascade supprimera automatiquement les relations)
+    // Prisma supprimera automatiquement : profile, items, exchanges, refreshTokens, etc.
+    await this.prisma.user.delete({
+      where: { id: userId },
+    });
+
+    // Logger l'action
+    await this.logAction(
+      adminId,
+      'DELETE_USER',
+      'User',
+      userId,
+      { email: user.email },
+      req,
+    );
+
+    return { success: true, message: 'Utilisateur supprimé avec succès' };
   }
 
   // Items Management

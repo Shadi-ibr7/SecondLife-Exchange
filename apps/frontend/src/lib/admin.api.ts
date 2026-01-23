@@ -666,6 +666,11 @@ export const adminApi = {
     return response.data;
   },
 
+  deleteUser: async (id: string) => {
+    const response = await adminApiClient.delete(`/admin/users/${id}`);
+    return response.data;
+  },
+
   // ============================================
   // ITEMS
   // ============================================

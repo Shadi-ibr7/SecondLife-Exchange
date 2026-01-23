@@ -181,6 +181,25 @@ export class AdminController {
     return this.adminService.unbanUser(id, req.user.id, req);
   }
 
+  @Delete('users/:id')
+  @ApiOperation({ summary: 'Supprimer un utilisateur' })
+  @ApiResponse({ status: 200, description: 'Utilisateur supprimé avec succès' })
+  @ApiResponse({ status: 403, description: 'Impossible de supprimer un admin' })
+  @ApiResponse({ status: 404, description: 'Utilisateur non trouvé' })
+  async deleteUser(@Param('id') id: string, @Request() req: any) {
+    const requestId = (req as any).requestId || 'unknown';
+    const method = req.method || 'DELETE';
+
+    this.logRequest(method, requestId, `/admin/users/${id}`);
+
+    try {
+      return await this.adminService.deleteUser(id, req.user.id, req);
+    } catch (error: any) {
+      this.logError(error, method, requestId, 'AdminController.deleteUser');
+      throw error;
+    }
+  }
+
   // Items
   @Get('items')
   @ApiOperation({ summary: 'Liste des objets' })

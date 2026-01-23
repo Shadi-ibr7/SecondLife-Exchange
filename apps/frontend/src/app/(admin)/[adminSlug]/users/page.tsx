@@ -10,7 +10,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, Eye, Ban, Mail, UserCheck, Filter } from 'lucide-react';
+import { Search, Eye, Ban, Mail, UserCheck, Filter, Trash2 } from 'lucide-react';
 import { adminApi } from '@/lib/admin.api';
 import { ADMIN_BASE_PATH } from '@/lib/admin.config';
 import { toast } from 'react-hot-toast';
@@ -46,6 +46,7 @@ export default function AdminUsersPage() {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [banDialogOpen, setBanDialogOpen] = useState(false);
   const [banReason, setBanReason] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-users', page, search],
@@ -84,6 +85,24 @@ export default function AdminUsersPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
     } catch (error: any) {
       toast.error(error.message || 'Erreur lors du bannissement');
+    }
+  };
+
+  const handleDelete = async (user: any) => {
+    setSelectedUser(user);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedUser) return;
+    try {
+      await adminApi.deleteUser(selectedUser.id);
+      toast.success('Utilisateur supprimé avec succès');
+      setDeleteDialogOpen(false);
+      setSelectedUser(null);
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+    } catch (error: any) {
+      toast.error(error.message || 'Erreur lors de la suppression');
     }
   };
 
@@ -307,6 +326,7 @@ export default function AdminUsersPage() {
                             size="icon"
                             className="h-8 w-8 rounded-md"
                             onClick={() => handleUnban(user.id)}
+                            title="Débannir"
                           >
                             <UserCheck className="w-4 h-4" />
                           </Button>
@@ -316,10 +336,20 @@ export default function AdminUsersPage() {
                             size="icon"
                             className="h-8 w-8 rounded-md"
                             onClick={() => handleBan(user)}
+                            title="Bannir"
                           >
                             <Ban className="w-4 h-4" />
                           </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-md text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          onClick={() => handleDelete(user)}
+                          title="Supprimer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     ),
                   },
@@ -389,6 +419,36 @@ export default function AdminUsersPage() {
             </Button>
             <Button variant="destructive" onClick={confirmBan}>
               Bannir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer l'utilisateur</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer définitivement{' '}
+              <strong>{selectedUser?.displayName}</strong> ({selectedUser?.email}) ?
+              <br />
+              <br />
+              Cette action est <strong>irréversible</strong> et supprimera :
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Le compte utilisateur</li>
+                <li>Tous ses objets</li>
+                <li>Tous ses échanges</li>
+                <li>Son profil et ses données</li>
+              </ul>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Supprimer définitivement
             </Button>
           </DialogFooter>
         </DialogContent>
