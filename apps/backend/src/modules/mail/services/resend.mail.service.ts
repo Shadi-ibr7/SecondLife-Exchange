@@ -26,32 +26,49 @@ export class ResendMailService implements IMailService {
     const fromEmail = this.configService.get<string>('EMAIL_FROM');
 
     if (!apiKey) {
-      this.logger.warn(
-        'RESEND_API_KEY non configuré - Service email désactivé',
+      this.logger.error(
+        '❌ RESEND_API_KEY non configuré - Service email désactivé. ' +
+        'Veuillez définir RESEND_API_KEY dans les variables d\'environnement.',
       );
       return;
     }
 
     if (!fromEmail) {
-      this.logger.warn('EMAIL_FROM non configuré - Service email désactivé');
+      this.logger.error(
+        '❌ EMAIL_FROM non configuré - Service email désactivé. ' +
+        'Veuillez définir EMAIL_FROM dans les variables d\'environnement.',
+      );
       return;
     }
 
     try {
       this.resend = new Resend(apiKey);
       this.fromEmail = fromEmail;
-      this.logger.log('Service email Resend configuré avec succès');
+      this.logger.log(`✅ Service email Resend configuré avec succès (FROM: ${fromEmail})`);
     } catch (error: any) {
-      this.logger.error(`Erreur configuration Resend: ${error.message}`);
+      this.logger.error(`❌ Erreur configuration Resend: ${error.message}`);
+      if (error.stack) {
+        this.logger.error(`Stack trace: ${error.stack}`);
+      }
     }
   }
 
   async sendEmail(options: SendEmailOptions): Promise<void> {
     if (!this.resend) {
-      throw new Error('Service email non configuré (RESEND_API_KEY manquant)');
+      const errorMsg = 'Service email non configuré. Vérifiez RESEND_API_KEY et EMAIL_FROM dans les variables d\'environnement.';
+      this.logger.error(errorMsg);
+      throw new Error(errorMsg);
+    }
+
+    if (!this.fromEmail) {
+      const errorMsg = 'EMAIL_FROM non configuré. Veuillez définir EMAIL_FROM dans les variables d\'environnement.';
+      this.logger.error(errorMsg);
+      throw new Error(errorMsg);
     }
 
     try {
+      this.logger.log(`Tentative d'envoi email à ${options.to} depuis ${this.fromEmail}`);
+      
       const result = await this.resend.emails.send({
         from: this.fromEmail,
         to: options.to,
@@ -61,12 +78,29 @@ export class ResendMailService implements IMailService {
       });
 
       if (result.error) {
-        throw new Error(`Resend API error: ${result.error.message}`);
+        const errorMsg = `Resend API error: ${result.error.message}`;
+        this.logger.error(errorMsg);
+        this.logger.error(`Détails: ${JSON.stringify(result.error)}`);
+        
+        // Message plus explicite pour les erreurs de domaine non vérifié
+        if (result.error.message?.includes('domain is not verified')) {
+          const domain = this.fromEmail.split('@')[1];
+          throw new Error(
+            `Le domaine ${domain} n'est pas vérifié dans Resend. ` +
+            `Veuillez vérifier votre domaine sur https://resend.com/domains ou ` +
+            `utiliser temporairement onboarding@resend.dev comme EMAIL_FROM.`
+          );
+        }
+        
+        throw new Error(errorMsg);
       }
 
-      this.logger.log(`Email envoyé à ${options.to} (ID: ${result.data?.id})`);
+      this.logger.log(`✅ Email envoyé avec succès à ${options.to} (ID: ${result.data?.id})`);
     } catch (error: any) {
-      this.logger.error(`Erreur envoi email à ${options.to}: ${error.message}`);
+      this.logger.error(`❌ Erreur envoi email à ${options.to}: ${error.message}`);
+      if (error.stack) {
+        this.logger.error(`Stack trace: ${error.stack}`);
+      }
       throw error;
     }
   }
