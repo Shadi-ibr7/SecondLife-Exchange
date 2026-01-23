@@ -41,6 +41,7 @@ import { SecurityModule } from './modules/security/security.module'; // Sécurit
 import { HealthModule } from './modules/health/health.module'; // Health checks
 import { UploadsModule } from './modules/uploads/uploads.module'; // Uploads Cloudinary sécurisés
 import { ReportsModule } from './modules/reports/reports.module'; // Signalements utilisateurs
+import { GeoModule } from './modules/geo/geo.module'; // Géolocalisation et autocomplétion villes
 
 // Import des fichiers de configuration
 import appConfig from './config/app.config'; // Configuration générale de l'app
@@ -189,6 +190,7 @@ import prismaConfig from './config/prisma.config'; // Configuration de la base d
     HealthModule,
     UploadsModule,
     ReportsModule,
+    GeoModule,
   ],
 })
 /**

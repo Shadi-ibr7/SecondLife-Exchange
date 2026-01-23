@@ -104,6 +104,12 @@ import { Sparkles, Tag, X } from 'lucide-react';
 // Import du composant de sélection de photos
 import { PhotoSelector } from './PhotoSelector';
 
+// Import du composant d'autocomplétion des villes
+import { CityAutocomplete } from '@/components/geo/CityAutocomplete';
+
+// Import du type CitySuggestion
+import { CitySuggestion } from '@/types';
+
 /**
  * SCHÉMA DE VALIDATION: itemSchema
  *
@@ -187,6 +193,17 @@ const itemSchema = z.object({
    * - Si true, l'IA peut suggérer catégorie et tags automatiquement
    */
   aiAuto: z.boolean().default(false),
+
+  /**
+   * Champs de localisation (optionnels)
+   * Remplis automatiquement via l'autocomplétion des villes
+   */
+  city: z.string().optional(),
+  postalCode: z.string().optional(),
+  department: z.string().optional(),
+  region: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
 });
 
 /**
@@ -283,6 +300,28 @@ export function ItemForm({
    */
   const [photosError, setPhotosError] = useState<string | undefined>();
 
+  /**
+   * État pour la ville sélectionnée via l'autocomplétion
+   *
+   * UTILISATION:
+   * - Stocke la ville complète (avec lat/lng, département, région)
+   * - Synchronisé avec le formulaire React Hook Form
+   * - Utilisé pour l'affichage et les soumissions
+   */
+  const [selectedCity, setSelectedCity] = useState<CitySuggestion | null>(
+    initialData?.city && initialData?.latitude && initialData?.longitude
+      ? {
+          label: `${initialData.city} (${initialData.postalCode || ''})`,
+          city: initialData.city,
+          postalCode: initialData.postalCode || '',
+          department: initialData.department || '',
+          region: initialData.region || '',
+          latitude: initialData.latitude,
+          longitude: initialData.longitude,
+        }
+      : null
+  );
+
   // ============================================
   // CONFIGURATION DE REACT HOOK FORM
   // ============================================
@@ -329,6 +368,12 @@ export function ItemForm({
       condition: initialData?.condition || '',
       tags: initialData?.tags || [],
       aiAuto: false,
+      city: initialData?.city || undefined,
+      postalCode: initialData?.postalCode || undefined,
+      department: initialData?.department || undefined,
+      region: initialData?.region || undefined,
+      latitude: initialData?.latitude || undefined,
+      longitude: initialData?.longitude || undefined,
     },
   });
 
@@ -408,6 +453,32 @@ export function ItemForm({
        * setNewTag('') vide l'input pour permettre l'ajout d'un nouveau tag
        */
       setNewTag('');
+    }
+  };
+
+  /**
+   * FONCTION: handleCityChange
+   *
+   * Met à jour la ville sélectionnée et synchronise avec le formulaire.
+   *
+   * @param city - Ville sélectionnée ou null si effacée
+   */
+  const handleCityChange = (city: CitySuggestion | null) => {
+    setSelectedCity(city);
+    if (city) {
+      setValue('city', city.city);
+      setValue('postalCode', city.postalCode);
+      setValue('department', city.department);
+      setValue('region', city.region);
+      setValue('latitude', city.latitude);
+      setValue('longitude', city.longitude);
+    } else {
+      setValue('city', undefined);
+      setValue('postalCode', undefined);
+      setValue('department', undefined);
+      setValue('region', undefined);
+      setValue('latitude', undefined);
+      setValue('longitude', undefined);
     }
   };
 
@@ -498,12 +569,20 @@ export function ItemForm({
        *   (pour ne pas envoyer un tableau vide à l'API)
        * - category: Cast en ItemCategory pour le type-safety
        * - condition: Cast en ItemCondition pour le type-safety
+       * - Champs de localisation: inclus si une ville est sélectionnée
        */
       const submitData = {
         ...data,
         tags: tags.length > 0 ? tags : undefined, // undefined si vide (pas de tableau vide)
         category: data.category as ItemCategory | undefined, // Cast pour type-safety
         condition: data.condition as ItemCondition, // Cast pour type-safety
+        // Inclure les champs de localisation si une ville est sélectionnée
+        city: selectedCity?.city,
+        postalCode: selectedCity?.postalCode,
+        department: selectedCity?.department,
+        region: selectedCity?.region,
+        latitude: selectedCity?.latitude,
+        longitude: selectedCity?.longitude,
       };
 
       /**
@@ -760,6 +839,22 @@ export function ItemForm({
                 {errors.category.message}
               </p>
             )}
+          </div>
+
+          {/* ============================================
+              CHAMP: Localisation (Ville)
+              ============================================ */}
+          <div>
+            <CityAutocomplete
+              label="Localisation (optionnel)"
+              value={selectedCity}
+              onChange={handleCityChange}
+              placeholder="Rechercher une ville..."
+              showGeolocationButton={true}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Indiquez votre ville pour permettre aux utilisateurs proches de vous trouver
+            </p>
           </div>
 
           {/* ============================================

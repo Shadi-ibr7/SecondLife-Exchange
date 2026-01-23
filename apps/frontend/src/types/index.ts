@@ -55,6 +55,15 @@ export interface Item {
   createdAt: string;
   updatedAt: string;
   owner: User;
+  // Champs de localisation (style Leboncoin)
+  city?: string | null;
+  postalCode?: string | null;
+  department?: string | null;
+  region?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  // Distance calculée (si lat/lng fournis dans la requête)
+  distanceKm?: number | null;
 }
 
 export interface ItemPhoto {
@@ -172,6 +181,13 @@ export interface CreateItemDto {
   condition: ItemCondition;
   tags?: string[];
   aiAuto?: boolean;
+  // Champs de localisation (style Leboncoin)
+  city?: string;
+  postalCode?: string;
+  department?: string;
+  region?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface UpdateItemDto extends Partial<CreateItemDto> {
@@ -187,6 +203,13 @@ export interface ListItemsParams {
   status?: ItemStatus;
   ownerId?: string;
   sort?: string;
+  // Paramètres de géolocalisation
+  lat?: number;
+  lng?: number;
+  radiusKm?: number;
+  city?: string;
+  department?: string;
+  region?: string;
 }
 
 /**
@@ -599,4 +622,43 @@ export interface CalendarResponse {
   weeks: CalendarWeek[];
   totalWeeks: number;
   currentWeek: number;
+}
+
+// ============================================
+// Types pour la géolocalisation
+// ============================================
+
+/**
+ * Suggestion de ville retournée par l'API d'autocomplétion.
+ */
+export interface CitySuggestion {
+  /** Label complet pour l'affichage (ex: "Paris (75000)") */
+  label: string;
+  /** Nom de la ville (ex: "Paris") */
+  city: string;
+  /** Code postal (ex: "75000") */
+  postalCode: string;
+  /** Numéro du département (ex: "75") */
+  department: string;
+  /** Nom de la région (ex: "Île-de-France") */
+  region: string;
+  /** Latitude GPS */
+  latitude: number;
+  /** Longitude GPS */
+  longitude: number;
+}
+
+/**
+ * Préférences de localisation de l'utilisateur.
+ * Stockées dans localStorage pour persister entre les sessions.
+ */
+export interface UserLocationPreferences {
+  /** Mode de localisation: GPS, ville choisie, ou aucun */
+  mode: 'gps' | 'city' | 'none';
+  /** Dernière ville sélectionnée (si mode = city) */
+  lastCitySelection?: CitySuggestion;
+  /** Dernières coordonnées GPS (si mode = gps) */
+  lastLatLng?: { lat: number; lng: number };
+  /** Rayon de recherche préféré en km */
+  radiusKm?: number;
 }

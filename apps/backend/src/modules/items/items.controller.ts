@@ -166,7 +166,43 @@ export class ItemsController {
     name: 'sort',
     required: false,
     type: String,
-    description: 'Tri (ex: -createdAt)',
+    description: 'Tri (ex: -createdAt, distance)',
+  })
+  @ApiQuery({
+    name: 'lat',
+    required: false,
+    type: Number,
+    description: 'Latitude de l\'utilisateur (pour tri par distance)',
+  })
+  @ApiQuery({
+    name: 'lng',
+    required: false,
+    type: Number,
+    description: 'Longitude de l\'utilisateur (pour tri par distance)',
+  })
+  @ApiQuery({
+    name: 'radiusKm',
+    required: false,
+    type: Number,
+    description: 'Rayon de recherche en km (défaut: 25)',
+  })
+  @ApiQuery({
+    name: 'city',
+    required: false,
+    type: String,
+    description: 'Filtrer par ville',
+  })
+  @ApiQuery({
+    name: 'department',
+    required: false,
+    type: String,
+    description: 'Filtrer par département',
+  })
+  @ApiQuery({
+    name: 'region',
+    required: false,
+    type: String,
+    description: 'Filtrer par région',
   })
   async listItems(@Query() query: ListItemsQueryDto): Promise<PaginatedItems> {
     /**
@@ -178,10 +214,28 @@ export class ItemsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Récupérer un item par ID' })
+  @ApiQuery({
+    name: 'lat',
+    required: false,
+    type: Number,
+    description: 'Latitude de l\'utilisateur (pour calcul de distance)',
+  })
+  @ApiQuery({
+    name: 'lng',
+    required: false,
+    type: Number,
+    description: 'Longitude de l\'utilisateur (pour calcul de distance)',
+  })
   @ApiResponse({ status: 200, description: "Détails de l'item" })
   @ApiResponse({ status: 404, description: 'Item non trouvé' })
-  async getItemById(@Param('id') id: string): Promise<ItemWithPhotos> {
-    return this.itemsService.getItemById(id);
+  async getItemById(
+    @Param('id') id: string,
+    @Query('lat') lat?: string,
+    @Query('lng') lng?: string,
+  ): Promise<ItemWithPhotos> {
+    const latNum = lat ? parseFloat(lat) : undefined;
+    const lngNum = lng ? parseFloat(lng) : undefined;
+    return this.itemsService.getItemById(id, latNum, lngNum);
   }
 
   @Patch(':id')

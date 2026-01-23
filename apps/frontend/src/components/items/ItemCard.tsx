@@ -249,15 +249,24 @@ export function ItemCard({ item, index = 0 }: ItemCardProps) {
               </CardTitle>
               {/*
               Localisation avec icône
-              flex items-center gap-2: aligner horizontalement avec espacement
-              text-sm: texte petit
-              text-muted-foreground: couleur atténuée
+              Affiche la ville de l'item si disponible, sinon la localisation du propriétaire
+              Si une distance est calculée, l'afficher également
             */}
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <MapPin className="h-4 w-4" />
                 <span>
-                  {item.owner.location || 'Localisation non précisée'}
+                  {item.city
+                    ? `${item.city}${item.postalCode ? ` (${item.postalCode})` : ''}`
+                    : item.owner.location || 'Localisation non précisée'}
                 </span>
+                {/* Afficher la distance si disponible */}
+                {item.distanceKm !== undefined && item.distanceKm !== null && (
+                  <span className="ml-auto font-medium text-primary">
+                    {item.distanceKm < 1
+                      ? `${Math.round(item.distanceKm * 1000)} m`
+                      : `${item.distanceKm} km`}
+                  </span>
+                )}
               </div>
             </CardHeader>
 

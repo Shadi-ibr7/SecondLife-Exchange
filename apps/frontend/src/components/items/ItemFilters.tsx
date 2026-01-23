@@ -42,11 +42,12 @@ import {
   ITEM_CONDITION_LABELS,
   ITEM_STATUS_LABELS,
   SORT_OPTIONS,
+  RADIUS_OPTIONS,
 } from '@/lib/constants';
 // Import des types TypeScript pour garantir la sécurité des types
 import { ListItemsParams } from '@/types';
 // Import des icônes Lucide React
-import { Search, X, Filter } from 'lucide-react';
+import { Search, X, Filter, MapPin } from 'lucide-react';
 
 /**
  * Interface TypeScript qui définit les propriétés (props) que ce composant accepte
@@ -132,12 +133,15 @@ export function ItemFilters({
    * Vérifier s'il y a des filtres actifs
    * Un filtre est actif s'il n'est pas vide/null/undefined
    * Le tri par défaut (-createdAt) n'est pas considéré comme un filtre actif
+   * Le rayon par défaut (25) n'est pas considéré comme un filtre actif
    */
   const hasActiveFilters =
     localParams.q || // Recherche textuelle
     localParams.category || // Catégorie sélectionnée
     localParams.condition || // Condition sélectionnée
     localParams.status || // Statut sélectionné
+    localParams.city || // Ville sélectionnée
+    (localParams.radiusKm && localParams.radiusKm !== 25) || // Rayon différent du défaut
     localParams.sort !== '-createdAt'; // Tri différent du tri par défaut
 
   /**
@@ -150,6 +154,8 @@ export function ItemFilters({
     localParams.category, // Catégorie
     localParams.condition, // Condition
     localParams.status, // Statut
+    localParams.city, // Ville
+    localParams.radiusKm && localParams.radiusKm !== 25 ? localParams.radiusKm : null, // Rayon
     localParams.sort !== '-createdAt' ? localParams.sort : null, // Tri (seulement si différent du défaut)
   ].filter(Boolean).length; // Compter seulement les valeurs non vides
 
@@ -282,6 +288,24 @@ export function ItemFilters({
                 </option>
               ))}
             </select>
+
+            {/* Sélecteur de rayon (seulement si lat/lng fournis) */}
+            {(localParams.lat !== undefined || localParams.city) && (
+              <select
+                value={localParams.radiusKm || 25}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value, 10);
+                  handleChange('radiusKm', value === 0 ? undefined : value);
+                }}
+                className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                {RADIUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
 
@@ -364,6 +388,31 @@ export function ItemFilters({
                 }
                 <button
                   onClick={() => handleChange('sort', '-createdAt')}
+                  className="ml-1 hover:text-destructive"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+            {/* Badge pour la ville */}
+            {localParams.city && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                {localParams.city}
+                <button
+                  onClick={() => handleChange('city', undefined)}
+                  className="ml-1 hover:text-destructive"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+            {/* Badge pour le rayon (si différent de 25km) */}
+            {localParams.radiusKm && localParams.radiusKm !== 25 && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                Rayon: {localParams.radiusKm} km
+                <button
+                  onClick={() => handleChange('radiusKm', 25)}
                   className="ml-1 hover:text-destructive"
                 >
                   <X className="h-3 w-3" />

@@ -115,6 +115,45 @@ const withPWA = require('next-pwa')({
     // - Données obsolètes
     // - Problèmes d'authentification (cookies non envoyés)
     // Les routes API seront toujours fetchées depuis le réseau
+    //
+    // EXCEPTION: Endpoint geo/cities pour l'autocomplétion (cache court)
+    {
+      urlPattern: /\/api\/v1\/geo\/cities\?/i,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'geo-cities-cache',
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 5 * 60, // 5 minutes (même durée que le cache backend)
+        },
+      },
+    },
+    // Cache des items pour mode hors-ligne (lecture seule)
+    {
+      urlPattern: /\/api\/v1\/items\?/i,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'items-list-cache',
+        expiration: {
+          maxEntries: 20,
+          maxAgeSeconds: 10 * 60, // 10 minutes
+        },
+        networkTimeoutSeconds: 5, // Timeout avant fallback cache
+      },
+    },
+    // Cache des détails d'item pour mode hors-ligne
+    {
+      urlPattern: /\/api\/v1\/items\/[^?]+$/i,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'items-detail-cache',
+        expiration: {
+          maxEntries: 30,
+          maxAgeSeconds: 15 * 60, // 15 minutes
+        },
+        networkTimeoutSeconds: 5,
+      },
+    },
   ],
 });
 

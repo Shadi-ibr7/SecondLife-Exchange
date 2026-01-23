@@ -60,6 +60,8 @@ import {
   UpdateProfileDto,
   EcoContent,
   PaginatedEcoContentResponse,
+  CitySuggestion,
+  ListItemsParams,
 } from '@/types';
 
 /**
@@ -999,15 +1001,10 @@ class ApiClient {
   /**
    * Récupère une liste paginée d'items avec filtres optionnels.
    *
-   * @param params - Paramètres de pagination et filtres (page, limit, category, search)
+   * @param params - Paramètres de pagination, filtres et géolocalisation
    * @returns Liste paginée d'items
    */
-  async getItems(params?: {
-    page?: number;
-    limit?: number;
-    category?: string;
-    search?: string;
-  }): Promise<PaginatedResponse<Item>> {
+  async getItems(params?: ListItemsParams): Promise<PaginatedResponse<Item>> {
     const response = await this.client.get<PaginatedResponse<Item>>('/items', {
       params,
     });
@@ -1016,12 +1013,21 @@ class ApiClient {
 
   /**
    * Récupère un item par son ID.
+   * Si lat/lng sont fournis, calcule également la distance.
    *
    * @param id - ID de l'item
-   * @returns Détails de l'item
+   * @param lat - Latitude de l'utilisateur (optionnel)
+   * @param lng - Longitude de l'utilisateur (optionnel)
+   * @returns Détails de l'item avec distance optionnelle
    */
-  async getItem(id: string): Promise<Item> {
-    const response = await this.client.get<Item>(`/items/${id}`);
+  async getItem(id: string, lat?: number, lng?: number): Promise<Item> {
+    const params: Record<string, number> = {};
+    if (lat !== undefined) params.lat = lat;
+    if (lng !== undefined) params.lng = lng;
+
+    const response = await this.client.get<Item>(`/items/${id}`, {
+      params: Object.keys(params).length > 0 ? params : undefined,
+    });
     return response.data;
   }
 
@@ -1347,6 +1353,29 @@ class ApiClient {
     byLocale: Record<string, number>;
   }> {
     const response = await this.client.get('/eco/stats');
+    return response.data;
+  }
+
+  // ============================================
+  // ENDPOINTS GÉO (AUTOCOMPLÉTION VILLES)
+  // ============================================
+
+  /**
+   * Recherche des villes françaises avec autocomplétion.
+   * Utilise l'API Adresse Etalab via le backend.
+   *
+   * @param query - Terme de recherche (ex: "Paris", "Lyon 69")
+   * @param limit - Nombre maximum de résultats (défaut: 10)
+   * @returns Liste de suggestions de villes
+   */
+  async searchCities(query: string, limit: number = 10): Promise<CitySuggestion[]> {
+    if (query.length < 2) {
+      return [];
+    }
+
+    const response = await this.client.get<CitySuggestion[]>('/geo/cities', {
+      params: { q: query, limit },
+    });
     return response.data;
   }
 }

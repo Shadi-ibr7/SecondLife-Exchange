@@ -153,12 +153,23 @@ model Item {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   popularityScore Int           @default(0)
+  // Champs de localisation (style Leboncoin)
+  city            String?       // Nom de la ville (ex: "Paris")
+  postalCode      String?       // Code postal (ex: "75001")
+  department      String?       // Numéro du département (ex: "75")
+  region          String?       // Nom de la région (ex: "Île-de-France")
+  latitude        Float?        // Latitude GPS
+  longitude       Float?        // Longitude GPS
+  // Note: Le champ PostGIS 'location' est géré via SQL raw (voir migration)
   photos          ItemPhoto[]
   owner           User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId])
   @@index([category, condition, status])
   @@index([popularityScore])
+  @@index([city])
+  @@index([postalCode])
+  @@index([department])
   @@map("items")
 }
 

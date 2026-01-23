@@ -25,11 +25,14 @@ import {
   IsOptional,
   IsBoolean,
   IsArray,
+  IsNumber,
   MinLength,
   MaxLength,
   ArrayMaxSize,
   ArrayMinSize,
   ValidateIf,
+  Min,
+  Max,
 } from 'class-validator';
 
 // Import des décorateurs Swagger
@@ -172,4 +175,143 @@ export class CreateItemDto {
   @IsOptional()
   @IsBoolean()
   aiAuto?: boolean;
+
+  // ============================================
+  // CHAMPS DE LOCALISATION (Style Leboncoin)
+  // ============================================
+
+  /**
+   * PROPRIÉTÉ: city
+   *
+   * Nom de la ville où se situe l'objet.
+   * Sélectionné via l'autocomplétion des villes.
+   *
+   * @IsOptional(): Optionnel (l'utilisateur peut choisir de ne pas préciser)
+   * @IsString(): Doit être une chaîne
+   * @MinLength(1): Au moins 1 caractère
+   * @MaxLength(100): Maximum 100 caractères
+   */
+  @ApiPropertyOptional({
+    description: 'Nom de la ville (sélectionné via autocomplétion)',
+    minLength: 1,
+    maxLength: 100,
+    example: 'Paris',
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(1, { message: 'Le nom de la ville ne peut pas être vide' })
+  @MaxLength(100, { message: 'Le nom de la ville ne peut pas dépasser 100 caractères' })
+  city?: string;
+
+  /**
+   * PROPRIÉTÉ: postalCode
+   *
+   * Code postal de la ville.
+   * Format français: 5 chiffres (ex: 75001, 69001).
+   *
+   * @IsOptional(): Optionnel
+   * @IsString(): Doit être une chaîne
+   * @MinLength(4): Minimum 4 caractères (DOM-TOM peuvent avoir 4 chiffres)
+   * @MaxLength(10): Maximum 10 caractères (pour compatibilité internationale)
+   */
+  @ApiPropertyOptional({
+    description: 'Code postal',
+    minLength: 4,
+    maxLength: 10,
+    example: '75001',
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(4, { message: 'Le code postal doit contenir au moins 4 caractères' })
+  @MaxLength(10, { message: 'Le code postal ne peut pas dépasser 10 caractères' })
+  postalCode?: string;
+
+  /**
+   * PROPRIÉTÉ: department
+   *
+   * Numéro du département français.
+   * Format: 2 à 3 caractères (ex: 75, 2A, 974).
+   *
+   * @IsOptional(): Optionnel
+   * @IsString(): Doit être une chaîne
+   * @MinLength(1): Minimum 1 caractère
+   * @MaxLength(3): Maximum 3 caractères
+   */
+  @ApiPropertyOptional({
+    description: 'Numéro du département',
+    minLength: 1,
+    maxLength: 3,
+    example: '75',
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(1, { message: 'Le département doit contenir au moins 1 caractère' })
+  @MaxLength(3, { message: 'Le département ne peut pas dépasser 3 caractères' })
+  department?: string;
+
+  /**
+   * PROPRIÉTÉ: region
+   *
+   * Nom de la région française.
+   * Ex: Île-de-France, Auvergne-Rhône-Alpes, etc.
+   *
+   * @IsOptional(): Optionnel
+   * @IsString(): Doit être une chaîne
+   * @MaxLength(50): Maximum 50 caractères
+   */
+  @ApiPropertyOptional({
+    description: 'Nom de la région',
+    maxLength: 50,
+    example: 'Île-de-France',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50, { message: 'La région ne peut pas dépasser 50 caractères' })
+  region?: string;
+
+  /**
+   * PROPRIÉTÉ: latitude
+   *
+   * Latitude GPS du lieu (WGS84).
+   * Plage valide: -90 à 90 (pôle Sud à pôle Nord).
+   *
+   * @IsOptional(): Optionnel
+   * @IsNumber(): Doit être un nombre
+   * @Min(-90): Minimum -90 (pôle Sud)
+   * @Max(90): Maximum 90 (pôle Nord)
+   */
+  @ApiPropertyOptional({
+    description: 'Latitude GPS (WGS84)',
+    minimum: -90,
+    maximum: 90,
+    example: 48.8566,
+  })
+  @IsOptional()
+  @IsNumber({}, { message: 'La latitude doit être un nombre' })
+  @Min(-90, { message: 'La latitude doit être comprise entre -90 et 90' })
+  @Max(90, { message: 'La latitude doit être comprise entre -90 et 90' })
+  latitude?: number;
+
+  /**
+   * PROPRIÉTÉ: longitude
+   *
+   * Longitude GPS du lieu (WGS84).
+   * Plage valide: -180 à 180 (ligne de changement de date).
+   *
+   * @IsOptional(): Optionnel
+   * @IsNumber(): Doit être un nombre
+   * @Min(-180): Minimum -180
+   * @Max(180): Maximum 180
+   */
+  @ApiPropertyOptional({
+    description: 'Longitude GPS (WGS84)',
+    minimum: -180,
+    maximum: 180,
+    example: 2.3522,
+  })
+  @IsOptional()
+  @IsNumber({}, { message: 'La longitude doit être un nombre' })
+  @Min(-180, { message: 'La longitude doit être comprise entre -180 et 180' })
+  @Max(180, { message: 'La longitude doit être comprise entre -180 et 180' })
+  longitude?: number;
 }

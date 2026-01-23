@@ -74,6 +74,15 @@ export interface ItemWithPhotos extends Item {
     displayName: string;
     avatarUrl?: string;
   };
+  // Champs de localisation (optionnels)
+  city?: string | null;
+  postalCode?: string | null;
+  department?: string | null;
+  region?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  // Distance calculée (si lat/lng fournis dans la requête)
+  distanceKm?: number | null;
 }
 
 /**
@@ -245,7 +254,10 @@ export class ItemsService {
    * - condition: Filtrer par état (NEW, GOOD, FAIR, TO_REPAIR)
    * - status: Filtrer par statut (AVAILABLE, PENDING, TRADED, ARCHIVED)
    * - ownerId: Filtrer par propriétaire
-   * - sort: Tri (ex: -createdAt pour plus récent en premier)
+   * - sort: Tri (ex: -createdAt pour plus récent en premier, distance pour proximité)
+   * - lat/lng: Position de l'utilisateur pour calcul de distance
+   * - radiusKm: Rayon de recherche en km
+   * - city/department/region: Filtrer par localisation textuelle
    *
    * @param query - Paramètres de filtrage et pagination
    * @returns Liste paginée d'items
@@ -260,6 +272,12 @@ export class ItemsService {
       status,
       ownerId,
       sort = '-createdAt',
+      lat,
+      lng,
+      radiusKm = 25,
+      city,
+      department,
+      region,
     } = query;
 
     // Convertir en numbers pour éviter les erreurs Prisma
@@ -267,10 +285,17 @@ export class ItemsService {
     const limitNum = typeof limit === 'string' ? parseInt(limit, 10) : limit;
     const skip = (pageNum - 1) * limitNum;
 
+    // Si lat/lng fournis, utiliser PostGIS pour le calcul de distance
+    const hasGeoQuery = lat !== undefined && lng !== undefined;
+
+    if (hasGeoQuery) {
+      return this.listItemsWithDistance(query, pageNum, limitNum, skip);
+    }
+
+    // Sinon, utiliser la requête Prisma classique
     // Construire les filtres
-    // (cette structure est passée telle quelle à Prisma, ce qui limite le boilerplate)
     const where: Prisma.ItemWhereInput = {
-      status: status || ItemStatus.AVAILABLE, // Filtre par défaut : uniquement les items disponibles
+      status: status || ItemStatus.AVAILABLE,
     };
 
     if (category) {
@@ -285,6 +310,17 @@ export class ItemsService {
       where.ownerId = ownerId;
     }
 
+    // Filtres de localisation textuelle
+    if (city) {
+      where.city = { equals: city, mode: 'insensitive' };
+    }
+    if (department) {
+      where.department = department;
+    }
+    if (region) {
+      where.region = { equals: region, mode: 'insensitive' };
+    }
+
     // Recherche full-text
     if (q) {
       where.OR = [
@@ -295,10 +331,6 @@ export class ItemsService {
     }
 
     // Construire l'ordre de tri
-    /**
-     * Construction dynamique du tri.
-     * Convention: un `-` en prefix signifie tri descendant (`-createdAt` → plus récents d'abord).
-     */
     const orderBy: Prisma.ItemOrderByWithRelationInput = {};
     if (sort.startsWith('-')) {
       orderBy[sort.substring(1)] = 'desc';
@@ -333,7 +365,7 @@ export class ItemsService {
             },
           },
         }),
-        this.prisma.item.count({ where }), // deuxième requête pour la pagination (total global)
+        this.prisma.item.count({ where }),
       ]);
 
       return {
@@ -344,7 +376,6 @@ export class ItemsService {
         totalPages: Math.ceil(total / limitNum),
       };
     } catch (error: any) {
-      // Si erreur de connexion Prisma, retourner une liste vide
       if (error.code === 'P1010' || error.message?.includes('denied access')) {
         console.error('Erreur Prisma P1010:', error.message);
         return {
@@ -355,8 +386,274 @@ export class ItemsService {
           totalPages: 0,
         };
       }
-      // Propager les autres erreurs
       throw error;
+    }
+  }
+
+  // ============================================
+  // MÉTHODE: listItemsWithDistance (Requête PostGIS)
+  // ============================================
+
+  /**
+   * Liste les items avec calcul de distance via PostGIS.
+   * Utilisée quand lat/lng sont fournis dans la requête.
+   *
+   * FONCTIONNEMENT:
+   * - Utilise ST_Distance pour calculer la distance en mètres
+   * - Utilise ST_DWithin pour filtrer par rayon
+   * - Trie par distance si sort=distance
+   *
+   * @param query - Paramètres de filtrage
+   * @param pageNum - Numéro de page
+   * @param limitNum - Nombre d'éléments par page
+   * @param skip - Nombre d'éléments à sauter
+   * @returns Liste paginée d'items avec distance
+   */
+  private async listItemsWithDistance(
+    query: ListItemsQueryDto,
+    pageNum: number,
+    limitNum: number,
+    skip: number,
+  ): Promise<PaginatedItems> {
+    const {
+      q,
+      category,
+      condition,
+      status,
+      ownerId,
+      sort = '-createdAt',
+      lat,
+      lng,
+      radiusKm = 25,
+      city,
+      department,
+      region,
+    } = query;
+
+    // Construire les conditions WHERE
+    const whereConditions: string[] = [];
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    // Statut (par défaut: AVAILABLE)
+    whereConditions.push(`i."status" = $${paramIndex}`);
+    params.push(status || 'AVAILABLE');
+    paramIndex++;
+
+    // Catégorie
+    if (category) {
+      whereConditions.push(`i."category" = $${paramIndex}`);
+      params.push(category);
+      paramIndex++;
+    }
+
+    // Condition
+    if (condition) {
+      whereConditions.push(`i."condition" = $${paramIndex}`);
+      params.push(condition);
+      paramIndex++;
+    }
+
+    // Propriétaire
+    if (ownerId) {
+      whereConditions.push(`i."ownerId" = $${paramIndex}`);
+      params.push(ownerId);
+      paramIndex++;
+    }
+
+    // Filtres de localisation textuelle
+    if (city) {
+      whereConditions.push(`LOWER(i."city") = LOWER($${paramIndex})`);
+      params.push(city);
+      paramIndex++;
+    }
+    if (department) {
+      whereConditions.push(`i."department" = $${paramIndex}`);
+      params.push(department);
+      paramIndex++;
+    }
+    if (region) {
+      whereConditions.push(`LOWER(i."region") = LOWER($${paramIndex})`);
+      params.push(region);
+      paramIndex++;
+    }
+
+    // Recherche textuelle
+    if (q) {
+      whereConditions.push(`(
+        i."title" ILIKE $${paramIndex} OR
+        i."description" ILIKE $${paramIndex} OR
+        $${paramIndex + 1} = ANY(i."tags")
+      )`);
+      params.push(`%${q}%`);
+      params.push(q);
+      paramIndex += 2;
+    }
+
+    // Filtre par rayon (seulement les items avec location)
+    const radiusMeters = radiusKm * 1000;
+    const userPointParam = paramIndex;
+    params.push(lng); // longitude d'abord (format PostGIS)
+    paramIndex++;
+    params.push(lat);
+    paramIndex++;
+    params.push(radiusMeters);
+    paramIndex++;
+
+    whereConditions.push(`(
+      i."location" IS NULL OR
+      ST_DWithin(
+        i."location",
+        ST_SetSRID(ST_MakePoint($${userPointParam}, $${userPointParam + 1}), 4326)::geography,
+        $${userPointParam + 2}
+      )
+    )`);
+
+    const whereClause = whereConditions.join(' AND ');
+
+    // Construire l'ORDER BY
+    let orderByClause = '';
+    if (sort === 'distance') {
+      orderByClause = 'ORDER BY distance_km ASC NULLS LAST';
+    } else if (sort === '-distance') {
+      orderByClause = 'ORDER BY distance_km DESC NULLS LAST';
+    } else if (sort.startsWith('-')) {
+      orderByClause = `ORDER BY i."${sort.substring(1)}" DESC`;
+    } else {
+      orderByClause = `ORDER BY i."${sort}" ASC`;
+    }
+
+    try {
+      // Requête principale avec calcul de distance
+      const itemsQuery = `
+        SELECT
+          i.*,
+          CASE
+            WHEN i."location" IS NOT NULL THEN
+              ROUND(
+                (ST_Distance(
+                  i."location",
+                  ST_SetSRID(ST_MakePoint($${userPointParam}, $${userPointParam + 1}), 4326)::geography
+                ) / 1000)::numeric,
+                1
+              )
+            ELSE NULL
+          END as distance_km
+        FROM "items" i
+        WHERE ${whereClause}
+        ${orderByClause}
+        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+      `;
+
+      params.push(limitNum);
+      params.push(skip);
+
+      // Requête de comptage
+      const countQuery = `
+        SELECT COUNT(*) as total
+        FROM "items" i
+        WHERE ${whereClause}
+      `;
+
+      // Exécuter les requêtes
+      const [itemsRaw, countResult] = await Promise.all([
+        this.prisma.$queryRawUnsafe<any[]>(itemsQuery, ...params),
+        this.prisma.$queryRawUnsafe<{ total: bigint }[]>(
+          countQuery,
+          ...params.slice(0, -2), // Exclure LIMIT et OFFSET
+        ),
+      ]);
+
+      const total = Number(countResult[0]?.total || 0);
+
+      // Récupérer les photos et owners pour chaque item
+      const itemIds = itemsRaw.map((item) => item.id);
+
+      if (itemIds.length === 0) {
+        return {
+          items: [],
+          total: 0,
+          page: pageNum,
+          limit: limitNum,
+          totalPages: 0,
+        };
+      }
+
+      // Récupérer les photos
+      const photos = await this.prisma.itemPhoto.findMany({
+        where: { itemId: { in: itemIds } },
+        select: {
+          id: true,
+          itemId: true,
+          url: true,
+          width: true,
+          height: true,
+          createdAt: true,
+        },
+      });
+
+      // Récupérer les owners
+      const ownerIds = [...new Set(itemsRaw.map((item) => item.ownerId))];
+      const owners = await this.prisma.user.findMany({
+        where: { id: { in: ownerIds } },
+        select: {
+          id: true,
+          displayName: true,
+          avatarUrl: true,
+        },
+      });
+
+      // Mapper les photos et owners aux items
+      const photosByItem = photos.reduce(
+        (acc, photo) => {
+          if (!acc[photo.itemId]) acc[photo.itemId] = [];
+          acc[photo.itemId].push({
+            id: photo.id,
+            url: photo.url,
+            width: photo.width,
+            height: photo.height,
+            createdAt: photo.createdAt,
+          });
+          return acc;
+        },
+        {} as Record<string, any[]>,
+      );
+
+      const ownersById = owners.reduce(
+        (acc, owner) => {
+          acc[owner.id] = owner;
+          return acc;
+        },
+        {} as Record<string, any>,
+      );
+
+      // Assembler les items complets
+      const items: ItemWithPhotos[] = itemsRaw.map((item) => ({
+        ...item,
+        distanceKm: item.distance_km ? parseFloat(item.distance_km) : null,
+        photos: photosByItem[item.id] || [],
+        owner: ownersById[item.ownerId] || {
+          id: item.ownerId,
+          displayName: 'Utilisateur inconnu',
+          avatarUrl: null,
+        },
+      }));
+
+      return {
+        items,
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
+      };
+    } catch (error: any) {
+      console.error('Erreur PostGIS:', error.message);
+      // Fallback sur la requête standard sans distance
+      return this.listItems({
+        ...query,
+        lat: undefined,
+        lng: undefined,
+      });
     }
   }
 
@@ -366,12 +663,19 @@ export class ItemsService {
 
   /**
    * Récupère un item par son ID avec toutes ses relations.
+   * Si lat/lng sont fournis, calcule également la distance.
    *
    * @param id - ID de l'item
-   * @returns Item avec photos et propriétaire
+   * @param lat - Latitude de l'utilisateur (optionnel)
+   * @param lng - Longitude de l'utilisateur (optionnel)
+   * @returns Item avec photos, propriétaire et distance optionnelle
    * @throws NotFoundException si l'item n'existe pas
    */
-  async getItemById(id: string): Promise<ItemWithPhotos> {
+  async getItemById(
+    id: string,
+    lat?: number,
+    lng?: number,
+  ): Promise<ItemWithPhotos> {
     const item = await this.prisma.item.findUnique({
       where: { id },
       include: {
@@ -396,6 +700,30 @@ export class ItemsService {
 
     if (!item) {
       throw new NotFoundException('Item non trouvé');
+    }
+
+    // Si lat/lng fournis et item a une location, calculer la distance
+    if (lat !== undefined && lng !== undefined && item.latitude && item.longitude) {
+      try {
+        const distanceResult = await this.prisma.$queryRaw<{ distance_km: number }[]>`
+          SELECT ROUND(
+            (ST_Distance(
+              ST_SetSRID(ST_MakePoint(${item.longitude}, ${item.latitude}), 4326)::geography,
+              ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography
+            ) / 1000)::numeric,
+            1
+          ) as distance_km
+        `;
+
+        return {
+          ...item,
+          distanceKm: distanceResult[0]?.distance_km || null,
+        };
+      } catch (error) {
+        // Si PostGIS n'est pas disponible, retourner sans distance
+        console.warn('PostGIS distance calculation failed:', error.message);
+        return item;
+      }
     }
 
     return item;

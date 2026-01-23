@@ -25,6 +25,7 @@ import {
   IsString,
   IsEnum,
   IsInt,
+  IsNumber,
   Min,
   Max,
   IsUUID,
@@ -116,10 +117,101 @@ export class ListItemsQueryDto {
 
   @ApiPropertyOptional({
     description:
-      'Tri des résultats (ex: -createdAt pour plus récent en premier)',
+      'Tri des résultats (ex: -createdAt pour plus récent en premier, distance pour proximité)',
     example: '-createdAt',
   })
   @IsOptional()
   @IsString()
   sort?: string = '-createdAt';
+
+  // ============================================
+  // PARAMÈTRES DE GÉOLOCALISATION
+  // ============================================
+
+  /**
+   * Latitude de l'utilisateur pour le calcul de distance.
+   * Si fournie avec lng, permet le tri par proximité et le filtrage par rayon.
+   */
+  @ApiPropertyOptional({
+    description: 'Latitude de l\'utilisateur (pour tri par distance)',
+    minimum: -90,
+    maximum: 90,
+    example: 48.8566,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  lat?: number;
+
+  /**
+   * Longitude de l'utilisateur pour le calcul de distance.
+   * Si fournie avec lat, permet le tri par proximité et le filtrage par rayon.
+   */
+  @ApiPropertyOptional({
+    description: 'Longitude de l\'utilisateur (pour tri par distance)',
+    minimum: -180,
+    maximum: 180,
+    example: 2.3522,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  lng?: number;
+
+  /**
+   * Rayon de recherche en kilomètres.
+   * Filtre les items situés à moins de X km de la position de l'utilisateur.
+   * Nécessite lat et lng pour fonctionner.
+   */
+  @ApiPropertyOptional({
+    description: 'Rayon de recherche en kilomètres (défaut: 25)',
+    minimum: 1,
+    maximum: 500,
+    default: 25,
+    example: 25,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(500)
+  radiusKm?: number = 25;
+
+  /**
+   * Filtrer par ville (nom exact).
+   * Utile pour rechercher dans une ville spécifique sans coordonnées GPS.
+   */
+  @ApiPropertyOptional({
+    description: 'Filtrer par ville (nom exact)',
+    example: 'Paris',
+  })
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  /**
+   * Filtrer par département.
+   */
+  @ApiPropertyOptional({
+    description: 'Filtrer par département',
+    example: '75',
+  })
+  @IsOptional()
+  @IsString()
+  department?: string;
+
+  /**
+   * Filtrer par région.
+   */
+  @ApiPropertyOptional({
+    description: 'Filtrer par région',
+    example: 'Île-de-France',
+  })
+  @IsOptional()
+  @IsString()
+  region?: string;
 }

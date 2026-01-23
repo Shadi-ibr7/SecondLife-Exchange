@@ -159,8 +159,32 @@ export const ITEM_STATUS = [
 export const SORT_OPTIONS = [
   { value: '-createdAt', label: 'Plus récent' }, // Tri décroissant par date de création (nouveaux d'abord)
   { value: 'createdAt', label: 'Plus ancien' }, // Tri croissant par date de création (anciens d'abord)
+  { value: 'distance', label: 'Plus proche' }, // Tri par distance (nécessite lat/lng)
   { value: 'title', label: 'Titre A-Z' }, // Tri croissant par titre (alphabétique A-Z)
   { value: '-title', label: 'Titre Z-A' }, // Tri décroissant par titre (alphabétique Z-A)
+] as const;
+
+/**
+ * CONSTANTE: RADIUS_OPTIONS
+ *
+ * Options de rayon de recherche pour les filtres de localisation.
+ * Permet de filtrer les items dans un rayon donné autour de la position de l'utilisateur.
+ *
+ * VALEURS DISPONIBLES:
+ * - 5 km: Très proche (quartier/arrondissement)
+ * - 10 km: Proche (ville)
+ * - 25 km: Défaut (agglomération)
+ * - 50 km: Large (département)
+ * - 100 km: Très large (région)
+ * - 0: Pas de limite (affiche tous les items)
+ */
+export const RADIUS_OPTIONS = [
+  { value: 5, label: '5 km' },
+  { value: 10, label: '10 km' },
+  { value: 25, label: '25 km' },
+  { value: 50, label: '50 km' },
+  { value: 100, label: '100 km' },
+  { value: 0, label: 'Pas de limite' },
 ] as const;
 
 /**
