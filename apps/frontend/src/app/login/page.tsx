@@ -90,6 +90,9 @@ import { Input } from '@/components/ui/input';
 // Import du store d'authentification
 import { useAuthStore } from '@/store/auth';
 
+// Import du client API
+import { apiClient } from '@/lib/api';
+
 // Import des icônes
 import { Eye, EyeOff, Mail, Lock, MailCheck, Loader2 } from 'lucide-react';
 
