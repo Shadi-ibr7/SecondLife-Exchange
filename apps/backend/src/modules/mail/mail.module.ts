@@ -19,7 +19,7 @@ import { IMailService } from './interfaces/mail.service.interface';
       useClass: ResendMailService,
     },
   ],
-  exports: ['IMailService', ResendMailService],
+  exports: ['IMailService'],
 })
 export class MailModule {}
 
