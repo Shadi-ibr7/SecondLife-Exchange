@@ -89,7 +89,7 @@ self.addEventListener('notificationclick', (event) => {
   }
 
   // Déterminer l'URL de destination
-  const { url, type, exchangeId, itemId, themeId, contentId } =
+  const { url, type, exchangeId, itemId, themeId, contentId, threadId } =
     event.notification.data || {};
 
   let targetUrl = url || '/notifications';
@@ -100,45 +100,59 @@ self.addEventListener('notificationclick', (event) => {
       case 'MESSAGE':
       case 'EXCHANGE_REQUEST':
       case 'EXCHANGE_STATUS':
-        targetUrl = exchangeId ? `/exchanges/${exchangeId}` : '/exchanges';
+        // Routes app: /exchanges (liste) et /exchange/[id] (détail)
+        targetUrl = exchangeId ? `/exchange/${exchangeId}` : '/exchanges';
         break;
       case 'MATCH_FOUND':
-        targetUrl = itemId ? `/items/${itemId}` : '/matching';
+        // Routes app: /item/[id]
+        targetUrl = itemId ? `/item/${itemId}` : '/matching';
         break;
       case 'WEEKLY_THEME':
         targetUrl = themeId ? `/themes/${themeId}` : '/themes';
         break;
       case 'ECO_CONTENT_PUBLISHED':
-        targetUrl = contentId ? `/eco/${contentId}` : '/eco';
+        // Routes app: /discover/[id]
+        targetUrl = contentId ? `/discover/${contentId}` : '/discover';
         break;
       case 'ADMIN_ACTION':
         targetUrl = '/profile';
+        break;
+      case 'POST_LIKED':
+      case 'THREAD_REPLY':
+      case 'POST_REPLY':
+        targetUrl = threadId ? `/thread/${threadId}` : '/community';
         break;
       default:
         targetUrl = '/notifications';
     }
   }
 
-  // Ouvrir ou focus sur la fenêtre
+  // Toujours utiliser une URL absolue (meilleure compatibilité PWA)
+  const absoluteUrl = new URL(targetUrl, self.location.origin).href;
+
+  // Ouvrir ou focus sur la fenêtre (PWA si déjà ouverte)
   event.waitUntil(
     clients
       .matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
-        // Chercher une fenêtre déjà ouverte
-        for (const client of clientList) {
-          if ('focus' in client) {
-            // Si on trouve une fenêtre de l'app, la focus et naviguer
-            client.postMessage({
-              type: 'NOTIFICATION_CLICK',
-              url: targetUrl,
-            });
-            return client.focus();
+        // Priorité: une fenêtre déjà ouverte sur le même origin
+        const sameOriginClients = clientList.filter((c) => {
+          try {
+            return new URL(c.url).origin === self.location.origin;
+          } catch {
+            return false;
           }
+        });
+
+        const client = sameOriginClients[0] || clientList[0];
+        if (client) {
+          // Naviguer directement côté SW (pas besoin de postMessage côté app)
+          return client.navigate(absoluteUrl).then(() => client.focus());
         }
 
         // Sinon, ouvrir une nouvelle fenêtre
         if (clients.openWindow) {
-          return clients.openWindow(targetUrl);
+          return clients.openWindow(absoluteUrl);
         }
       })
   );

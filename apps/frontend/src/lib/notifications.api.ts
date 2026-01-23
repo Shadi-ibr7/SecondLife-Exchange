@@ -28,7 +28,10 @@ export type NotificationType =
   | 'ECO_CONTENT_PUBLISHED'
   | 'MATCH_FOUND'
   | 'WEEKLY_THEME'
-  | 'SYSTEM';
+  | 'SYSTEM'
+  | 'POST_LIKED'
+  | 'THREAD_REPLY'
+  | 'POST_REPLY';
 
 export interface AppNotification {
   id: string;
@@ -36,7 +39,7 @@ export interface AppNotification {
   type: NotificationType;
   title: string;
   body: string;
-  data: Record<string, any> | null;
+  data: Record<string, unknown> | null;
   readAt: string | null;
   createdAt: string;
 }
@@ -137,7 +140,7 @@ export async function markAllAsRead(): Promise<{ count: number }> {
  */
 export async function subscribePush(
   subscription: WebPushSubscription
-): Promise<any> {
+): Promise<unknown> {
   const response = await apiClient.client.post(
     '/notifications/push/subscribe',
     subscription
@@ -175,10 +178,11 @@ export function getNotificationUrl(
   notification: AppNotification
 ): string | null {
   const { type, data } = notification;
+  const d = (data ?? {}) as Record<string, unknown>;
 
   // Si une URL est explicitement fournie
-  if (data?.url) {
-    return data.url;
+  if (typeof d.url === 'string' && d.url.length > 0) {
+    return d.url;
   }
 
   // Sinon, construire l'URL selon le type
@@ -186,19 +190,38 @@ export function getNotificationUrl(
     case 'MESSAGE':
     case 'EXCHANGE_REQUEST':
     case 'EXCHANGE_STATUS':
-      return data?.exchangeId ? `/exchanges/${data.exchangeId}` : '/exchanges';
+      // Routes app: /exchanges (liste) et /exchange/[id] (détail)
+      return typeof d.exchangeId === 'string' && d.exchangeId
+        ? `/exchange/${d.exchangeId}`
+        : '/exchanges';
 
     case 'MATCH_FOUND':
-      return data?.itemId ? `/items/${data.itemId}` : '/matching';
+      // Routes app: /item/[id]
+      return typeof d.itemId === 'string' && d.itemId
+        ? `/item/${d.itemId}`
+        : '/matching';
 
     case 'WEEKLY_THEME':
-      return data?.themeId ? `/themes/${data.themeId}` : '/themes';
+      return typeof d.themeId === 'string' && d.themeId
+        ? `/themes/${d.themeId}`
+        : '/themes';
 
     case 'ECO_CONTENT_PUBLISHED':
-      return data?.contentId ? `/eco/${data.contentId}` : '/eco';
+      // Routes app: /discover/[id]
+      return typeof d.contentId === 'string' && d.contentId
+        ? `/discover/${d.contentId}`
+        : '/discover';
 
     case 'ADMIN_ACTION':
       return '/profile';
+
+    case 'POST_LIKED':
+    case 'THREAD_REPLY':
+    case 'POST_REPLY':
+      // Forum: /thread/[id]
+      return typeof d.threadId === 'string' && d.threadId
+        ? `/thread/${d.threadId}`
+        : '/community';
 
     case 'SYSTEM':
     default:

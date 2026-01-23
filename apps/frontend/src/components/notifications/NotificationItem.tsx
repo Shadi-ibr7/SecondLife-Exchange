@@ -42,6 +42,9 @@ const iconMap: Record<NotificationType, React.ElementType> = {
   MATCH_FOUND: Sparkles,
   WEEKLY_THEME: Calendar,
   SYSTEM: Bell,
+  POST_LIKED: Bell,
+  THREAD_REPLY: MessageCircle,
+  POST_REPLY: MessageCircle,
 };
 
 // Couleurs de fond par type
@@ -54,6 +57,9 @@ const bgColorMap: Record<NotificationType, string> = {
   MATCH_FOUND: 'bg-purple-500/10',
   WEEKLY_THEME: 'bg-yellow-500/10',
   SYSTEM: 'bg-gray-500/10',
+  POST_LIKED: 'bg-pink-500/10',
+  THREAD_REPLY: 'bg-indigo-500/10',
+  POST_REPLY: 'bg-indigo-500/10',
 };
 
 // Couleurs d'icône par type
@@ -66,6 +72,9 @@ const iconColorMap: Record<NotificationType, string> = {
   MATCH_FOUND: 'text-purple-500',
   WEEKLY_THEME: 'text-yellow-500',
   SYSTEM: 'text-gray-500',
+  POST_LIKED: 'text-pink-500',
+  THREAD_REPLY: 'text-indigo-500',
+  POST_REPLY: 'text-indigo-500',
 };
 
 export function NotificationItem({
