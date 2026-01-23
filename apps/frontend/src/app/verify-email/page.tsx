@@ -8,7 +8,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Container } from '@/components/common/Container';
@@ -18,7 +18,7 @@ import { CheckCircle, XCircle, Loader2, Mail } from 'lucide-react';
 import Link from 'next/link';
 import { apiClient } from '@/lib/api';
 
-export default function VerifyEmailPage() {
+function VerifyEmailPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>(
@@ -157,5 +157,28 @@ export default function VerifyEmailPage() {
         </Card>
       </motion.div>
     </Container>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense
+      fallback={
+        <Container className="flex min-h-screen items-center justify-center py-12">
+          <div className="w-full max-w-md">
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-primary" />
+                <h1 className="mb-2 text-2xl font-semibold">
+                  Chargement...
+                </h1>
+              </CardContent>
+            </Card>
+          </div>
+        </Container>
+      }
+    >
+      <VerifyEmailPageContent />
+    </Suspense>
   );
 }
