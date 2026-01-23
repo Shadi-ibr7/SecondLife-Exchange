@@ -48,6 +48,7 @@ import { ConfigService } from '@nestjs/config';
 
 // Import du service Prisma pour accéder à la base de données
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { UserRole } from '@prisma/client';
 
 // Import de bcrypt pour hasher les mots de passe
 import * as bcrypt from 'bcrypt';
@@ -262,20 +263,25 @@ export class AuthService {
     });
 
     // ============================================
-    // ENVOI DE L'EMAIL DE VÉRIFICATION
+    // ENVOI DE L'EMAIL DE VÉRIFICATION (uniquement pour les utilisateurs normaux)
     // ============================================
     // Envoyer l'email de vérification (non bloquant, après la transaction)
     // Si l'envoi échoue, l'utilisateur pourra demander un renvoi
-    this.emailVerificationService
-      .generateAndSendVerificationToken(result.user.id, email, displayName)
-      .catch((error) => {
-        // Log l'erreur mais ne bloque pas l'inscription
-        console.error(
-          `❌ [AUTH] Erreur envoi email vérification pour ${email}:`,
-          error.message,
-        );
-        console.error(`Stack: ${error.stack}`);
-      });
+    // EXCEPTION: Les admins ne reçoivent pas d'email de vérification
+    if (result.user.roles[0] !== UserRole.ADMIN) {
+      this.emailVerificationService
+        .generateAndSendVerificationToken(result.user.id, email, displayName)
+        .catch((error) => {
+          // Log l'erreur mais ne bloque pas l'inscription
+          console.error(
+            `❌ [AUTH] Erreur envoi email vérification pour ${email}:`,
+            error.message,
+          );
+          console.error(`Stack: ${error.stack}`);
+        });
+    } else {
+      console.log(`[AUTH] Utilisateur admin créé (${email}), email de vérification ignoré`);
+    }
 
     return result;
   }
@@ -372,13 +378,14 @@ export class AuthService {
     }
 
     // ============================================
-    // VÉRIFICATION DE L'EMAIL
+    // VÉRIFICATION DE L'EMAIL (uniquement pour les utilisateurs normaux)
     // ============================================
     /**
      * Blocage du login si l'email n'est pas vérifié.
      * L'utilisateur doit vérifier son email avant de pouvoir se connecter.
+     * EXCEPTION: Les admins ne sont pas concernés par cette vérification.
      */
-    if (!user.emailVerifiedAt) {
+    if (!user.emailVerifiedAt && user.roles !== UserRole.ADMIN) {
       throw new ForbiddenException({
         message: 'Votre adresse email n\'a pas été vérifiée. Veuillez vérifier votre email avant de vous connecter.',
         code: 'EMAIL_NOT_VERIFIED',
