@@ -82,18 +82,23 @@ export class EmailVerificationService {
 
     // Envoyer l'email (non bloquant, log les erreurs)
     try {
+      this.logger.log(
+        `Tentative d'envoi email vérification à ${email} (URL: ${verificationUrl})`,
+      );
       await this.mailService.sendEmail({
         to: email,
         subject: 'Vérifiez votre adresse email - SecondLife Exchange',
         html: getEmailVerificationTemplate(verificationUrl, displayName),
       });
-      this.logger.log(`Email de vérification envoyé à ${email}`);
+      this.logger.log(`✅ Email de vérification envoyé avec succès à ${email}`);
     } catch (error: any) {
       // Log l'erreur mais ne bloque pas l'inscription
       this.logger.error(
-        `Erreur envoi email vérification à ${email}: ${error.message}`,
+        `❌ Erreur envoi email vérification à ${email}: ${error.message}`,
       );
+      this.logger.error(`Stack trace: ${error.stack}`);
       // On continue quand même, l'utilisateur pourra demander un renvoi
+      throw error; // Re-throw pour que l'appelant puisse logger aussi
     }
 
     return token; // Retourné pour tests uniquement

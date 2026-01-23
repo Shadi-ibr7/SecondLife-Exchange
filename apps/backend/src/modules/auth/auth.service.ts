@@ -271,9 +271,10 @@ export class AuthService {
       .catch((error) => {
         // Log l'erreur mais ne bloque pas l'inscription
         console.error(
-          `Erreur envoi email vérification pour ${email}:`,
+          `❌ [AUTH] Erreur envoi email vérification pour ${email}:`,
           error.message,
         );
+        console.error(`Stack: ${error.stack}`);
       });
 
     return result;
