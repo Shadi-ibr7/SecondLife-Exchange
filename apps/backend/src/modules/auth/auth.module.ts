@@ -65,6 +65,9 @@ import { MailModule } from '../mail/mail.module';
     // AdminModule: Importé pour utiliser AuditService pour les logs admin
     AdminModule,
 
+    // MailModule: Module pour l'envoi d'emails (vérification d'email)
+    MailModule,
+
     // JwtModule: Module pour générer et vérifier les tokens JWT
     // registerAsync permet de charger la configuration depuis ConfigService
     JwtModule.registerAsync({

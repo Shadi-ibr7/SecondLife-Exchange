@@ -36,6 +36,7 @@ import {
   HttpStatus, // Enum des codes HTTP
   UseInterceptors, // Décorateur pour appliquer des intercepteurs
   Req, // Décorateur pour accéder à la requête Express
+  BadRequestException, // Exception 400: requête invalide
 } from '@nestjs/common';
 import { Request } from 'express';
 
