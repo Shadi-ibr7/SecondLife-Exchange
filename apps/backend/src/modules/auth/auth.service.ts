@@ -37,6 +37,7 @@ import {
   ConflictException, // Exception 409: conflit (ex: email déjà utilisé)
   UnauthorizedException, // Exception 401: non autorisé (ex: mauvais mot de passe)
   BadRequestException, // Exception 400: requête invalide
+  ForbiddenException, // Exception 403: interdit (ex: email non vérifié)
 } from '@nestjs/common';
 
 // Import du service JWT pour générer et vérifier les tokens
@@ -53,6 +54,7 @@ import * as bcrypt from 'bcrypt';
 
 // Import du service de gestion des tentatives de login
 import { LoginAttemptService } from './services/login-attempt.service';
+import { EmailVerificationService } from './services/email-verification.service';
 
 // Import des DTOs (Data Transfer Objects) pour typer les entrées
 import { AuthRegisterInput } from './dtos/auth-register.dto';
@@ -94,6 +96,7 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private loginAttemptService: LoginAttemptService,
+    private emailVerificationService: EmailVerificationService,
   ) {}
 
   // ============================================
@@ -258,6 +261,21 @@ export class AuthService {
       };
     });
 
+    // ============================================
+    // ENVOI DE L'EMAIL DE VÉRIFICATION
+    // ============================================
+    // Envoyer l'email de vérification (non bloquant, après la transaction)
+    // Si l'envoi échoue, l'utilisateur pourra demander un renvoi
+    this.emailVerificationService
+      .generateAndSendVerificationToken(result.user.id, email, displayName)
+      .catch((error) => {
+        // Log l'erreur mais ne bloque pas l'inscription
+        console.error(
+          `Erreur envoi email vérification pour ${email}:`,
+          error.message,
+        );
+      });
+
     return result;
   }
 
@@ -287,7 +305,7 @@ export class AuthService {
    * @param ip - Adresse IP de la requête
    * @param userAgent - User-Agent de la requête (optionnel)
    * @returns Tokens JWT et informations de l'utilisateur
-   * @throws ForbiddenException si bloqué par anti-bruteforce
+   * @throws ForbiddenException si bloqué par anti-bruteforce ou email non vérifié
    * @throws UnauthorizedException si l'email ou le mot de passe est incorrect
    */
   async login(
@@ -350,6 +368,20 @@ export class AuthService {
        */
       await this.loginAttemptService.recordFailure(email, ip, userAgent);
       throw new UnauthorizedException('Email ou mot de passe incorrect');
+    }
+
+    // ============================================
+    // VÉRIFICATION DE L'EMAIL
+    // ============================================
+    /**
+     * Blocage du login si l'email n'est pas vérifié.
+     * L'utilisateur doit vérifier son email avant de pouvoir se connecter.
+     */
+    if (!user.emailVerifiedAt) {
+      throw new ForbiddenException({
+        message: 'Votre adresse email n\'a pas été vérifiée. Veuillez vérifier votre email avant de vous connecter.',
+        code: 'EMAIL_NOT_VERIFIED',
+      });
     }
 
     // ============================================

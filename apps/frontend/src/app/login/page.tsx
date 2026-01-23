@@ -91,7 +91,7 @@ import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/store/auth';
 
 // Import des icônes
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, MailCheck, Loader2 } from 'lucide-react';
 
 /**
  * SCHÉMA DE VALIDATION: loginSchema
@@ -216,6 +216,9 @@ function LoginPageContent() {
    *   - Affiche "Connexion..." au lieu de "Se connecter"
    */
   const { login, isLoading } = useAuthStore();
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
+  const [userEmail, setUserEmail] = useState<string>('');
+  const [isResending, setIsResending] = useState(false);
 
   /**
    * Hook Next.js pour la navigation programmatique
@@ -375,24 +378,56 @@ function LoginPageContent() {
        * - Si next = "/": navigue vers la page d'accueil
        */
       router.push(next);
-    } catch (error) {
+    } catch (error: any) {
       /**
        * En cas d'erreur, afficher un toast d'erreur
        *
        * ERREURS POSSIBLES:
        * - Mauvais identifiants (email ou password incorrect)
+       * - Email non vérifié (403 avec code EMAIL_NOT_VERIFIED)
        * - Erreur réseau (pas de connexion, serveur inaccessible)
        * - Erreur serveur (500, etc.)
        *
-       * MESSAGE:
-       * - "Email ou mot de passe incorrect" pour les erreurs d'authentification
-       * - toast.error() affiche une notification rouge en haut de l'écran
-       *
-       * UX:
-       * - L'utilisateur reste sur la page de connexion
-       * - Peut corriger ses identifiants et réessayer
+       * GESTION EMAIL_NOT_VERIFIED:
+       * - Si erreur 403 avec code EMAIL_NOT_VERIFIED
+       * - Afficher un message spécial avec bouton "Renvoyer l'email"
+       * - Permet de renvoyer l'email de vérification
        */
-      toast.error('Email ou mot de passe incorrect');
+      const errorCode = error?.response?.data?.code;
+      const errorMessage = error?.response?.data?.message;
+
+      if (error?.response?.status === 403 && errorCode === 'EMAIL_NOT_VERIFIED') {
+        // Email non vérifié: afficher message spécial
+        setEmailNotVerified(true);
+        setUserEmail(data.email);
+        toast.error(errorMessage || 'Votre adresse email n\'a pas été vérifiée');
+      } else {
+        // Autre erreur (mauvais identifiants, etc.)
+        toast.error(errorMessage || 'Email ou mot de passe incorrect');
+      }
+    }
+  };
+
+  /**
+   * FONCTION: handleResendVerification
+   *
+   * Renvoie un email de vérification à l'utilisateur.
+   */
+  const handleResendVerification = async () => {
+    if (!userEmail) return;
+
+    setIsResending(true);
+    try {
+      await apiClient.resendVerificationEmail(userEmail);
+      toast.success('Email de vérification envoyé ! Vérifiez votre boîte mail.');
+      setEmailNotVerified(false);
+    } catch (error: any) {
+      toast.error(
+        error?.response?.data?.message ||
+          'Erreur lors de l\'envoi de l\'email de vérification',
+      );
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -506,6 +541,52 @@ function LoginPageContent() {
                   </p>
                 )}
               </div>
+
+              {/* ============================================
+                  ALERTE: Email non vérifié
+                  ============================================ */}
+              {emailNotVerified && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="rounded-lg border border-orange-200 bg-orange-50 p-4 dark:border-orange-800 dark:bg-orange-900/20"
+                >
+                  <div className="flex items-start gap-3">
+                    <MailCheck className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600 dark:text-orange-400" />
+                    <div className="flex-1 space-y-2">
+                      <p className="text-sm font-medium text-orange-900 dark:text-orange-100">
+                        Email non vérifié
+                      </p>
+                      <p className="text-sm text-orange-800 dark:text-orange-200">
+                        Vous devez vérifier votre adresse email avant de pouvoir vous
+                        connecter. Vérifiez votre boîte mail ou renvoyez un nouvel email
+                        de vérification.
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleResendVerification}
+                        disabled={isResending}
+                        className="mt-2 border-orange-300 text-orange-700 hover:bg-orange-100 dark:border-orange-700 dark:text-orange-300 dark:hover:bg-orange-900/40"
+                      >
+                        {isResending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Envoi en cours...
+                          </>
+                        ) : (
+                          <>
+                            <Mail className="mr-2 h-4 w-4" />
+                            Renvoyer l'email de vérification
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
 
               {/* ============================================
                   CHAMP: Mot de passe

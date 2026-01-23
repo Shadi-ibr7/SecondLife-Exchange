@@ -11,6 +11,7 @@ model User {
   id                 String              @id @default(cuid())
   email              String              @unique
   createdAt          DateTime            @default(now())
+  emailVerifiedAt   DateTime?           // Date de vérification de l'email
   avatarUrl          String?
   displayName        String
   passwordHash       String
@@ -34,8 +35,10 @@ model User {
   chatMessages       ChatMessage[]       @relation("MessageSender")
   ban                Ban?
   adminLogs          AdminLog[]          @relation("AdminLogs")
+  emailVerificationTokens EmailVerificationToken[]
 
   @@index([email])
+  @@index([emailVerifiedAt])
   @@map("users")
 }
 
@@ -81,6 +84,22 @@ model RefreshToken {
   @@index([expiresAt])
   @@index([familyId])
   @@map("refresh_tokens")
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique // SHA256 du token original
+  expiresAt DateTime
+  usedAt    DateTime? // null = non utilisé, date = utilisé
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+  @@index([usedAt])
+  @@map("email_verification_tokens")
 }
 
 model Exchange {

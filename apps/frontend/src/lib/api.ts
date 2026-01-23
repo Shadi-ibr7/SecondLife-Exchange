@@ -837,6 +837,39 @@ class ApiClient {
   }
 
   /**
+   * MÉTHODE: verifyEmail
+   *
+   * Vérifie l'adresse email d'un utilisateur avec un token.
+   *
+   * @param token - Token de vérification reçu par email
+   * @returns Promise qui se résout avec { success: true }
+   */
+  async verifyEmail(token: string): Promise<{ success: boolean }> {
+    const response = await this.client.post<{ success: boolean }>(
+      '/auth/verify-email',
+      { token },
+    );
+    return response.data;
+  }
+
+  /**
+   * MÉTHODE: resendVerificationEmail
+   *
+   * Renvoie un email de vérification pour un utilisateur.
+   *
+   * @param email - Email de l'utilisateur
+   * @returns Promise qui se résout avec { success: true } ou { alreadyVerified: true }
+   */
+  async resendVerificationEmail(
+    email: string,
+  ): Promise<{ success: true } | { alreadyVerified: true }> {
+    const response = await this.client.post<
+      { success: true } | { alreadyVerified: true }
+    >('/auth/resend-verification', { email });
+    return response.data;
+  }
+
+  /**
    * MÉTHODE: logout
    *
    * Déconnecte l'utilisateur et supprime les tokens.

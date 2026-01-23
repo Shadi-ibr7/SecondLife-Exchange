@@ -200,6 +200,58 @@ const EnvSchema = z.object({
     .describe('Sujet VAPID (mailto: ou https://)'),
 
   // ============================================
+  // EMAIL (Vérification d'email)
+  // ============================================
+  FRONTEND_URL: z
+    .string()
+    .url('FRONTEND_URL doit être une URL valide')
+    .default('http://localhost:3000')
+    .describe('URL du frontend (pour les liens dans les emails)'),
+
+  EMAIL_FROM: z
+    .string()
+    .email('EMAIL_FROM doit être une adresse email valide')
+    .optional()
+    .describe('Adresse email expéditrice (ex: noreply@secondlife-exchange.com)'),
+
+  RESEND_API_KEY: z
+    .string()
+    .optional()
+    .describe('Clé API Resend pour l\'envoi d\'emails (si RESEND_API_KEY est fourni, Resend sera utilisé)'),
+
+  // Alternative SMTP (si RESEND_API_KEY n'est pas fourni)
+  SMTP_HOST: z
+    .string()
+    .optional()
+    .describe('Serveur SMTP (ex: smtp.gmail.com)'),
+
+  SMTP_PORT: z
+    .string()
+    .regex(/^\d+$/, 'SMTP_PORT doit être un nombre')
+    .transform((val) => parseInt(val, 10))
+    .pipe(z.number().int().min(1).max(65535))
+    .optional()
+    .describe('Port SMTP (ex: 587 pour TLS, 465 pour SSL)'),
+
+  SMTP_USER: z
+    .string()
+    .optional()
+    .describe('Utilisateur SMTP'),
+
+  SMTP_PASSWORD: z
+    .string()
+    .optional()
+    .describe('Mot de passe SMTP'),
+
+  SMTP_SECURE: z
+    .string()
+    .transform((val) => val === 'true')
+    .pipe(z.boolean())
+    .default('false')
+    .optional()
+    .describe('Utiliser SSL/TLS pour SMTP (true/false)'),
+
+  // ============================================
   // BCRYPT
   // ============================================
   BCRYPT_SALT_ROUNDS: z

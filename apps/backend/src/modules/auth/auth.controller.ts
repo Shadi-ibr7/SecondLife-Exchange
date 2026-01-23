@@ -28,7 +28,9 @@
 import {
   Controller, // Décorateur pour définir un contrôleur
   Post, // Décorateur pour définir une route POST
+  Get, // Décorateur pour définir une route GET
   Body, // Décorateur pour extraire le body de la requête
+  Query, // Décorateur pour extraire les query params
   UseGuards, // Décorateur pour appliquer des guards (sécurité)
   HttpCode, // Décorateur pour définir le code HTTP de réponse
   HttpStatus, // Enum des codes HTTP
@@ -42,10 +44,12 @@ import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 
 // Import du service d'authentification
 import { AuthService } from './auth.service';
+import { EmailVerificationService } from './services/email-verification.service';
 
 // Import des DTOs pour la validation des données
 import { AuthRegisterDto } from './dtos/auth-register.dto';
 import { AuthLoginDto } from './dtos/auth-login.dto';
+import { VerifyEmailDto, ResendVerificationDto } from './dtos/verify-email.dto';
 
 // Import des guards pour protéger les routes
 import { JwtRefreshGuard } from '../../common/guards/jwt-refresh.guard';
@@ -69,7 +73,10 @@ export class AuthController {
    * On injecte uniquement `AuthService` afin de garder ce contrôleur très fin.
    * Cela facilite les tests e2e (on peut mocker AuthService si nécessaire).
    */
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private emailVerificationService: EmailVerificationService,
+  ) {}
 
   // ============================================
   // ROUTE: POST /api/v1/auth/register
@@ -136,7 +143,7 @@ export class AuthController {
     // Extraire l'IP et le userAgent pour le système anti-bruteforce
     const ip = req.ip || req.socket.remoteAddress || 'unknown';
     const userAgent = req.get('user-agent') || undefined;
-    
+
     return this.authService.login(loginDto, ip, userAgent);
   }
 
@@ -200,5 +207,73 @@ export class AuthController {
      * On ne retourne aucun corps (204), ce qui permet au client de simplement nettoyer son storage.
      */
     await this.authService.logout(refreshToken);
+  }
+
+  // ============================================
+  // ROUTE: POST /api/v1/auth/verify-email
+  // ============================================
+
+  /**
+   * Endpoint pour vérifier l'adresse email d'un utilisateur.
+   *
+   * Supporte GET (query param) et POST (body) pour plus de flexibilité.
+   *
+   * @param token - Token de vérification (query param pour GET, body pour POST)
+   * @returns { success: true } si la vérification réussit
+   *
+   * Code HTTP: 200 (OK) - Email vérifié avec succès
+   *
+   * SÉCURITÉ:
+   * - Rate limiting via ThrottlerGuard
+   * - Token hashé en DB (SHA256)
+   * - Expiration après 24h
+   * - Token à usage unique
+   */
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 tentatives par minute
+  async verifyEmailPost(@Body() verifyEmailDto: VerifyEmailDto) {
+    await this.emailVerificationService.verifyToken(verifyEmailDto.token);
+    return { success: true };
+  }
+
+  @Get('verify-email')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 tentatives par minute
+  async verifyEmailGet(@Query('token') token: string) {
+    if (!token) {
+      throw new BadRequestException('Token de vérification requis');
+    }
+    await this.emailVerificationService.verifyToken(token);
+    return { success: true };
+  }
+
+  // ============================================
+  // ROUTE: POST /api/v1/auth/resend-verification
+  // ============================================
+
+  /**
+   * Endpoint pour renvoyer un email de vérification.
+   *
+   * @param resendVerificationDto - Email de l'utilisateur
+   * @returns { success: true } (message générique pour éviter l'enumeration)
+   *
+   * Code HTTP: 200 (OK) - Email envoyé (ou déjà vérifié)
+   *
+   * SÉCURITÉ:
+   * - Rate limiting strict (3 par heure par email/IP)
+   * - Message générique même si l'email n'existe pas (anti-enumeration)
+   * - Invalide les anciens tokens non utilisés
+   */
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 3, ttl: 3600000 } }) // 3 tentatives par heure
+  async resendVerification(@Body() resendVerificationDto: ResendVerificationDto) {
+    return this.emailVerificationService.resendVerificationEmail(
+      resendVerificationDto.email,
+    );
   }
 }

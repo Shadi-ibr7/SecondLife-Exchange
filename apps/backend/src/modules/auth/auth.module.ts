@@ -34,11 +34,13 @@ import { AdminJwtStrategy } from './strategies/admin-jwt.strategy';
 import { LoginAttemptService } from './services/login-attempt.service';
 import { TwoFactorService } from './services/two-factor.service';
 import { TwoFactorAttemptService } from './services/two-factor-attempt.service';
+import { EmailVerificationService } from './services/email-verification.service';
 
 // Import des modules nécessaires
 import { RedisModule } from '../../common/redis/redis.module';
 import { PrismaModule } from '../../common/prisma/prisma.module';
 import { AdminModule } from '../admin/admin.module';
+import { MailModule } from '../mail/mail.module';
 
 /**
  * MODULE: AuthModule
@@ -96,6 +98,7 @@ import { AdminModule } from '../admin/admin.module';
     LoginAttemptService, // Service pour gérer les tentatives de login et blocages
     TwoFactorService, // Service pour gérer l'authentification à deux facteurs (2FA) TOTP
     TwoFactorAttemptService, // Service pour tracker les tentatives 2FA et lockout
+    EmailVerificationService, // Service pour la vérification d'email
   ],
 
   // ============================================
@@ -104,6 +107,7 @@ import { AdminModule } from '../admin/admin.module';
   exports: [
     AuthService, // Exporté pour que d'autres modules puissent l'utiliser
     JwtAccessStrategy, // Exporté pour que les guards puissent l'utiliser
+    EmailVerificationService, // Exporté pour utilisation dans le controller
   ],
 })
 export class AuthModule {}
