@@ -1378,6 +1378,36 @@ class ApiClient {
     });
     return response.data;
   }
+
+  /**
+   * Récupère la liste des régions françaises.
+   *
+   * @param fromDb - Si true, retourne uniquement les régions présentes en DB
+   * @returns Liste des régions
+   */
+  async getRegions(fromDb: boolean = false): Promise<string[]> {
+    const response = await this.client.get<string[]>('/geo/regions', {
+      params: { fromDb: fromDb ? 'true' : undefined },
+    });
+    return response.data;
+  }
+
+  /**
+   * Récupère la liste des départements français.
+   *
+   * @param region - Optionnel: filtrer par région
+   * @param fromDb - Si true, retourne uniquement les départements présents en DB
+   * @returns Liste des départements avec code et nom
+   */
+  async getDepartments(region?: string, fromDb: boolean = false): Promise<{ code: string; name: string }[]> {
+    const response = await this.client.get<{ code: string; name: string }[]>('/geo/departments', {
+      params: {
+        region,
+        fromDb: fromDb ? 'true' : undefined,
+      },
+    });
+    return response.data;
+  }
 }
 
 // ============================================

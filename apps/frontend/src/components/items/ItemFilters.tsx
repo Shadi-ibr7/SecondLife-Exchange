@@ -27,7 +27,7 @@
 'use client';
 
 // Import de React pour la gestion de l'état et des effets
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 // Import des composants UI réutilisables
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,9 +45,15 @@ import {
   RADIUS_OPTIONS,
 } from '@/lib/constants';
 // Import des types TypeScript pour garantir la sécurité des types
-import { ListItemsParams } from '@/types';
+import { ListItemsParams, CitySuggestion } from '@/types';
 // Import des icônes Lucide React
-import { Search, X, Filter, MapPin } from 'lucide-react';
+import { Search, X, Filter, MapPin, Loader2, Navigation } from 'lucide-react';
+// Import du client API
+import { apiClient } from '@/lib/api';
+// Import du store de localisation
+import { useLocationStore, useUserLocation } from '@/store/location';
+// Import du composant CityAutocomplete
+import { CityAutocomplete } from '@/components/geo/CityAutocomplete';
 
 /**
  * Interface TypeScript qui définit les propriétés (props) que ce composant accepte
@@ -83,6 +89,17 @@ export function ItemFilters({
    */
   const [localParams, setLocalParams] = useState(params);
 
+  // État pour les régions et départements
+  const [regions, setRegions] = useState<string[]>([]);
+  const [departments, setDepartments] = useState<{ code: string; name: string }[]>([]);
+  const [isLoadingRegions, setIsLoadingRegions] = useState(false);
+  const [isLoadingDepartments, setIsLoadingDepartments] = useState(false);
+
+  // Store de localisation pour GPS
+  const { mode: locationMode, gpsCoordinates, setGpsLocation, setGpsPermission } = useLocationStore();
+  const { coords: userCoords, isLocationEnabled } = useUserLocation();
+  const [isGeolocating, setIsGeolocating] = useState(false);
+
   /**
    * useEffect pour synchroniser l'état local avec les props
    * Quand les paramètres changent depuis l'extérieur (ex: réinitialisation),
@@ -91,6 +108,73 @@ export function ItemFilters({
   useEffect(() => {
     setLocalParams(params);
   }, [params]);
+
+  // Charger les régions au montage
+  useEffect(() => {
+    const loadRegions = async () => {
+      setIsLoadingRegions(true);
+      try {
+        const data = await apiClient.getRegions();
+        setRegions(data);
+      } catch (error) {
+        console.error('Erreur lors du chargement des régions:', error);
+      } finally {
+        setIsLoadingRegions(false);
+      }
+    };
+    loadRegions();
+  }, []);
+
+  // Charger les départements quand la région change
+  useEffect(() => {
+    const loadDepartments = async () => {
+      setIsLoadingDepartments(true);
+      try {
+        const data = await apiClient.getDepartments(localParams.region);
+        setDepartments(data);
+      } catch (error) {
+        console.error('Erreur lors du chargement des départements:', error);
+      } finally {
+        setIsLoadingDepartments(false);
+      }
+    };
+    loadDepartments();
+  }, [localParams.region]);
+
+  // Demander la géolocalisation GPS
+  const requestGpsLocation = useCallback(async () => {
+    if (!navigator.geolocation) {
+      return;
+    }
+
+    setIsGeolocating(true);
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000,
+        });
+      });
+
+      setGpsPermission('granted');
+      setGpsLocation({
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      });
+      // Mettre à jour les params avec les coordonnées GPS
+      onParamsChange({
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      });
+    } catch (error: any) {
+      if (error.code === 1) {
+        setGpsPermission('denied');
+      }
+    } finally {
+      setIsGeolocating(false);
+    }
+  }, [setGpsLocation, setGpsPermission, onParamsChange]);
 
   // ============================================
   // GESTION DES CHANGEMENTS DE FILTRES
@@ -140,7 +224,10 @@ export function ItemFilters({
     localParams.category || // Catégorie sélectionnée
     localParams.condition || // Condition sélectionnée
     localParams.status || // Statut sélectionné
+    localParams.region || // Région sélectionnée
+    localParams.department || // Département sélectionné
     localParams.city || // Ville sélectionnée
+    localParams.lat !== undefined || // GPS activé
     (localParams.radiusKm && localParams.radiusKm !== 25) || // Rayon différent du défaut
     localParams.sort !== '-createdAt'; // Tri différent du tri par défaut
 
@@ -154,10 +241,18 @@ export function ItemFilters({
     localParams.category, // Catégorie
     localParams.condition, // Condition
     localParams.status, // Statut
+    localParams.region, // Région
+    localParams.department, // Département
     localParams.city, // Ville
+    localParams.lat !== undefined ? 'gps' : null, // GPS
     localParams.radiusKm && localParams.radiusKm !== 25 ? localParams.radiusKm : null, // Rayon
     localParams.sort !== '-createdAt' ? localParams.sort : null, // Tri (seulement si différent du défaut)
   ].filter(Boolean).length; // Compter seulement les valeurs non vides
+
+  // Désactiver le GPS
+  const disableGps = useCallback(() => {
+    onParamsChange({ lat: undefined, lng: undefined });
+  }, [onParamsChange]);
 
   // ============================================
   // RENDU DU COMPOSANT (JSX)
@@ -288,16 +383,117 @@ export function ItemFilters({
                 </option>
               ))}
             </select>
+          </div>
+        </div>
 
-            {/* Sélecteur de rayon (seulement si lat/lng fournis) */}
-            {(localParams.lat !== undefined || localParams.city) && (
+        {/* ============================================
+            FILTRES DE LOCALISATION (GPS, RÉGION, DÉPARTEMENT, VILLE)
+            ============================================ */}
+        <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-end">
+          {/* Bouton GPS */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant={localParams.lat !== undefined ? 'default' : 'outline'}
+              size="sm"
+              onClick={localParams.lat !== undefined ? disableGps : requestGpsLocation}
+              disabled={isGeolocating}
+              className="gap-2"
+            >
+              {isGeolocating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Navigation className="h-4 w-4" />
+              )}
+              {localParams.lat !== undefined ? 'GPS actif' : 'Autour de moi'}
+            </Button>
+          </div>
+
+          {/* Sélecteur de région */}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-muted-foreground">Région</label>
+            <select
+              value={localParams.region || ''}
+              onChange={(e) => {
+                const value = e.target.value || undefined;
+                // Réinitialiser département et ville si région change
+                handleChange('region', value);
+                if (!value) {
+                  handleChange('department', undefined);
+                  handleChange('city', undefined);
+                }
+              }}
+              disabled={isLoadingRegions}
+              className="h-10 min-w-[180px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="">Toutes les régions</option>
+              {regions.map((region) => (
+                <option key={region} value={region}>
+                  {region}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sélecteur de département */}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-muted-foreground">Département</label>
+            <select
+              value={localParams.department || ''}
+              onChange={(e) => {
+                const value = e.target.value || undefined;
+                handleChange('department', value);
+                // Réinitialiser ville si département change
+                if (!value) {
+                  handleChange('city', undefined);
+                }
+              }}
+              disabled={isLoadingDepartments}
+              className="h-10 min-w-[180px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="">Tous les départements</option>
+              {departments.map((dept) => (
+                <option key={dept.code} value={dept.code}>
+                  {dept.code} - {dept.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Autocomplétion ville */}
+          <div className="flex flex-col gap-1 min-w-[200px]">
+            <label className="text-xs text-muted-foreground">Ville</label>
+            <CityAutocomplete
+              value={localParams.city ? { label: localParams.city, city: localParams.city, postalCode: '', department: '', region: '', latitude: 0, longitude: 0 } : null}
+              onChange={(city) => {
+                if (city) {
+                  handleChange('city', city.city);
+                  // Si pas de région/département sélectionné, les remplir automatiquement
+                  if (!localParams.region) {
+                    handleChange('region', city.region);
+                  }
+                  if (!localParams.department) {
+                    handleChange('department', city.department);
+                  }
+                } else {
+                  handleChange('city', undefined);
+                }
+              }}
+              placeholder="Rechercher une ville..."
+              showGeolocationButton={false}
+            />
+          </div>
+
+          {/* Sélecteur de rayon (si localisation active) */}
+          {(localParams.lat !== undefined || localParams.city || localParams.department || localParams.region) && (
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground">Rayon</label>
               <select
                 value={localParams.radiusKm || 25}
                 onChange={(e) => {
                   const value = parseInt(e.target.value, 10);
                   handleChange('radiusKm', value === 0 ? undefined : value);
                 }}
-                className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="h-10 min-w-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
                 {RADIUS_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -305,8 +501,8 @@ export function ItemFilters({
                   </option>
                 ))}
               </select>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* ============================================
@@ -394,10 +590,54 @@ export function ItemFilters({
                 </button>
               </Badge>
             )}
+            {/* Badge pour GPS */}
+            {localParams.lat !== undefined && (
+              <Badge variant="default" className="flex items-center gap-1">
+                <Navigation className="h-3 w-3" />
+                GPS actif
+                <button
+                  onClick={disableGps}
+                  className="ml-1 hover:text-destructive-foreground"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+            {/* Badge pour la région */}
+            {localParams.region && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                {localParams.region}
+                <button
+                  onClick={() => {
+                    handleChange('region', undefined);
+                    handleChange('department', undefined);
+                    handleChange('city', undefined);
+                  }}
+                  className="ml-1 hover:text-destructive"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+            {/* Badge pour le département */}
+            {localParams.department && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                Dép. {localParams.department}
+                <button
+                  onClick={() => {
+                    handleChange('department', undefined);
+                    handleChange('city', undefined);
+                  }}
+                  className="ml-1 hover:text-destructive"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
             {/* Badge pour la ville */}
             {localParams.city && (
               <Badge variant="secondary" className="flex items-center gap-1">
-                <MapPin className="h-3 w-3" />
                 {localParams.city}
                 <button
                   onClick={() => handleChange('city', undefined)}

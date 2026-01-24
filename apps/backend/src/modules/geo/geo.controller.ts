@@ -115,4 +115,116 @@ export class GeoController {
   async searchCities(@Query() query: SearchCitiesDto): Promise<CitySuggestion[]> {
     return this.geoService.searchCities(query.q, query.limit);
   }
+
+  // ============================================
+  // ROUTE: GET /geo/regions
+  // ============================================
+
+  /**
+   * Retourne la liste des régions françaises.
+   *
+   * COMPORTEMENT:
+   * - Si fromDb=true, retourne uniquement les régions présentes dans les items de la DB
+   * - Sinon, retourne la liste complète des régions françaises (par défaut)
+   *
+   * EXEMPLE:
+   * GET /api/v1/geo/regions
+   * GET /api/v1/geo/regions?fromDb=true
+   */
+  @Get('regions')
+  @ApiOperation({
+    summary: 'Liste des régions françaises',
+    description: 'Retourne la liste des régions. Par défaut toutes les régions, ou seulement celles présentes en DB.',
+  })
+  @ApiQuery({
+    name: 'fromDb',
+    required: false,
+    type: Boolean,
+    description: 'Si true, retourne uniquement les régions ayant des items en DB',
+    example: false,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Liste des régions',
+    schema: {
+      type: 'array',
+      items: { type: 'string', example: 'Île-de-France' },
+    },
+  })
+  async getRegions(@Query('fromDb') fromDb?: string): Promise<string[]> {
+    if (fromDb === 'true') {
+      return this.geoService.getRegionsFromDB();
+    }
+    return this.geoService.getAllRegions();
+  }
+
+  // ============================================
+  // ROUTE: GET /geo/departments
+  // ============================================
+
+  /**
+   * Retourne la liste des départements français.
+   *
+   * COMPORTEMENT:
+   * - Si region est spécifiée, filtre par cette région
+   * - Si fromDb=true, retourne uniquement les départements présents dans les items de la DB
+   * - Sinon, retourne la liste statique des départements (par défaut)
+   *
+   * EXEMPLE:
+   * GET /api/v1/geo/departments
+   * GET /api/v1/geo/departments?region=Île-de-France
+   * GET /api/v1/geo/departments?region=Île-de-France&fromDb=true
+   */
+  @Get('departments')
+  @ApiOperation({
+    summary: 'Liste des départements français',
+    description: 'Retourne la liste des départements. Peut être filtré par région.',
+  })
+  @ApiQuery({
+    name: 'region',
+    required: false,
+    type: String,
+    description: 'Filtrer par région',
+    example: 'Île-de-France',
+  })
+  @ApiQuery({
+    name: 'fromDb',
+    required: false,
+    type: Boolean,
+    description: 'Si true, retourne uniquement les départements ayant des items en DB',
+    example: false,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Liste des départements',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          code: { type: 'string', example: '75' },
+          name: { type: 'string', example: 'Paris' },
+        },
+      },
+    },
+  })
+  async getDepartments(
+    @Query('region') region?: string,
+    @Query('fromDb') fromDb?: string,
+  ): Promise<{ code: string; name: string }[]> {
+    if (fromDb === 'true') {
+      return this.geoService.getDepartmentsFromDB(region);
+    }
+    if (region) {
+      return this.geoService.getDepartmentsByRegion(region);
+    }
+    // Retourner tous les départements de toutes les régions
+    const allRegions = this.geoService.getAllRegions();
+    const allDepartments: { code: string; name: string }[] = [];
+    for (const r of allRegions) {
+      allDepartments.push(...this.geoService.getDepartmentsByRegion(r));
+    }
+    // Trier par code
+    return allDepartments.sort((a, b) => a.code.localeCompare(b.code, 'fr'));
+  }
 }

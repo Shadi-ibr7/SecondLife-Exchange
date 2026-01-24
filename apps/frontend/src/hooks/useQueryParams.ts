@@ -168,6 +168,46 @@ export function useQueryParams() {
        * '-createdAt' signifie tri décroissant par date de création
        */
       sort: searchParams.get('sort') || '-createdAt',
+
+      // ============================================
+      // PARAMÈTRES DE GÉOLOCALISATION
+      // ============================================
+
+      /**
+       * Latitude: parser en nombre ou undefined
+       */
+      lat: searchParams.get('lat')
+        ? parseFloat(searchParams.get('lat')!)
+        : undefined,
+
+      /**
+       * Longitude: parser en nombre ou undefined
+       */
+      lng: searchParams.get('lng')
+        ? parseFloat(searchParams.get('lng')!)
+        : undefined,
+
+      /**
+       * Rayon de recherche en km: parser en nombre ou undefined
+       */
+      radiusKm: searchParams.get('radiusKm')
+        ? parseInt(searchParams.get('radiusKm')!)
+        : undefined,
+
+      /**
+       * Région: utiliser la valeur ou undefined
+       */
+      region: searchParams.get('region') || undefined,
+
+      /**
+       * Département: utiliser la valeur ou undefined
+       */
+      department: searchParams.get('department') || undefined,
+
+      /**
+       * Ville: utiliser la valeur ou undefined
+       */
+      city: searchParams.get('city') || undefined,
     };
   }, [searchParams]); // Recalculer si searchParams change
 
@@ -238,7 +278,12 @@ export function useQueryParams() {
       newParams.category !== undefined ||
       newParams.condition !== undefined ||
       newParams.status !== undefined ||
-      newParams.sort !== undefined
+      newParams.sort !== undefined ||
+      newParams.region !== undefined ||
+      newParams.department !== undefined ||
+      newParams.city !== undefined ||
+      newParams.lat !== undefined ||
+      newParams.lng !== undefined
     ) {
       /**
        * Forcer la page à 1
