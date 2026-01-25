@@ -262,20 +262,38 @@ export class ExchangesService {
    *
    * Retourne la liste paginée des échanges où l'utilisateur est soit requester soit responder.
    * Optionnellement, on peut filtrer par statut (utile pour séparer les échanges actifs vs terminés).
+   *
+   * FILTRES:
+   * - status: Filtrer par statut (PENDING, ACCEPTED, etc.)
+   * - type: Filtrer par rôle de l'utilisateur:
+   *   - 'sent': Échanges initiés par l'utilisateur (requester)
+   *   - 'received': Échanges reçus par l'utilisateur (responder)
+   *   - 'all' ou undefined: Tous les échanges
    */
   async getMyExchanges(
     userId: string,
     pagination: PaginationInput,
     status?: string,
+    type?: 'sent' | 'received' | 'all',
   ) {
     const page = pagination.page ?? 1;
     const limit = pagination.limit ?? 20;
     const sort = pagination.sort ?? '-createdAt';
     const skip = (page - 1) * limit;
 
-    const where: any = {
-      OR: [{ requesterId: userId }, { responderId: userId }],
-    };
+    // Construire la condition WHERE selon le type
+    let where: any = {};
+
+    if (type === 'sent') {
+      // Échanges initiés par l'utilisateur (il est le requester)
+      where.requesterId = userId;
+    } else if (type === 'received') {
+      // Échanges reçus par l'utilisateur (il est le responder)
+      where.responderId = userId;
+    } else {
+      // Tous les échanges où l'utilisateur est impliqué
+      where.OR = [{ requesterId: userId }, { responderId: userId }];
+    }
 
     if (status) {
       where.status = status;
@@ -322,8 +340,14 @@ export class ExchangesService {
 
     const totalPages = total > 0 ? Math.ceil(total / limit) : 0;
 
+    // Ajouter un champ `isRequester` pour chaque échange (utile pour le frontend)
+    const enrichedExchanges = exchanges.map((exchange) => ({
+      ...exchange,
+      isRequester: exchange.requesterId === userId,
+    }));
+
     return {
-      items: exchanges,
+      items: enrichedExchanges,
       total,
       page,
       limit,

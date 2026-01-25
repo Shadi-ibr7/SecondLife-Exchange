@@ -258,6 +258,8 @@ export interface Exchange {
   requester: User;
   responder: User;
   messages?: ChatMessage[];
+  /** Indique si l'utilisateur connecté est le requester (ajouté par le backend) */
+  isRequester?: boolean;
 }
 
 // Types pour le chat
@@ -323,6 +325,8 @@ export interface ListExchangesParams {
   limit?: number;
   status?: ExchangeStatus;
   sort?: string;
+  /** Filtrer par rôle: 'sent' (initiés), 'received' (reçus), 'all' (tous) */
+  type?: 'sent' | 'received' | 'all';
 }
 
 // DTOs pour les thèmes

@@ -119,6 +119,7 @@ import {
   Edit3,
   LogOut,
   Trash2,
+  History,
 } from 'lucide-react';
 
 // Import des composants
@@ -1276,14 +1277,25 @@ function ProfilePageContent() {
                 <CardTitle>Actions rapides</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
+                {/* Bouton: Historique des échanges
+                 *
+                 * NAVIGATION:
+                 * - Lien vers /profile/exchanges pour voir l'historique
+                 */}
+                <Button className="w-full" asChild>
+                  <a href="/profile/exchanges">
+                    <History className="mr-2 h-4 w-4" />
+                    Historique des échanges
+                  </a>
+                </Button>
                 {/* Bouton: Publier un objet
                  *
                  * NAVIGATION:
-                 * - Lien vers /explore (ou /item/new pour créer un objet)
+                 * - Lien vers /item/new pour créer un objet
                  * - asChild: Utilise le Link comme bouton stylisé
                  */}
-                <Button className="w-full" asChild>
-                  <a href="/explore">Publier un objet</a>
+                <Button variant="outline" className="w-full" asChild>
+                  <a href="/item/new">Publier un objet</a>
                 </Button>
                 {/* Bouton: Explorer les objets
                  *

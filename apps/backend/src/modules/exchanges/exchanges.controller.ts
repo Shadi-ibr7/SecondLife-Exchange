@@ -95,8 +95,12 @@ export class ExchangesController {
   /**
    * GET /api/v1/exchanges/me
    *
-   * Retourne la liste paginée des échanges où l’utilisateur courant est impliqué.
+   * Retourne la liste paginée des échanges où l'utilisateur courant est impliqué.
    * Les paramètres `page`, `limit`, `sort` proviennent de `PaginationDto`; `status` est optionnel.
+   *
+   * FILTRES:
+   * - status: Filtrer par statut (PENDING, ACCEPTED, DECLINED, COMPLETED, CANCELLED)
+   * - type: Filtrer par rôle (sent = requester, received = responder, all = les deux)
    */
   @Get('me')
   @ApiOperation({ summary: 'Lister mes échanges' })
@@ -105,11 +109,13 @@ export class ExchangesController {
     @Request() req,
     @Query() paginationDto: PaginationDto,
     @Query('status') status?: string,
+    @Query('type') type?: 'sent' | 'received' | 'all',
   ) {
     return this.exchangesService.getMyExchanges(
       req.user.id,
       paginationDto,
       status,
+      type,
     );
   }
 
