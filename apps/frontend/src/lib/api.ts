@@ -872,6 +872,37 @@ class ApiClient {
   }
 
   /**
+   * MÉTHODE: forgotPassword
+   *
+   * Demande de réinitialisation de mot de passe.
+   * Réponse toujours 200 { ok: true } (ne révèle jamais si l'email existe).
+   */
+  async forgotPassword(email: string): Promise<{ ok: true }> {
+    const response = await this.client.post<{ ok: true }>(
+      '/auth/forgot-password',
+      { email },
+    );
+    return response.data;
+  }
+
+  /**
+   * MÉTHODE: resetPassword
+   *
+   * Réinitialise le mot de passe avec un token valide.
+   * 422 si token invalide / expiré / déjà utilisé.
+   */
+  async resetPassword(params: {
+    token: string;
+    newPassword: string;
+  }): Promise<{ ok: true }> {
+    const response = await this.client.post<{ ok: true }>(
+      '/auth/reset-password',
+      params,
+    );
+    return response.data;
+  }
+
+  /**
    * MÉTHODE: logout
    *
    * Déconnecte l'utilisateur et supprime les tokens.

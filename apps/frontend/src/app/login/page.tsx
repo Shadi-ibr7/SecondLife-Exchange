@@ -655,6 +655,14 @@ function LoginPageContent() {
                     {errors.password.message}
                   </p>
                 )}
+                <p className="text-right text-sm">
+                  <Link
+                    href="/forgot-password"
+                    className="text-muted-foreground hover:text-primary hover:underline"
+                  >
+                    Mot de passe oublié ?
+                  </Link>
+                </p>
               </div>
 
               {/* ============================================

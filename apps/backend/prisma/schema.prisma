@@ -36,6 +36,7 @@ model User {
   ban                Ban?
   adminLogs          AdminLog[]          @relation("AdminLogs")
   emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens PasswordResetToken[]
 
   @@index([email])
   @@index([emailVerifiedAt])
@@ -100,6 +101,29 @@ model EmailVerificationToken {
   @@index([expiresAt])
   @@index([usedAt])
   @@map("email_verification_tokens")
+}
+
+// ============================================
+// MODÈLE: PasswordResetToken
+// Gère les demandes de réinitialisation de mot de passe
+// Sécurité: token hashé (SHA256), expiration 15 min, usage unique
+// ============================================
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique // SHA256 du token original (jamais stocké en clair)
+  expiresAt DateTime  // Expiration: 15 minutes après création
+  usedAt    DateTime? // null = non utilisé, date = utilisé (usage unique)
+  createdAt DateTime  @default(now())
+  requestIp String?   // IP de la demande (audit)
+  userAgent String?   // User-Agent de la demande (audit)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+  @@index([usedAt])
+  @@map("password_reset_tokens")
 }
 
 model Exchange {

@@ -46,11 +46,14 @@ import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 // Import du service d'authentification
 import { AuthService } from './auth.service';
 import { EmailVerificationService } from './services/email-verification.service';
+import { PasswordResetService } from './services/password-reset.service';
 
 // Import des DTOs pour la validation des données
 import { AuthRegisterDto } from './dtos/auth-register.dto';
 import { AuthLoginDto } from './dtos/auth-login.dto';
 import { VerifyEmailDto, ResendVerificationDto } from './dtos/verify-email.dto';
+import { ForgotPasswordDto } from './dtos/forgot-password.dto';
+import { ResetPasswordDto } from './dtos/reset-password.dto';
 
 // Import des guards pour protéger les routes
 import { JwtRefreshGuard } from '../../common/guards/jwt-refresh.guard';
@@ -77,6 +80,7 @@ export class AuthController {
   constructor(
     private authService: AuthService,
     private emailVerificationService: EmailVerificationService,
+    private passwordResetService: PasswordResetService,
   ) {}
 
   // ============================================
@@ -276,5 +280,52 @@ export class AuthController {
     return this.emailVerificationService.resendVerificationEmail(
       resendVerificationDto.email,
     );
+  }
+
+  // ============================================
+  // ROUTE: POST /api/v1/auth/forgot-password
+  // ============================================
+
+  /**
+   * Demande de réinitialisation de mot de passe.
+   * Réponse toujours 200 OK (ne jamais révéler si l'email existe).
+   *
+   * @param body - { email }
+   * @returns { ok: true }
+   */
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 900000 } }) // 5 par 15 min
+  async forgotPassword(
+    @Body() body: ForgotPasswordDto,
+    @Req() req: Request,
+  ): Promise<{ ok: true }> {
+    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+    const userAgent = req.get('user-agent') || undefined;
+    return this.passwordResetService.requestPasswordReset(
+      body.email,
+      ip,
+      userAgent,
+    );
+  }
+
+  // ============================================
+  // ROUTE: POST /api/v1/auth/reset-password
+  // ============================================
+
+  /**
+   * Réinitialise le mot de passe avec un token valide.
+   * 422 si token invalide / expiré / déjà utilisé.
+   *
+   * @param body - { token, newPassword }
+   * @returns { ok: true }
+   */
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 par minute
+  async resetPassword(@Body() body: ResetPasswordDto): Promise<{ ok: true }> {
+    return this.passwordResetService.resetPassword(body.token, body.newPassword);
   }
 }
