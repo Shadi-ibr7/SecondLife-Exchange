@@ -20,12 +20,10 @@ import Link from 'next/link';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ExchangeList } from '@/components/exchanges/ExchangeList';
 import { exchangesApi } from '@/lib/exchanges.api';
@@ -73,10 +71,15 @@ function ExchangeHistoryContent() {
       page,
       limit,
       sort: '-createdAt',
-      type: typeFilter,
     };
 
-    // Gérer le cas des statuts multiples (CANCELLED,DECLINED)
+    // N'envoyer 'type' que si différent de 'all' (valeur par défaut côté backend)
+    if (typeFilter && typeFilter !== 'all') {
+      params.type = typeFilter;
+    }
+
+    // Gérer le cas des statuts multiples (CANCELLED,DECLINED) côté client
+    // Envoyer status au backend seulement si c'est un statut unique
     if (statusFilter && !statusFilter.includes(',')) {
       params.status = statusFilter;
     }

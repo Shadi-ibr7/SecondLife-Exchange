@@ -49,7 +49,7 @@ import { ExchangesService } from './exchanges.service';
 // Import des DTOs
 import { CreateExchangeDto } from './dtos/create-exchange.dto';
 import { UpdateExchangeStatusDto } from './dtos/update-exchange-status.dto';
-import { PaginationDto } from '../../common/dtos/pagination.dto';
+import { ListExchangesQueryDto } from './dtos/list-exchanges-query.dto';
 
 // Import des guards et intercepteurs
 import { JwtAccessGuard } from '../../common/guards/jwt-access.guard';
@@ -96,24 +96,25 @@ export class ExchangesController {
    * GET /api/v1/exchanges/me
    *
    * Retourne la liste paginée des échanges où l'utilisateur courant est impliqué.
-   * Les paramètres `page`, `limit`, `sort` proviennent de `PaginationDto`; `status` est optionnel.
    *
-   * FILTRES:
-   * - status: Filtrer par statut (PENDING, ACCEPTED, DECLINED, COMPLETED, CANCELLED)
-   * - type: Filtrer par rôle (sent = requester, received = responder, all = les deux)
+   * PARAMÈTRES (query):
+   * - page: numéro de page (défaut: 1)
+   * - limit: éléments par page (défaut: 20, max: 100)
+   * - sort: tri (ex: "-createdAt" pour DESC, "createdAt" pour ASC)
+   * - status: filtrer par statut (PENDING, ACCEPTED, DECLINED, COMPLETED, CANCELLED)
+   * - type: filtrer par rôle (sent = proposés, received = reçus, all = tous)
    */
   @Get('me')
   @ApiOperation({ summary: 'Lister mes échanges' })
   @ApiResponse({ status: 200, description: 'Liste paginée' })
   async getMyExchanges(
     @Request() req,
-    @Query() paginationDto: PaginationDto,
-    @Query('status') status?: string,
-    @Query('type') type?: 'sent' | 'received' | 'all',
+    @Query() queryDto: ListExchangesQueryDto,
   ) {
+    const { status, type, ...pagination } = queryDto;
     return this.exchangesService.getMyExchanges(
       req.user.id,
-      paginationDto,
+      pagination,
       status,
       type,
     );
