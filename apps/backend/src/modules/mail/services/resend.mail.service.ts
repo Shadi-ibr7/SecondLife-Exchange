@@ -68,7 +68,7 @@ export class ResendMailService implements IMailService {
 
     try {
       this.logger.log(`Tentative d'envoi email à ${options.to} depuis ${this.fromEmail}`);
-      
+
       const result = await this.resend.emails.send({
         from: this.fromEmail,
         to: options.to,
@@ -81,7 +81,7 @@ export class ResendMailService implements IMailService {
         const errorMsg = `Resend API error: ${result.error.message}`;
         this.logger.error(errorMsg);
         this.logger.error(`Détails: ${JSON.stringify(result.error)}`);
-        
+
         // Message plus explicite pour les erreurs de domaine non vérifié
         if (result.error.message?.includes('domain is not verified')) {
           const domain = this.fromEmail.split('@')[1];
@@ -91,7 +91,7 @@ export class ResendMailService implements IMailService {
             `utiliser temporairement onboarding@resend.dev comme EMAIL_FROM.`
           );
         }
-        
+
         throw new Error(errorMsg);
       }
 
