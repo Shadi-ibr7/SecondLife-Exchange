@@ -42,8 +42,8 @@ const ACTION_ITEM_SUGGEST = 'ITEM_SUGGEST';
 @Controller('ai')
 @UseGuards(JwtAccessGuard)
 @ApiBearerAuth()
-export class AiController {
-  private readonly logger = new Logger(AiController.name);
+export class AiItemsController {
+  private readonly logger = new Logger(AiItemsController.name);
 
   constructor(
     private readonly geminiService: GeminiService,

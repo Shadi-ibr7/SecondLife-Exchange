@@ -25,7 +25,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
 // Import du controller
-import { AiController } from './ai.controller';
+import { AiItemsController } from './ai.controller';
 
 // Import du service
 import { GeminiService } from './gemini.service';
@@ -49,7 +49,7 @@ import { PrismaModule } from '../../common/prisma/prisma.module';
   ],
 
   // Controllers exposant les endpoints
-  controllers: [AiController],
+  controllers: [AiItemsController],
 
   // Services fournis par ce module
   providers: [GeminiService],
