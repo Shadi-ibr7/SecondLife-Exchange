@@ -429,8 +429,11 @@ export class ItemsService {
     let paramIndex = 1;
 
     // Statut (par défaut: AVAILABLE)
-    whereConditions.push(`i."status" = $${paramIndex}`);
-    params.push(status || 'AVAILABLE');
+    // IMPORTANT: i."status" est un enum PostgreSQL ("ItemStatus")
+    // On caste explicitement le paramètre en "ItemStatus" pour éviter l'erreur
+    // Postgres: operator does not exist: "ItemStatus" = text
+    whereConditions.push(`i."status" = $${paramIndex}::"ItemStatus"`);
+    params.push(status || ItemStatus.AVAILABLE);
     paramIndex++;
 
     // Catégorie
