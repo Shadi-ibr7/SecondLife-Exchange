@@ -100,11 +100,12 @@ export class AiItemsController {
           ? dto.description.substring(0, 2000) + '...'
           : dto.description;
 
-      // Appeler Gemini
+      // Appeler Gemini (avec éventuellement les URLs d'images, tronquées à 5 pour l'IA)
       const result = await this.geminiService.analyzeItem({
         title: dto.title,
         description: truncatedDescription,
         locale: 'fr',
+        imageUrls: dto.imageUrls?.slice(0, 5),
       });
 
       if (!result) {

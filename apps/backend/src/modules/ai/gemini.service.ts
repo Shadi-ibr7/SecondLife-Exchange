@@ -73,6 +73,7 @@ export interface AnalyzeItemRequest {
   title: string; // Titre de l'item
   description: string; // Description de l'item
   locale?: string; // Langue (défaut: 'fr')
+  imageUrls?: string[]; // URLs d'images (max 5, optionnel)
 }
 
 // ============================================
@@ -274,12 +275,17 @@ export class GeminiService {
    * @returns Prompt texte pour l'API Gemini
    */
   private buildAnalysisPrompt(request: AnalyzeItemRequest): string {
-    const { title, description, locale = 'fr' } = request;
+    const { title, description, locale = 'fr', imageUrls } = request;
+
+    const imagesPart =
+      imageUrls && imageUrls.length
+        ? `\nImages (URLs, max 5):\n${imageUrls.slice(0, 5).join('\n')}`
+        : '';
 
     return `Analyse cet objet pour une plateforme d'échange d'objets d'occasion.
 
 Titre: "${title}"
-Description: "${description}"
+Description: "${description}"${imagesPart}
 
 Réponds UNIQUEMENT en JSON valide avec cette structure exacte:
 {
@@ -314,15 +320,18 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
    * - Parse la réponse JSON
    *
    * CONFIGURATION:
-   * - temperature: 0.3 par défaut (réponses plus déterministes), peut être personnalisée
-   * - maxOutputTokens: 500 (limite la longueur de la réponse)
+   * - temperature: 0.2 par défaut (réponses très déterministes, plus économiques)
+   * - maxOutputTokens: 400 (limite la longueur de la réponse)
    *
    * @param prompt - Prompt texte à envoyer à l'IA
    * @param temperature - Température pour la génération (défaut: 0.3, plus élevé = plus créatif)
    * @returns Réponse texte de l'IA, ou null si erreur
    * @throws Error si l'API retourne une erreur ou timeout
    */
-  private async callGeminiAPI(prompt: string, temperature: number = 0.3): Promise<string | null> {
+  private async callGeminiAPI(
+    prompt: string,
+    temperature: number = 0.2,
+  ): Promise<string | null> {
     const url = `${this.aiConfig.geminiBaseUrl}/models/${this.aiConfig.geminiModel}:generateContent?key=${this.aiConfig.geminiApiKey}`;
 
     const requestBody = {
@@ -339,7 +348,7 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
         temperature: temperature, // Utiliser la température passée en paramètre
         topP: 0.95,
         topK: 40,
-        maxOutputTokens: 500,
+        maxOutputTokens: 400,
       },
     };
 
@@ -437,10 +446,16 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
         throw new Error('Structure JSON invalide');
       }
 
-      // Valider la catégorie
-      const validCategories = Object.values(ItemCategory);
-      if (!validCategories.includes(parsed.category)) {
-        throw new Error(`Catégorie invalide: ${parsed.category}`);
+      // Valider la catégorie avec fallback sur OTHER en cas de valeur inconnue
+      const validCategories = Object.values(ItemCategory) as string[];
+      let category: ItemCategory;
+      if (validCategories.includes(parsed.category)) {
+        category = parsed.category as ItemCategory;
+      } else {
+        this.logger.warn(
+          `Catégorie IA inconnue (${parsed.category}), utilisation du fallback ItemCategory.OTHER`,
+        );
+        category = ItemCategory.OTHER;
       }
 
       // Valider les tags
@@ -458,8 +473,8 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
       }
 
       return {
-        category: parsed.category as ItemCategory,
-        tags: parsed.tags.slice(0, 4), // Max 4 tags
+        category,
+        tags: parsed.tags.slice(0, 4), // Max 4 tags (seront re-filtrés ensuite)
         aiSummary: parsed.aiSummary,
         aiRepairTip: parsed.aiRepairTip,
       };
