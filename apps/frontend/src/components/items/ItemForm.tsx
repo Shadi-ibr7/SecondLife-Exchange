@@ -99,7 +99,10 @@ import {
 import { toast } from 'react-hot-toast';
 
 // Import des icônes
-import { Sparkles, Tag, X } from 'lucide-react';
+import { Loader2, Sparkles, Tag, X } from 'lucide-react';
+
+// Import de l'API IA
+import { aiApi, QuotaExceededError, AiServiceError } from '@/lib/ai.api';
 
 // Import du composant de sélection de photos
 import { PhotoSelector } from './PhotoSelector';
@@ -299,6 +302,24 @@ export function ItemForm({
    * État pour l'erreur de validation des photos
    */
   const [photosError, setPhotosError] = useState<string | undefined>();
+
+  /**
+   * État pour le chargement de la génération IA
+   *
+   * UTILISATION:
+   * - Affiche un spinner pendant l'appel API
+   * - Désactive le bouton de génération pendant le chargement
+   */
+  const [isAiLoading, setIsAiLoading] = useState(false);
+
+  /**
+   * État pour le résumé généré par l'IA
+   *
+   * UTILISATION:
+   * - Stocke le résumé suggéré par Gemini
+   * - Affiché à l'utilisateur pour information
+   */
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
 
   /**
    * État pour la ville sélectionnée via l'autocomplétion
@@ -519,6 +540,92 @@ export function ItemForm({
   };
 
   // ============================================
+  // FONCTION: handleAiSuggest
+  // ============================================
+
+  /**
+   * FONCTION: handleAiSuggest
+   *
+   * Appelle l'API IA pour suggérer automatiquement catégorie, tags et résumé.
+   *
+   * PRÉREQUIS:
+   * - Titre et description doivent être remplis et valides
+   *
+   * ACTIONS:
+   * 1. Valide les champs requis
+   * 2. Appelle l'API IA avec titre et description
+   * 3. Remplit automatiquement les champs du formulaire
+   * 4. Affiche le résumé généré
+   *
+   * GESTION D'ERREUR:
+   * - 429: Quota dépassé (3 générations/jour)
+   * - 502: Service IA indisponible
+   * - Autres: Erreur générique
+   */
+  const handleAiSuggest = async () => {
+    // Récupérer les valeurs actuelles du formulaire
+    const title = watch('title');
+    const description = watch('description');
+
+    // Validation: titre requis (minimum 3 caractères)
+    if (!title || title.trim().length < 3) {
+      toast.error('Veuillez entrer un titre (minimum 3 caractères)');
+      return;
+    }
+
+    // Validation: description requise (minimum 10 caractères)
+    if (!description || description.trim().length < 10) {
+      toast.error('Veuillez entrer une description (minimum 10 caractères)');
+      return;
+    }
+
+    setIsAiLoading(true);
+
+    try {
+      // Appeler l'API IA
+      const result = await aiApi.suggestItemFields({
+        title: title.trim(),
+        description: description.trim(),
+      });
+
+      // Remplir la catégorie si suggérée
+      if (result.category) {
+        setValue('category', result.category);
+      }
+
+      // Remplir les tags si suggérés
+      if (result.tags && result.tags.length > 0) {
+        setTags(result.tags);
+        setValue('tags', result.tags);
+      }
+
+      // Stocker le résumé généré
+      if (result.summary) {
+        setAiSummary(result.summary);
+      }
+
+      // Message de succès avec info quota
+      toast.success(
+        `Suggestions générées ! (${result.quota.remaining} génération(s) restante(s) aujourd'hui)`
+      );
+    } catch (error) {
+      if (error instanceof QuotaExceededError) {
+        toast.error(
+          `Quota journalier atteint (${error.quota.max} générations/jour). Réessayez demain.`
+        );
+      } else if (error instanceof AiServiceError) {
+        toast.error('Le service IA est temporairement indisponible. Réessayez plus tard.');
+      } else if (error instanceof Error && error.message === 'Authentification requise') {
+        toast.error('Veuillez vous connecter pour utiliser cette fonctionnalité.');
+      } else {
+        toast.error('Une erreur est survenue lors de la génération IA.');
+      }
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
+  // ============================================
   // FONCTION: handleFormSubmit
   // ============================================
 
@@ -583,6 +690,8 @@ export function ItemForm({
         region: selectedCity?.region,
         latitude: selectedCity?.latitude,
         longitude: selectedCity?.longitude,
+        // Inclure le résumé IA si généré
+        aiSummary: aiSummary || undefined,
       };
 
       /**
@@ -1006,11 +1115,57 @@ export function ItemForm({
            * - text-primary: texte en couleur primaire
            */}
           {aiAuto && (
-            <div className="rounded-md bg-primary/10 p-3 text-sm">
-              <p className="text-primary">
-                💡 L'IA peut automatiquement suggérer la catégorie, générer des
-                tags et créer un résumé de votre objet.
-              </p>
+            <div className="space-y-3">
+              <div className="rounded-md bg-primary/10 p-3 text-sm">
+                <p className="text-primary">
+                  💡 L'IA peut automatiquement suggérer la catégorie, générer des
+                  tags et créer un résumé de votre objet.
+                </p>
+              </div>
+              {/**
+               * Bouton pour générer les suggestions IA
+               *
+               * PRÉREQUIS:
+               * - Titre et description doivent être remplis
+               *
+               * ACTIONS:
+               * - Appelle handleAiSuggest()
+               * - Remplit automatiquement catégorie, tags et résumé
+               */}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleAiSuggest}
+                disabled={isAiLoading}
+                className="w-full"
+              >
+                {isAiLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Génération en cours...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Générer avec IA
+                  </>
+                )}
+              </Button>
+              {/**
+               * Affichage du résumé généré par l'IA
+               *
+               * AFFICHAGE:
+               * - Seulement si aiSummary est défini
+               * - Résumé affiché dans une boîte informative
+               */}
+              {aiSummary && (
+                <div className="rounded-md border border-primary/20 bg-primary/5 p-3">
+                  <p className="mb-1 text-xs font-medium text-primary">
+                    Résumé généré par l'IA :
+                  </p>
+                  <p className="text-sm text-muted-foreground">{aiSummary}</p>
+                </div>
+              )}
             </div>
           )}
 

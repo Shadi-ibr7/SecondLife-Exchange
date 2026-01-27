@@ -171,7 +171,7 @@ export class ItemsService {
       ownerId: userId, // Associer l'item au propriétaire
       category: aiAnalysis?.category || itemData.category || 'OTHER', // Catégorie IA > manuelle > OTHER
       tags: aiAnalysis?.tags || itemData.tags || [], // Tags IA > manuels > []
-      aiSummary: aiAnalysis?.aiSummary, // Résumé généré par l'IA
+      aiSummary: itemData.aiSummary || aiAnalysis?.aiSummary, // Résumé DTO (pré-généré) > IA > undefined
       aiRepairTip: aiAnalysis?.aiRepairTip, // Conseils de réparation de l'IA
     };
 

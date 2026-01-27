@@ -181,6 +181,7 @@ export interface CreateItemDto {
   condition: ItemCondition;
   tags?: string[];
   aiAuto?: boolean;
+  aiSummary?: string; // Résumé généré par l'IA
   // Champs de localisation (style Leboncoin)
   city?: string;
   postalCode?: string;

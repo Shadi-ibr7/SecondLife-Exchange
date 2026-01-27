@@ -7,25 +7,34 @@
  *
  * COMPOSANTS:
  * - GeminiService: Service pour interagir avec l'API Google Gemini
+ * - AiController: Endpoints pour les suggestions IA
  *
  * FONCTIONNALITÉS:
  * - Analyse automatique des items (catégorisation, tags, résumé)
  * - Génération de suggestions d'objets basées sur les thèmes
  * - Génération de contenu écologique
+ * - Suggestions IA pour la création d'items (quota 3/jour)
  *
  * DÉPENDANCES:
  * - ConfigModule: Configuration de l'API Gemini (clé API, modèle, etc.)
+ * - PrismaModule: Accès base de données pour le tracking des quotas
  */
 
 // Import des modules NestJS
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
+// Import du controller
+import { AiController } from './ai.controller';
+
 // Import du service
 import { GeminiService } from './gemini.service';
 
 // Import de la configuration
 import aiConfig from '../../config/ai.config';
+
+// Import de Prisma
+import { PrismaModule } from '../../common/prisma/prisma.module';
 
 /**
  * MODULE: AiModule
@@ -34,7 +43,13 @@ import aiConfig from '../../config/ai.config';
  */
 @Module({
   // Modules importés nécessaires
-  imports: [ConfigModule.forFeature(aiConfig)], // Configuration de l'API Gemini
+  imports: [
+    ConfigModule.forFeature(aiConfig), // Configuration de l'API Gemini
+    PrismaModule, // Accès base de données pour le quota
+  ],
+
+  // Controllers exposant les endpoints
+  controllers: [AiController],
 
   // Services fournis par ce module
   providers: [GeminiService],

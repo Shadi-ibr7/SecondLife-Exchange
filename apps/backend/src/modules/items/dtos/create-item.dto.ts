@@ -176,6 +176,26 @@ export class CreateItemDto {
   @IsBoolean()
   aiAuto?: boolean;
 
+  /**
+   * PROPRIÉTÉ: aiSummary
+   *
+   * Résumé pré-généré par l'IA via l'endpoint /ai/items/suggest.
+   * Si fourni, le service utilisera ce résumé au lieu de le regénérer.
+   *
+   * @IsOptional(): Optionnel
+   * @IsString(): Doit être une chaîne
+   * @MaxLength(500): Maximum 500 caractères
+   */
+  @ApiPropertyOptional({
+    description: 'Résumé pré-généré par l\'IA (via /ai/items/suggest)',
+    maxLength: 500,
+    example: 'Smartphone Apple haut de gamme avec écran OLED 6.7 pouces...',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500, { message: 'Le résumé IA ne peut pas dépasser 500 caractères' })
+  aiSummary?: string;
+
   // ============================================
   // CHAMPS DE LOCALISATION (Style Leboncoin)
   // ============================================

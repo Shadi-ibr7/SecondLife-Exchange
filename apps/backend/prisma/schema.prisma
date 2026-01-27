@@ -37,6 +37,7 @@ model User {
   adminLogs          AdminLog[]          @relation("AdminLogs")
   emailVerificationTokens EmailVerificationToken[]
   passwordResetTokens PasswordResetToken[]
+  aiUsage             AiUsage[]
 
   @@index([email])
   @@index([emailVerifiedAt])
@@ -489,4 +490,20 @@ model LoginAttempt {
   @@index([email, ip, createdAt])
   @@index([blocked, createdAt])
   @@map("login_attempts")
+}
+
+// ============================================
+// MODÈLE: AiUsage
+// Tracking des appels IA par utilisateur pour quotas
+// ============================================
+model AiUsage {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String   // Ex: "ITEM_SUGGEST", "ITEM_ANALYZE", etc.
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, action, createdAt])
+  @@index([userId, createdAt])
+  @@map("ai_usage")
 }
