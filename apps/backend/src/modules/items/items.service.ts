@@ -436,16 +436,16 @@ export class ItemsService {
     params.push(status || ItemStatus.AVAILABLE);
     paramIndex++;
 
-    // Catégorie
+    // Catégorie (enum PostgreSQL "ItemCategory")
     if (category) {
-      whereConditions.push(`i."category" = $${paramIndex}`);
+      whereConditions.push(`i."category" = $${paramIndex}::"ItemCategory"`);
       params.push(category);
       paramIndex++;
     }
 
-    // Condition
+    // Condition (enum PostgreSQL "ItemCondition")
     if (condition) {
-      whereConditions.push(`i."condition" = $${paramIndex}`);
+      whereConditions.push(`i."condition" = $${paramIndex}::"ItemCondition"`);
       params.push(condition);
       paramIndex++;
     }
