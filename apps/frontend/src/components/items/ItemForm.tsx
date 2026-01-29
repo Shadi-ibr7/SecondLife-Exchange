@@ -609,14 +609,17 @@ export function ItemForm({
         `Suggestions générées ! (${result.quota.remaining} génération(s) restante(s) aujourd'hui)`
       );
     } catch (error) {
+      console.error('[ItemForm] AI suggest error:', error);
       if (error instanceof QuotaExceededError) {
         toast.error(
           `Quota journalier atteint (${error.quota.max} générations/jour). Réessayez demain.`
         );
       } else if (error instanceof AiServiceError) {
-        toast.error('Le service IA est temporairement indisponible. Réessayez plus tard.');
+        toast.error(error.message || 'Le service IA est temporairement indisponible. Réessayez plus tard.');
       } else if (error instanceof Error && error.message === 'Authentification requise') {
         toast.error('Veuillez vous connecter pour utiliser cette fonctionnalité.');
+      } else if (error instanceof Error) {
+        toast.error(error.message || 'Une erreur est survenue lors de la génération IA.');
       } else {
         toast.error('Une erreur est survenue lors de la génération IA.');
       }

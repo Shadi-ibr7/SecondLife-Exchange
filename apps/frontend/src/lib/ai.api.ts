@@ -83,6 +83,13 @@ export const aiApi = {
       );
       return response.data;
     } catch (error: any) {
+      // Log pour debug
+      console.error('[AI API] Error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+      });
+
       // Gérer les erreurs spécifiques
       if (error.response?.status === 429) {
         const errorData = error.response.data;
@@ -101,6 +108,19 @@ export const aiApi = {
 
       if (error.response?.status === 401) {
         throw new Error('Authentification requise');
+      }
+
+      if (error.response?.status === 404) {
+        throw new AiServiceError(
+          "L'endpoint IA n'est pas disponible. Veuillez contacter le support."
+        );
+      }
+
+      // Erreur réseau (pas de réponse du serveur)
+      if (!error.response) {
+        throw new AiServiceError(
+          "Impossible de contacter le serveur. Vérifiez votre connexion."
+        );
       }
 
       // Autres erreurs
