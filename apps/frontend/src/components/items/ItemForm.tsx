@@ -910,8 +910,7 @@ export function ItemForm({
              * automatiquement par l'IA, donc elle devient optionnelle.
              */}
             <Label htmlFor="category">
-              Catégorie{' '}
-              {aiAuto ? "(optionnel - peut être fournie par l'IA)" : '*'}
+              Catégorie *
             </Label>
             {/**
              * Select pour la catégorie
@@ -1084,18 +1083,10 @@ export function ItemForm({
 
           {/* ============================================
               OPTION: Aide IA (Gemini)
+              TEMPORAIREMENT DÉSACTIVÉ - En attente de fix du parsing Gemini
               ============================================ */}
+          {/*
           <div className="flex items-center space-x-2">
-            {/**
-             * Switch pour activer/désactiver l'aide IA
-             *
-             * checked={aiAuto}: état contrôlé par watch('aiAuto')
-             * onCheckedChange: met à jour la valeur dans React Hook Form
-             *
-             * FONCTIONNEMENT:
-             * - Si activé, l'IA peut suggérer catégorie et tags
-             * - La catégorie devient optionnelle si activée
-             */}
             <Switch
               id="aiAuto"
               checked={aiAuto}
@@ -1106,17 +1097,6 @@ export function ItemForm({
               Aider avec Gemini (IA)
             </Label>
           </div>
-          {/**
-           * Message d'information si l'aide IA est activée
-           *
-           * AFFICHAGE:
-           * - Seulement si aiAuto === true
-           * - Message informatif sur les capacités de l'IA
-           *
-           * STYLE:
-           * - bg-primary/10: fond avec opacité 10% de la couleur primaire
-           * - text-primary: texte en couleur primaire
-           */}
           {aiAuto && (
             <div className="space-y-3">
               <div className="rounded-md bg-primary/10 p-3 text-sm">
@@ -1125,16 +1105,6 @@ export function ItemForm({
                   tags et créer un résumé de votre objet.
                 </p>
               </div>
-              {/**
-               * Bouton pour générer les suggestions IA
-               *
-               * PRÉREQUIS:
-               * - Titre et description doivent être remplis
-               *
-               * ACTIONS:
-               * - Appelle handleAiSuggest()
-               * - Remplit automatiquement catégorie, tags et résumé
-               */}
               <Button
                 type="button"
                 variant="outline"
@@ -1154,13 +1124,6 @@ export function ItemForm({
                   </>
                 )}
               </Button>
-              {/**
-               * Affichage du résumé généré par l'IA
-               *
-               * AFFICHAGE:
-               * - Seulement si aiSummary est défini
-               * - Résumé affiché dans une boîte informative
-               */}
               {aiSummary && (
                 <div className="rounded-md border border-primary/20 bg-primary/5 p-3">
                   <p className="mb-1 text-xs font-medium text-primary">
@@ -1171,6 +1134,7 @@ export function ItemForm({
               )}
             </div>
           )}
+          */}
 
           {/* ============================================
               BOUTON DE SOUMISSION
