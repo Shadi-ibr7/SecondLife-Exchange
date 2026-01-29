@@ -287,23 +287,27 @@ export class GeminiService {
 Titre: "${title}"
 Description: "${description}"${imagesPart}
 
-Réponds UNIQUEMENT en JSON valide avec cette structure exacte:
-{
-  "category": "CATEGORIE_APPROPRIEE",
-  "tags": ["tag1", "tag2", "tag3", "tag4"],
-  "aiSummary": "Résumé concis en ${locale} (max 240 caractères)",
-  "aiRepairTip": "Conseil réparation basique en ${locale} (max 240 caractères)"
-}
+IMPORTANT - Format JSON STRICT:
+- Utilise UNIQUEMENT des guillemets doubles (") pour les clés ET les valeurs
+- Pas de guillemets simples (')
+- Pas de texte avant ou après le JSON
+- Le JSON doit être valide et parseable
 
-Catégories disponibles: CLOTHING, ELECTRONICS, BOOKS, HOME, TOOLS, TOYS, SPORTS, ART, VINTAGE, HANDCRAFT, OTHER
+Réponds UNIQUEMENT avec ce JSON exact:
+{"category":"CATEGORIE","tags":["tag1","tag2","tag3"],"aiSummary":"Résumé en ${locale}","aiRepairTip":"Conseil en ${locale}"}
+
+Catégories: CLOTHING, ELECTRONICS, BOOKS, HOME, TOOLS, TOYS, SPORTS, ART, VINTAGE, HANDCRAFT, OTHER
 
 Règles:
-- Choisis la catégorie la plus appropriée
-- Génère 3-4 tags pertinents (2-24 caractères chacun)
-- Résumé: description courte et attractive
-- Conseil réparation: astuce simple si l'objet semble endommagé, sinon "Aucune réparation nécessaire"
+- category: la catégorie la plus appropriée (en MAJUSCULES)
+- tags: 3-4 tags pertinents
+- aiSummary: description courte et attractive (max 200 caractères)
+- aiRepairTip: astuce réparation si endommagé, sinon "Aucune réparation nécessaire"
 
-Réponds uniquement le JSON, sans texte supplémentaire.`;
+Exemple de réponse correcte:
+{"category":"ELECTRONICS","tags":["smartphone","apple","occasion"],"aiSummary":"iPhone en bon état général avec quelques rayures.","aiRepairTip":"Aucune réparation nécessaire"}
+
+Réponds UNIQUEMENT le JSON, sans markdown, sans code blocks.`;
   }
 
   // ============================================
@@ -416,7 +420,7 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
    *
    * PROCESSUS:
    * 1. Nettoie la réponse (enlève markdown si présent)
-   * 2. Parse le JSON
+   * 2. Parse le JSON (avec plusieurs tentatives de réparation)
    * 3. Valide la structure (category, tags, aiSummary, aiRepairTip)
    * 4. Valide la catégorie (doit être une valeur valide de ItemCategory)
    * 5. Valide les tags (doit être un tableau non vide)
@@ -429,28 +433,79 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
   private parseGeminiResponse(response: string): GeminiAnalysisResult {
     try {
       // Nettoyer la réponse (enlever markdown si présent)
-      const cleanResponse = response
+      let cleanResponse = response
         .replace(/```json\n?/g, '')
         .replace(/```\n?/g, '')
         .trim();
 
-      const parsed = JSON.parse(cleanResponse);
+      // Essayer d'extraire le JSON si la réponse contient du texte avant/après
+      const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        cleanResponse = jsonMatch[0];
+      }
+
+      this.logger.log(`🔍 Réponse Gemini brute: ${cleanResponse.substring(0, 300)}...`);
+
+      let parsed;
+      try {
+        parsed = JSON.parse(cleanResponse);
+      } catch (parseError: any) {
+        this.logger.warn(`⚠️  Premier parsing JSON échoué: ${parseError.message}`);
+        this.logger.warn(`🔧 Tentative de réparation du JSON...`);
+
+        // Tentative 1: Remplacer les guillemets simples par des guillemets doubles
+        let repaired = cleanResponse
+          .replace(/'/g, '"') // Remplacer tous les guillemets simples
+          .replace(/(\w+):/g, '"$1":') // Ajouter des guillemets aux clés non quotées
+          .replace(/,\s*}/g, '}') // Enlever les virgules finales avant }
+          .replace(/,\s*]/g, ']'); // Enlever les virgules finales avant ]
+
+        try {
+          parsed = JSON.parse(repaired);
+          this.logger.log(`✅ Réparation JSON réussie (guillemets)`);
+        } catch (e) {
+          // Tentative 2: Extraction manuelle des champs avec regex
+          this.logger.warn(`⚠️  Réparation guillemets échouée, extraction manuelle...`);
+
+          const categoryMatch = cleanResponse.match(/["']?category["']?\s*:\s*["']([^"']+)["']/i);
+          const tagsMatch = cleanResponse.match(/["']?tags["']?\s*:\s*\[(.*?)\]/i);
+          const summaryMatch = cleanResponse.match(/["']?aiSummary["']?\s*:\s*["']([^"']*(?:\\.[^"']*)*)["']/i);
+          const repairTipMatch = cleanResponse.match(/["']?aiRepairTip["']?\s*:\s*["']([^"']*(?:\\.[^"']*)*)["']/i);
+
+          if (categoryMatch && summaryMatch) {
+            // Extraire les tags du match
+            let tags: string[] = ['objet', 'occasion'];
+            if (tagsMatch && tagsMatch[1]) {
+              tags = tagsMatch[1]
+                .split(',')
+                .map(t => t.trim().replace(/["']/g, ''))
+                .filter(t => t.length > 0);
+            }
+
+            parsed = {
+              category: categoryMatch[1].toUpperCase(),
+              tags: tags,
+              aiSummary: (summaryMatch[1] || '').replace(/\\"/g, '"').replace(/\\n/g, ' '),
+              aiRepairTip: (repairTipMatch?.[1] || 'Aucune réparation nécessaire').replace(/\\"/g, '"').replace(/\\n/g, ' '),
+            };
+            this.logger.log(`✅ Extraction manuelle réussie: category=${parsed.category}, tags=${parsed.tags.join(',')}`);
+          } else {
+            throw parseError; // Relancer l'erreur si on ne peut pas extraire
+          }
+        }
+      }
 
       // Valider la structure
-      if (
-        !parsed.category ||
-        !parsed.tags ||
-        !parsed.aiSummary ||
-        !parsed.aiRepairTip
-      ) {
-        throw new Error('Structure JSON invalide');
+      if (!parsed.category || !parsed.aiSummary) {
+        throw new Error('Structure JSON invalide: category ou aiSummary manquant');
       }
 
       // Valider la catégorie avec fallback sur OTHER en cas de valeur inconnue
       const validCategories = Object.values(ItemCategory) as string[];
       let category: ItemCategory;
-      if (validCategories.includes(parsed.category)) {
-        category = parsed.category as ItemCategory;
+      const categoryUpper = parsed.category.toUpperCase();
+      if (validCategories.includes(categoryUpper)) {
+        category = categoryUpper as ItemCategory;
       } else {
         this.logger.warn(
           `Catégorie IA inconnue (${parsed.category}), utilisation du fallback ItemCategory.OTHER`,
@@ -458,28 +513,32 @@ Réponds uniquement le JSON, sans texte supplémentaire.`;
         category = ItemCategory.OTHER;
       }
 
-      // Valider les tags
-      if (!Array.isArray(parsed.tags) || parsed.tags.length === 0) {
-        throw new Error('Tags invalides');
+      // Valider les tags avec fallback
+      let tags: string[] = ['objet', 'occasion'];
+      if (Array.isArray(parsed.tags) && parsed.tags.length > 0) {
+        tags = parsed.tags;
       }
 
       // Valider les longueurs
-      if (parsed.aiSummary.length > 240) {
-        parsed.aiSummary = parsed.aiSummary.substring(0, 237) + '...';
+      let aiSummary = parsed.aiSummary || 'Description de l\'objet';
+      if (aiSummary.length > 240) {
+        aiSummary = aiSummary.substring(0, 237) + '...';
       }
 
-      if (parsed.aiRepairTip.length > 240) {
-        parsed.aiRepairTip = parsed.aiRepairTip.substring(0, 237) + '...';
+      let aiRepairTip = parsed.aiRepairTip || 'Aucune réparation nécessaire';
+      if (aiRepairTip.length > 240) {
+        aiRepairTip = aiRepairTip.substring(0, 237) + '...';
       }
 
       return {
         category,
-        tags: parsed.tags.slice(0, 4), // Max 4 tags (seront re-filtrés ensuite)
-        aiSummary: parsed.aiSummary,
-        aiRepairTip: parsed.aiRepairTip,
+        tags: tags.slice(0, 4), // Max 4 tags (seront re-filtrés ensuite)
+        aiSummary,
+        aiRepairTip,
       };
     } catch (error) {
       this.logger.error(`Erreur parsing réponse Gemini: ${error.message}`);
+      this.logger.error(`🔍 Réponse complète: ${response}`);
       throw new BadRequestException('Réponse IA invalide');
     }
   }
